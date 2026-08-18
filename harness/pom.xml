@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project
+	xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
+>
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>4.1.0</version>
+		<relativePath /> <!-- lookup parent from repository -->
+	</parent>
+
+	<groupId>io.github.iso53</groupId>
+	<artifactId>castiel</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>castiel</name>
+	<description>AI powered pentesting harness</description>
+	<url>https://iso53.github.io/castiel</url>
+	<licenses>
+		<license>
+			<name>GNU General Public License v3.0</name>
+			<url>https://www.gnu.org/licenses/gpl-3.0.html</url>
+		</license>
+	</licenses>
+	<developers>
+		<developer>
+			<name>iso53</name>
+			<url>https://github.com/iso53</url>
+		</developer>
+	</developers>
+
+	<properties>
+		<java.version>25</java.version>
+	</properties>
+
+	<dependencies>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webflux</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
+			<optional>true</optional>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webflux-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+		    <groupId>dev.langchain4j</groupId>
+		    <artifactId>langchain4j-open-ai</artifactId>
+		    <version>1.19.0</version>
+		</dependency>
+
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>
