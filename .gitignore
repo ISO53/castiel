@@ -25,3 +25,10 @@ replay_pid*
 
 # build files
 target/
+node_modules/
+
+# IDE files
+.vscode/
+
+# lock files
+package-lock.json
