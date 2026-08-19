@@ -1,7 +1,8 @@
 <template>
 	<div class="app">
-		<TopBar />
-		<ResizablePanelGroup direction="horizontal">
+		<MenuBar />
+
+		<ResizablePanelGroup direction="horizontal" class="flex-1 min-h-0">
 			<ResizablePanel collapsible :defaultSize="20" :minSize="3" :maxSize="45"></ResizablePanel>
 
 			<ResizableHandle />
@@ -28,12 +29,15 @@
 <script setup>
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import ChatView from "@/views/ChatView.vue";
-import TopBar from "@/views/TopBar.vue";
+import MenuBar from "@/views/MenuBar.vue";
 </script>
 
 <style scoped>
 .app {
-	width: 100vw;
+	width: 100%;
 	height: 100vh;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
 }
 </style>

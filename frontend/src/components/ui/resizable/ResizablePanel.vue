@@ -16,16 +16,15 @@ const props = defineProps({
 const emits = defineEmits(["collapse", "expand", "resize"]);
 
 const forwarded = useForwardPropsEmits(props, emits);
-const { forwardRef } = useForwardExpose();
+useForwardExpose();
 </script>
 
 <template>
-	<SplitterPanel
-		:ref="forwardRef"
-		v-slot="slotProps"
-		data-slot="resizable-panel"
-		v-bind="forwarded"
-	>
-		<slot v-bind="slotProps" />
-	</SplitterPanel>
+  <SplitterPanel
+    v-slot="slotProps"
+    data-slot="resizable-panel"
+    v-bind="forwarded"
+  >
+    <slot v-bind="slotProps" />
+  </SplitterPanel>
 </template>

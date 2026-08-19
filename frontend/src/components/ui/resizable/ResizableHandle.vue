@@ -1,5 +1,4 @@
 <script setup>
-import { GripVertical } from "@lucide/vue";
 import { reactiveOmit } from "@vueuse/core";
 import { SplitterResizeHandle, useForwardPropsEmits } from "reka-ui";
 import { cn } from "@/lib/utils";
