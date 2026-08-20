@@ -9,7 +9,9 @@
 
 			<ResizablePanel>
 				<ResizablePanelGroup direction="vertical">
-					<ResizablePanel :minSize="40"></ResizablePanel>
+					<ResizablePanel :minSize="40">
+						<TabbedView />
+					</ResizablePanel>
 
 					<ResizableHandle />
 
@@ -30,6 +32,7 @@
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import ChatView from "@/views/ChatView.vue";
 import MenuBar from "@/views/MenuBar.vue";
+import TabbedView from "./views/TabbedView.vue";
 </script>
 
 <style scoped>

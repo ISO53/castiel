@@ -2,12 +2,14 @@
 import { reactiveOmit } from "@vueuse/core";
 import { TabsTrigger, useForwardProps } from "reka-ui";
 import { cn } from "@/lib/utils";
+import { X } from "@lucide/vue";
 
 const props = defineProps({
   value: { type: [String, Number], required: true },
   disabled: { type: Boolean, required: false },
   asChild: { type: Boolean, required: false },
   as: { type: null, required: false },
+  closable: { type: Boolean, required: false },
   class: {
     type: [Boolean, null, String, Object, Array],
     required: false,
@@ -15,7 +17,7 @@ const props = defineProps({
   },
 });
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps = reactiveOmit(props, "class", "closable");
 
 const forwardedProps = useForwardProps(delegatedProps);
 </script>
@@ -25,15 +27,26 @@ const forwardedProps = useForwardProps(delegatedProps);
     data-slot="tabs-trigger"
     :class="
       cn(
-        'gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-xs font-medium group-data-vertical/tabs:py-[calc(--spacing(1.25))] [&_svg:not([class*=size-])]:size-3.5 has-data-[icon=inline-end]:pr-1 has-data-[icon=inline-start]:pl-1 relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center whitespace-nowrap text-foreground/60 transition-all group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 dark:text-muted-foreground dark:hover:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0',
-        'group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent dark:group-data-[variant=line]/tabs-list:data-active:border-transparent dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent',
-        'data-active:bg-background data-active:text-foreground dark:data-active:border-input dark:data-active:bg-input/30 dark:data-active:text-foreground',
-        'after:absolute after:bg-foreground after:opacity-0 after:transition-opacity group-data-horizontal/tabs:after:inset-x-0 group-data-horizontal/tabs:after:bottom-[-5px] group-data-horizontal/tabs:after:h-0.5 group-data-vertical/tabs:after:inset-y-0 group-data-vertical/tabs:after:-right-1 group-data-vertical/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100',
+        'group/trig group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start relative inline-flex h-full items-center justify-center whitespace-nowrap px-5 text-xs font-medium select-none border-r border-border',
+        'group-data-vertical/tabs:py-[calc(--spacing(1.25))] [&_svg:not([class*=size-])]:size-3.5',
+        'focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50',
+        'data-active:bg-card data-active:text-foreground text-foreground/60',
         props.class,
       )
     "
     v-bind="forwardedProps"
   >
     <slot />
+    <span
+      v-if="props.closable"
+      role="button"
+      tabindex="-1"
+      aria-label="Close tab"
+      class="absolute right-1 top-1/2 -translate-y-1/2 group-hover/trig:opacity-100 flex size-3.5 items-center justify-center rounded-sm text-foreground/40 opacity-0 hover:bg-muted hover:text-foreground [&_svg]:size-3"
+      @mousedown.prevent.stop
+      @click.stop.prevent="$emit('close')"
+    >
+      <X />
+    </span>
   </TabsTrigger>
 </template>
