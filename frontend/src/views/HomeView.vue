@@ -1,19 +1,81 @@
 <template>
-	<div>Welcome bitches</div>
+	<div class="h-full w-full overflow-y-auto flex items-center justify-center p-6 select-none">
+		<div class="max-w-4xl w-full flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12 lg:gap-16">
+			<!-- ASCII Art (Left) -->
+			<div class="shrink-0 flex justify-center overflow-x-auto py-2">
+				<pre
+					class="font-mono text-[5px] sm:text-[6px] md:text-[7px] lg:text-[8px] leading-[1.1] text-primary/80 dark:text-primary tracking-tighter transition-all duration-300">
+					{{ asciiArt }}</pre>
+			</div>
+
+			<!-- Intro & Actions (Right) -->
+			<div class="flex flex-col items-center md:items-start text-center md:text-left space-y-6 max-w-md">
+				<div class="space-y-2">
+					<h1 class="text-3xl font-bold tracking-tight text-foreground">
+						Castiel
+					</h1>
+					<p class="text-sm font-medium text-muted-foreground">
+						AI powered penetration testing suite
+					</p>
+				</div>
+
+				<!-- Action Buttons -->
+				<div class="flex flex-wrap items-center gap-3 pt-2">
+					<Button size="lg" class="gap-2 px-4 shadow-sm cursor-pointer">
+						<FolderPlus class="size-4" />
+						<span>New Workspace</span>
+					</Button>
+
+					<Button variant="outline" size="lg" class="gap-2 px-4 shadow-sm cursor-pointer">
+						<FolderOpen class="size-4" />
+						<span>Open Workspace</span>
+					</Button>
+				</div>
+			</div>
+		</div>
+	</div>
 </template>
 
 <script>
+import { Button } from "@/components/ui/button";
+import { FolderPlus, FolderOpen } from "@lucide/vue";
 
 export default {
 	name: "HomeView",
+	components: {
+		Button,
+		FolderPlus,
+		FolderOpen,
+	},
 	data() {
 		return {
-
+			asciiArt: `
+⠀⠀⠀⠀⠀⠀⠀⢠⡄⠀⠀⢠⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⢹⣿⣄⠀⠈⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⢷⢽⢦⡀⢹⣇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠘⣯⠳⡙⢦⣿⣦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⢿⡦⣄⣀⠀⠀⠀⠀⠀⠈⢷⡙⢦⡙⢿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠈⠻⣮⡿⣿⢶⣤⣀⠀⠀⠀⠻⣄⠙⢦⡙⠿⣿⣦⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢨⠻⣮⣝⠲⢌⣙⠒⠦⣤⣈⡳⣤⡉⠲⢬⡑⠿⣟⣷⢶⣤⣤⣄⣀⣤⣀⣀⣄⣀⣀⣀⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠻⣿⡷⣿⣿⣶⣬⣙⠲⢤⣀⡉⠙⠛⠳⢤⣈⡑⠲⠬⣍⣉⡒⠛⠛⠛⣿⠛⠛⠻⠭⣍⣉⣉⣛⣛⠻⠷⣶⣤⣄⣰⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠈⠻⣿⣗⠦⣍⡙⠛⠶⢦⣍⡙⠒⠦⢤⣄⣉⠓⠲⢦⢤⣭⡤⠶⠒⠚⢷⣦⣀⠀⠸⣧⡄⠀⠉⠙⠒⠀⠈⠙⠳⡿⣦⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⢰⣶⣶⣽⣷⣦⣍⣑⠒⠤⢌⣉⣙⠒⠶⠤⢬⣹⣿⣄⢹⣇⡒⠒⠦⠤⡸⣧⡉⠛⠒⠈⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⣷⣤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠉⠻⢾⣕⡺⠭⣙⣛⠲⠶⢦⣭⣍⣑⣒⠒⠒⠒⠂⠉⠉⢛⡖⠆⣀⣀⣈⣙⣶⠒⠒⠚⠀⠀⠀⠀⠀⢀⣠⣤⣀⣀⠀⠘⢿⣆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠈⠙⢓⣶⣬⣍⣑⣒⣶⠶⠭⠭⠭⠉⠉⠉⠍⠭⠉⠙⠶⣥⣄⣀⣀⣩⣿⡓⠒⠀⠀⠀⠀⠀⢻⣁⣀⠀⠈⠙⢦⠈⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⢿⣭⣉⠉⢭⣉⡛⠛⠓⠒⠲⠶⠶⠶⠶⠖⠒⠒⣚⡩⠍⠉⢻⣍⣤⠀⠀⠀⠀⠀⠀⠀⢾⡉⠉⠛⠓⠀⠀⠈⣇⢸⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢩⣻⣳⣶⣮⣭⣭⣍⣉⣉⣉⣉⣉⣭⣭⠤⠴⠒⢋⡿⢋⠤⠔⠒⠊⠉⢀⡴⠚⠛⢛⠓⠶⠆⠀⠀⠀⢻⠈⣷⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠿⣍⣧⡤⠭⣍⣉⣉⣉⣀⣠⡤⠤⠴⠒⠊⣉⣨⠿⠒⠒⢶⣛⣀⣠⣞⣛⣶⠖⠲⠶⠀⠀⢀⡄⠀⠸⡦⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠛⠛⡶⣶⣦⣤⣤⣿⡦⠤⠴⠖⠛⠋⣉⣀⠤⠔⣀⡤⢿⣛⡩⢤⣈⣻⡤⠶⠆⠀⠀⡞⠁⠀⠀⠉⢽⣇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠻⢯⣭⣓⣀⣤⣒⣒⣒⣾⣉⣉⣁⣤⡴⢚⡥⠖⢋⣥⠶⠚⡉⠉⢧⣤⣤⠀⠸⢿⡶⠃⠀⠀⠀⢻⣆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠉⣽⣯⣭⡥⠴⢻⡟⠘⣉⣠⡾⢋⡤⠖⣭⡴⢖⠻⣯⡴⠗⠀⠀⣧⣠⡆⠀⠀⠀⠹⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠛⢛⣿⣫⠖⠉⣰⠟⣡⠖⢉⣾⣏⣀⣠⢤⡄⠈⣿⣠⡗⢀⠀⠀⠀⠙⠻⣦⣄⡀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⣁⣱⣶⡞⣡⠞⣁⡴⢋⡴⢋⡿⢶⡟⠀⠀⠈⢻⣀⡿⠀⢀⡇⠀⠀⠀⠈⠙⠓⠶⢤⣄
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⢠⡟⡝⣡⣾⢋⡴⠋⣴⠏⣠⠋⣿⠦⣶⠀⢈⠿⣧⢀⣾⣷⡀⢠⡀⠀⠀⠀⠀⠁⢸
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⡷⠚⣹⣣⢞⣷⣿⢇⡼⣡⣿⣵⢃⣾⡟⣹⢠⢸⢩⠘⡏⣳⡞⢧⣀⣿⣦⣷⢀⡞
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠷⠛⠁⣿⣿⡾⢛⣿⣡⢾⣹⢡⣿⡏⣾⣼⢠⣿⡇⣷⣀⣽⠀⢨⢉⡄⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠁⠀⠀⠋⠁⢸⣷⠟⣿⣣⠟⣿⡾⣿⣷⡏⠛⠛⠶⠾⠾⠇⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠋⠀⠀⠀⠈⠉⠀⠀⠀⠀⠀⠀⠀⠀`,
 		};
 	},
 }
 </script>
-
-<style scoped>
-
-</style>
