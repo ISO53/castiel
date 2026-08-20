@@ -1,5 +1,22 @@
 <template>
 	<div class="flex h-96 flex-col gap-3">
+
+		<!-- Workspace name input and path preview -->
+		<template v-if="mode === 'new'">
+			<div class="flex shrink-0 flex-col gap-1.5">
+				<Label for="workspace_name">Workspace name</Label>
+				<Input id="workspace_name" v-model="workspaceName" type="text" placeholder="my-project"
+					autocomplete="off" spellcheck="false" />
+			</div>
+			<p v-if="currentPath" class="shrink-0 text-xs text-muted-foreground wrap-break-word" :title="previewPath">
+				Your new workspace will be created at
+				<span class="font-medium text-foreground">{{ previewPath }}</span>
+			</p>
+			<p v-if="nameConflict" class="shrink-0 text-xs text-destructive">
+				"{{ trimmedWorkspaceName }}" already exists in this folder.
+			</p>
+		</template>
+
 		<!-- Navigation buttons + current path -->
 		<div class="flex shrink-0 items-center gap-1">
 			<Button variant="outline" size="icon" class="h-7 w-7 shrink-0" @click="goHome" aria-label="Go to desktop">
@@ -50,24 +67,28 @@
 				<Checkbox id="hidden_folders" v-model="includeHiddenFolders" />
 				<Label for="hidden_folders">Show Hidden Folders</Label>
 			</div>
-			<Button>Select</Button>
+			<Button :disabled="!canSelect || submitting" @click="selectWorkspace">
+				{{ submitting ? "Working..." : "Select" }}
+			</Button>
 		</div>
 	</div>
 </template>
 
 <script>
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useWorkspaceStore } from "@/stores/workspace";
 import { ArrowUp, File, Folder, Home, LoaderCircle } from "@lucide/vue";
 import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
 
-// this will probably change later
 const API_BASE_URL = "http://localhost:8081/api/files";
 
 export default {
 	name: "FileViewer",
 	components: {
 		Button,
+		Input,
 		ArrowUp,
 		File,
 		Folder,
@@ -78,7 +99,15 @@ export default {
 	},
 	props: {
 		includeFiles: { type: Boolean, required: false, default: false },
+		/** `"open"` selects an existing folder; `"new"` creates a child folder under currentPath. */
+		mode: {
+			type: String,
+			required: false,
+			default: "open",
+			validator: (value) => value === "open" || value === "new",
+		},
 	},
+	emits: ["workspace-ready"],
 	data() {
 		return {
 			currentPath: "",
@@ -87,8 +116,38 @@ export default {
 			selectedPath: "",
 			error: "",
 			loading: false,
+			submitting: false,
 			includeHiddenFolders: false,
+			workspaceName: "",
 		};
+	},
+	computed: {
+		trimmedWorkspaceName() {
+			return this.workspaceName.trim();
+		},
+		previewPath() {
+			const parent = (this.currentPath || "").trim();
+			const name = this.trimmedWorkspaceName;
+			if (!parent) return "";
+			if (!name) return parent;
+			const sep = parent.includes("\\") ? "\\" : "/";
+			const trimmed = parent.endsWith("\\") || parent.endsWith("/") ? parent.slice(0, -1) : parent;
+			return `${trimmed}${sep}${name}`;
+		},
+		nameConflict() {
+			if (this.mode !== "new" || !this.trimmedWorkspaceName) return false;
+			const target = this.trimmedWorkspaceName.toLowerCase();
+			return this.entries.some((entry) => entry.name.toLowerCase() === target);
+		},
+		selectedEntry() {
+			return this.entries.find((entry) => entry.path === this.selectedPath) ?? null;
+		},
+		canSelect() {
+			if (this.mode === "new") {
+				return Boolean(this.currentPath && this.trimmedWorkspaceName && !this.nameConflict);
+			}
+			return Boolean(this.selectedEntry?.directory);
+		},
 	},
 	watch: {
 		includeHiddenFolders() {
@@ -134,9 +193,26 @@ export default {
 		goHome() {
 			this.fetchDirectory(null);
 		},
+		async selectWorkspace() {
+			if (!this.canSelect || this.submitting) return;
+			this.submitting = true;
+			this.error = "";
+			const workspace = useWorkspaceStore();
+			try {
+				if (this.mode === "new") {
+					await workspace.create(this.currentPath, this.trimmedWorkspaceName);
+				} else {
+					await workspace.open(this.selectedPath);
+				}
+				this.$emit("workspace-ready", workspace.cwd);
+			} catch (err) {
+				this.error = err instanceof Error ? err.message : String(err);
+			} finally {
+				this.submitting = false;
+			}
+		},
 	},
 	mounted() {
-		// Start from the backend's default starting position (the user's desktop).
 		this.fetchDirectory(null);
 	},
 };

@@ -21,13 +21,13 @@
 
 				<!-- Action Buttons -->
 				<div class="flex flex-wrap items-center gap-3 pt-2">
-					<Button size="lg" class="gap-2 px-4 shadow-sm cursor-pointer" @click="openFileExplorer">
+					<Button size="lg" class="gap-2 px-4 shadow-sm cursor-pointer" @click="openNewWorkspace">
 						<FolderPlus class="size-4" />
 						<span>New Workspace</span>
 					</Button>
 
 					<Button variant="outline" size="lg" class="gap-2 px-4 shadow-sm cursor-pointer"
-						@click="openFileExplorer">
+						@click="openExistingWorkspace">
 						<FolderOpen class="size-4" />
 						<span>Open Workspace</span>
 					</Button>
@@ -38,13 +38,14 @@
 		<Dialog :open="fileDialogOpen" @update:open="fileDialogOpen = $event">
 			<DialogContent class="sm:max-w-136">
 				<DialogHeader>
-					<DialogTitle>File Explorer</DialogTitle>
+					<DialogTitle>{{ dialogTitle }}</DialogTitle>
 					<DialogDescription>
-						Select a directory to use as your workspace.
+						{{ dialogDescription }}
 					</DialogDescription>
 				</DialogHeader>
 
-				<FileViewer :include-files="includeFiles" />
+				<FileViewer v-if="fileDialogOpen" :include-files="includeFiles" :mode="explorerMode"
+					@workspace-ready="onWorkspaceReady" />
 			</DialogContent>
 		</Dialog>
 	</div>
@@ -79,6 +80,7 @@ export default {
 		return {
 			fileDialogOpen: false,
 			includeFiles: false,
+			explorerMode: "open",
 			asciiArt: `
 ⠀⠀⠀⠀⠀⠀⠀⢠⡄⠀⠀⢠⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⢹⣿⣄⠀⠈⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -107,10 +109,28 @@ export default {
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠋⠀⠀⠀⠈⠉⠀⠀⠀⠀⠀⠀⠀⠀`,
 		};
 	},
-	methods: {
-		openFileExplorer() {
-			this.fileDialogOpen = true;
+	computed: {
+		dialogTitle() {
+			return this.explorerMode === "new" ? "New Workspace" : "Open Workspace";
+		},
+		dialogDescription() {
+			return this.explorerMode === "new"
+				? "Choose a parent folder and enter a name for the new workspace."
+				: "Select an existing directory to use as your workspace.";
 		},
 	},
-}
+	methods: {
+		openNewWorkspace() {
+			this.explorerMode = "new";
+			this.fileDialogOpen = true;
+		},
+		openExistingWorkspace() {
+			this.explorerMode = "open";
+			this.fileDialogOpen = true;
+		},
+		onWorkspaceReady() {
+			this.fileDialogOpen = false;
+		},
+	},
+};
 </script>
