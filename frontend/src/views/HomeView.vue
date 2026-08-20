@@ -21,34 +21,64 @@
 
 				<!-- Action Buttons -->
 				<div class="flex flex-wrap items-center gap-3 pt-2">
-					<Button size="lg" class="gap-2 px-4 shadow-sm cursor-pointer">
+					<Button size="lg" class="gap-2 px-4 shadow-sm cursor-pointer" @click="openFileExplorer">
 						<FolderPlus class="size-4" />
 						<span>New Workspace</span>
 					</Button>
 
-					<Button variant="outline" size="lg" class="gap-2 px-4 shadow-sm cursor-pointer">
+					<Button variant="outline" size="lg" class="gap-2 px-4 shadow-sm cursor-pointer"
+						@click="openFileExplorer">
 						<FolderOpen class="size-4" />
 						<span>Open Workspace</span>
 					</Button>
 				</div>
 			</div>
 		</div>
+
+		<Dialog :open="fileDialogOpen" @update:open="fileDialogOpen = $event">
+			<DialogContent class="sm:max-w-136">
+				<DialogHeader>
+					<DialogTitle>File Explorer</DialogTitle>
+					<DialogDescription>
+						Select a directory to use as your workspace.
+					</DialogDescription>
+				</DialogHeader>
+
+				<FileViewer :include-files="includeFiles" />
+			</DialogContent>
+		</Dialog>
 	</div>
 </template>
 
 <script>
 import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import FileViewer from "@/components/FileViewer.vue";
 import { FolderPlus, FolderOpen } from "@lucide/vue";
 
 export default {
 	name: "HomeView",
 	components: {
 		Button,
+		Dialog,
+		DialogContent,
+		DialogDescription,
+		DialogHeader,
+		DialogTitle,
+		FileViewer,
 		FolderPlus,
 		FolderOpen,
 	},
 	data() {
 		return {
+			fileDialogOpen: false,
+			includeFiles: false,
 			asciiArt: `
 ⠀⠀⠀⠀⠀⠀⠀⢠⡄⠀⠀⢠⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⢹⣿⣄⠀⠈⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -76,6 +106,11 @@ export default {
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠁⠀⠀⠋⠁⢸⣷⠟⣿⣣⠟⣿⡾⣿⣷⡏⠛⠛⠶⠾⠾⠇⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠋⠀⠀⠀⠈⠉⠀⠀⠀⠀⠀⠀⠀⠀`,
 		};
+	},
+	methods: {
+		openFileExplorer() {
+			this.fileDialogOpen = true;
+		},
 	},
 }
 </script>
