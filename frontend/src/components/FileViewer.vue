@@ -2,8 +2,7 @@
 	<div class="flex flex-col gap-3 min-h-96">
 		<!-- Navigation buttons + current path -->
 		<div class="flex items-center gap-1">
-			<Button variant="outline" size="icon" class="h-7 w-7 shrink-0" @click="goHome"
-				aria-label="Go to desktop">
+			<Button variant="outline" size="icon" class="h-7 w-7 shrink-0" @click="goHome" aria-label="Go to desktop">
 				<Home class="size-4" />
 			</Button>
 			<Button variant="outline" size="icon" class="h-7 w-7 shrink-0" :disabled="!parentPath" @click="goUp"
@@ -46,7 +45,11 @@
 		</div>
 
 		<!-- Footer -->
-		<div class="flex justify-end">
+		<div class="flex justify-between">
+			<div class="flex items-center gap-3">
+				<Checkbox id="hidden_folders" v-model="includeHiddenFolders" />
+				<Label for="hidden_folders">Enable Hidden Folders</Label>
+			</div>
 			<Button>Select</Button>
 		</div>
 	</div>
@@ -55,6 +58,8 @@
 <script>
 import { Button } from "@/components/ui/button";
 import { ArrowUp, File, Folder, Home, LoaderCircle } from "@lucide/vue";
+import { Checkbox } from "./ui/checkbox";
+import { Label } from "./ui/label";
 
 // this will probably change later
 const API_BASE_URL = "http://localhost:8081/api/files";
@@ -68,6 +73,8 @@ export default {
 		Folder,
 		Home,
 		LoaderCircle,
+		Checkbox,
+		Label,
 	},
 	props: {
 		includeFiles: { type: Boolean, required: false, default: false },
@@ -80,7 +87,13 @@ export default {
 			selectedPath: "",
 			error: "",
 			loading: false,
+			includeHiddenFolders: true,
 		};
+	},
+	watch: {
+		includeHiddenFolders() {
+			this.fetchDirectory(this.currentPath || null);
+		},
 	},
 	methods: {
 		async fetchDirectory(path) {
@@ -90,6 +103,7 @@ export default {
 			try {
 				const query = new URLSearchParams({
 					includeFiles: String(this.includeFiles),
+					includeHiddenFolders: String(this.includeHiddenFolders),
 				});
 				if (path) query.set("path", path);
 				const response = await fetch(`${API_BASE_URL}?${query.toString()}`);

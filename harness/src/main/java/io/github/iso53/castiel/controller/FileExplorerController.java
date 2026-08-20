@@ -25,17 +25,19 @@ public class FileExplorerController {
     /**
      * Lists a single directory's contents.
      *
-     * @param path         Absolute directory to list. When omitted, the user's desktop is returned.
-     * @param includeFiles Whether to include file entries. {@code false} returns only directories.
+     * @param path                 Absolute directory to list. When omitted, the user's desktop is returned.
+     * @param includeFiles         Whether to include file entries. {@code false} returns only directories.
+     * @param includeHiddenFolders Whether to include hidden entries. {@code false} hides OS-hidden items.
      * @return The directory's metadata and its direct entries.
      */
     @GetMapping
     public DirectoryListing list(
         @RequestParam(name = "path", required = false) String path,
-        @RequestParam(name = "includeFiles", defaultValue = "true") boolean includeFiles
+        @RequestParam(name = "includeFiles", defaultValue = "true") boolean includeFiles,
+        @RequestParam(name = "includeHiddenFolders", defaultValue = "false") boolean includeHiddenFolders
     ) {
         try {
-            return fileExplorerService.list(path, includeFiles);
+            return fileExplorerService.list(path, includeFiles, includeHiddenFolders);
         } catch (IllegalArgumentException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
         }
