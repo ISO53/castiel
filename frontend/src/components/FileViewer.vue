@@ -1,7 +1,7 @@
 <template>
-	<div class="flex flex-col gap-3 min-h-96">
+	<div class="flex h-96 flex-col gap-3">
 		<!-- Navigation buttons + current path -->
-		<div class="flex items-center gap-1">
+		<div class="flex shrink-0 items-center gap-1">
 			<Button variant="outline" size="icon" class="h-7 w-7 shrink-0" @click="goHome" aria-label="Go to desktop">
 				<Home class="size-4" />
 			</Button>
@@ -17,10 +17,10 @@
 		</div>
 
 		<!-- Error -->
-		<p v-if="error" class="text-xs text-destructive wrap-break-word">{{ error }}</p>
+		<p v-if="error" class="shrink-0 text-xs text-destructive wrap-break-word">{{ error }}</p>
 
 		<!-- List -->
-		<div class="min-h-64 max-h-104 flex-1 overflow-y-auto rounded-md border bg-background p-1">
+		<div class="min-h-0 flex-1 overflow-y-auto rounded-md border bg-background p-1">
 			<template v-if="loading">
 				<div class="flex items-center gap-2 px-2 py-2 text-xs text-muted-foreground">
 					<LoaderCircle class="size-4 animate-spin shrink-0" />
@@ -45,10 +45,10 @@
 		</div>
 
 		<!-- Footer -->
-		<div class="flex justify-between">
+		<div class="flex shrink-0 justify-between">
 			<div class="flex items-center gap-3">
 				<Checkbox id="hidden_folders" v-model="includeHiddenFolders" />
-				<Label for="hidden_folders">Enable Hidden Folders</Label>
+				<Label for="hidden_folders">Show Hidden Folders</Label>
 			</div>
 			<Button>Select</Button>
 		</div>
@@ -87,7 +87,7 @@ export default {
 			selectedPath: "",
 			error: "",
 			loading: false,
-			includeHiddenFolders: true,
+			includeHiddenFolders: false,
 		};
 	},
 	watch: {
