@@ -1,13 +1,14 @@
 package io.github.iso53.castiel.service;
 
 import dev.langchain4j.model.catalog.ModelCatalog;
+import dev.langchain4j.model.catalog.ModelDescription;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.openai.OpenAiModelCatalog;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import io.github.iso53.castiel.model.HealthStatus;
 import io.github.iso53.castiel.model.LlmProviderConfig;
+import io.github.iso53.castiel.model.ModelInfo;
 import io.github.iso53.castiel.model.ProviderConfig;
-import io.github.iso53.castiel.model.ProviderType;
 import java.time.Duration;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -15,7 +16,7 @@ import org.springframework.stereotype.Service;
 /**
  * Builds LangChain4j clients from persisted provider config.
  *
- * <p>UI-specific brands are irrelevant here — only {@link ProviderType} matters.
+ * <p>UI-specific brands are irrelevant here — only {@link io.github.iso53.castiel.model.ProviderType} matters.
  */
 @Service
 public class LlmClientFactory {
@@ -27,7 +28,7 @@ public class LlmClientFactory {
 	 * Streaming chat model for a persisted provider entry.
 	 *
 	 * @param config    Persisted provider settings.
-	 * @param modelName Model id (chosen later by chat UI; required by the OpenAI API shape).
+	 * @param modelName Model id from the provider catalog.
 	 */
 	public StreamingChatModel streamingChatModel(LlmProviderConfig config, String modelName) {
 		return switch (config.type()) {
@@ -60,14 +61,31 @@ public class LlmClientFactory {
 	}
 
 	/**
+	 * Lists models advertised by the provider via LangChain4j {@link ModelCatalog}
+	 * ({@code GET /v1/models} for OpenAI-compatible servers).
+	 */
+	@SuppressWarnings("unchecked")
+	public List<ModelInfo> listModels(LlmProviderConfig config) {
+		ModelCatalog catalog = catalog(config);
+		List<ModelDescription> models = (List<ModelDescription>) (List<?>) catalog.listModels();
+		if (models == null || models.isEmpty()) {
+			return List.of();
+		}
+		return models
+			.stream()
+			.map(ModelDescription::name)
+			.filter(name -> name != null && !name.isBlank())
+			.map(ModelInfo::new)
+			.toList();
+	}
+
+	/**
 	 * Health-check via LangChain4j model catalog ({@code GET /v1/models} for OpenAI-compatible).
 	 */
 	public HealthStatus healthCheck(LlmProviderConfig config) {
 		try {
-			ModelCatalog catalog = catalog(config);
-			List<?> models = catalog.listModels();
-			int count = models != null ? models.size() : 0;
-			return new HealthStatus(true, count > 0 ? "Working" : "Working (no models listed)");
+			List<ModelInfo> models = listModels(config);
+			return new HealthStatus(true, models.isEmpty() ? "Working (no models listed)" : "Working");
 		} catch (Exception ex) {
 			String message = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
 			return new HealthStatus(false, message);
@@ -102,6 +120,6 @@ public class LlmClientFactory {
 	}
 
 	private static String resolveApiKey(String apiKey) {
-		return (apiKey == null || apiKey.isBlank()) ? FALLBACK_API_KEY : apiKey.trim();
+		return apiKey == null || apiKey.isBlank() ? FALLBACK_API_KEY : apiKey.trim();
 	}
 }
