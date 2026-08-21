@@ -1,11 +1,8 @@
 <template>
 	<section class="flex h-full min-h-0 flex-col bg-background">
-		<header class="flex h-11 shrink-0 items-center justify-between gap-2 border-b px-3">
+		<header class="flex h-8 shrink-0 items-center justify-between gap-2 border-b px-3">
 			<div class="min-w-0">
 				<p class="truncate text-xs font-medium text-foreground">{{ headerTitle }}</p>
-				<p v-if="selectedProvider" class="truncate text-[11px] text-muted-foreground">
-					{{ selectedProvider.id }}
-				</p>
 			</div>
 
 			<DropdownMenu>
@@ -65,12 +62,14 @@
 												<p class="whitespace-pre-wrap">{{ message.thinking }}</p>
 											</CollapsibleContent>
 										</Collapsible>
-										<div v-if="message.role === 'user' || message.content || (streaming && message.role === 'assistant')"
-											class="max-w-[90%] whitespace-pre-wrap rounded-lg px-3 py-2 text-xs leading-relaxed"
-											:class="message.role === 'user' ? 'self-end bg-primary text-primary-foreground' : 'self-start text-foreground'">
-											{{ message.content }}<Spinner
-												v-if="streaming && !message.content && message.role === 'assistant'"
-												class="inline-block size-3" />
+										<div v-if="message.role === 'user'"
+											class="max-w-[90%] self-end whitespace-pre-wrap rounded-lg bg-primary px-3 py-2 text-xs leading-relaxed text-primary-foreground">
+											{{ message.content }}
+										</div>
+										<div v-else-if="message.content || streaming"
+											class="typeset typeset-docs max-w-[90%] self-start text-foreground">
+											<div v-html="renderMarkdown(message.content)" />
+											<Spinner v-if="streaming && !message.content" class="size-3" />
 										</div>
 									</MessageContent>
 								</Message>
@@ -137,6 +136,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { useSettingsStore } from "@/stores/settings";
+import DOMPurify from "dompurify";
+import { marked } from "marked";
 
 const SETTINGS_API = "http://localhost:8081/api/settings";
 const CHAT_API = "http://localhost:8081/api/chat/stream";
@@ -195,7 +196,7 @@ export default {
 			return Boolean(this.providerId && this.modelName);
 		},
 		headerTitle() {
-			return this.selectedModel?.name ?? "New chat";
+			return this.selectedProvider?.id ?? "New chat";
 		},
 		composerPlaceholder() {
 			if (!this.providerId) return "Choose a provider to start a chat";
@@ -212,6 +213,9 @@ export default {
 		}
 	},
 	methods: {
+		renderMarkdown(content) {
+			return DOMPurify.sanitize(marked.parse(content, { async: false }));
+		},
 		createMessage(role, content) {
 			return {
 				id: crypto.randomUUID(),
