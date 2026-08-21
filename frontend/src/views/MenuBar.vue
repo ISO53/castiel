@@ -1,6 +1,6 @@
 <template>
 	<Menubar>
-	<h1 class="app-name">Castiel</h1>
+		<h1 class="app-name">Castiel</h1>
 		<MenubarMenu>
 			<MenubarTrigger>File</MenubarTrigger>
 			<MenubarContent>
@@ -14,7 +14,7 @@
 		<MenubarMenu>
 			<MenubarTrigger>Help</MenubarTrigger>
 			<MenubarContent>
-				<MenubarItem>Settings</MenubarItem>
+				<MenubarItem @click="openSettings">Settings</MenubarItem>
 				<MenubarItem>About</MenubarItem>
 				<MenubarItem>Report Issue</MenubarItem>
 			</MenubarContent>
@@ -31,6 +31,18 @@ import {
 	MenubarSeparator,
 	MenubarTrigger,
 } from "@/components/ui/menubar";
+import { useTabsStore } from "@/stores/tabs";
+
+const tabs = useTabsStore();
+
+function openSettings() {
+	tabs.openTab({
+		value: "settings",
+		label: "Settings",
+		component: "SettingsView",
+		closable: true,
+	});
+}
 </script>
 
 <style scoped>

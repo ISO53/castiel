@@ -1,41 +1,30 @@
 <template>
 	<div class="tabbed-view">
-		<Tabs v-model="active" class="h-full">
+		<Tabs :model-value="tabsStore.active" class="h-full" @update:model-value="tabsStore.active = $event">
 			<TabsList class="h-8 w-full items-center justify-start gap-0 rounded-none px-0">
-				<TabsTrigger v-for="tab in tabs" :key="tab.value" :value="tab.value" :closable="true"
-					class="h-8 min-w-fit px-5" @close="closeTab(tab.value)">
+				<TabsTrigger v-for="tab in tabsStore.tabs" :key="tab.value" :value="tab.value"
+					:closable="tab.closable !== false" class="h-8 min-w-fit px-5"
+					@close="tabsStore.closeTab(tab.value)">
 					{{ tab.label }}
 				</TabsTrigger>
 			</TabsList>
 
-			<TabsContent v-for="tab in tabs" :key="tab.value" :value="tab.value" class="h-full">
+			<TabsContent v-for="tab in tabsStore.tabs" :key="tab.value" :value="tab.value"
+				class="h-full overflow-hidden">
 				<HomeView v-if="tab.component === 'HomeView'" />
-				<div v-else>{{ tab.value }}</div>
+				<SettingsView v-else-if="tab.component === 'SettingsView'" />
 			</TabsContent>
 		</Tabs>
 	</div>
 </template>
 
 <script setup>
-import { ref } from "vue";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import HomeView from "@/views/HomeView.vue";
+import SettingsView from "@/views/SettingsView.vue";
+import { useTabsStore } from "@/stores/tabs";
 
-const tabs = ref([
-	{ value: "home", label: "Home", component: "HomeView" },
-]);
-const active = ref("home");
-
-function closeTab(value) {
-	const index = tabs.value.findIndex((t) => t.value === value);
-	if (index === -1) return;
-	const wasActive = active.value === value;
-	tabs.value.splice(index, 1);
-	if (wasActive) {
-		const next = tabs.value[Math.min(index, tabs.value.length - 1)];
-		active.value = next ? next.value : "";
-	}
-}
+const tabsStore = useTabsStore();
 </script>
 
 <style scoped>
