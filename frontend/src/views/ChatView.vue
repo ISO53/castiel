@@ -14,7 +14,7 @@
 						<Plus />
 					</Button>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" class="!w-64">
+				<DropdownMenuContent align="end" class="w-64!">
 					<DropdownMenuLabel>New chat</DropdownMenuLabel>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem v-for="provider in providers" :key="provider.id" @select="startChat(provider.id)">
@@ -95,7 +95,7 @@
 							<ChevronDown />
 						</Button>
 					</DropdownMenuTrigger>
-					<DropdownMenuContent align="start" class="!w-72">
+					<DropdownMenuContent align="start" class="w-72!">
 						<DropdownMenuItem v-for="model in models" :key="model.name" :text-value="model.name"
 							@select="modelName = model.name">
 							<span class="min-w-0 truncate">{{ model.name }}</span>
