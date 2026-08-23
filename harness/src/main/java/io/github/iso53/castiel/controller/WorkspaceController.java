@@ -5,12 +5,7 @@ import io.github.iso53.castiel.model.OpenWorkspaceRequest;
 import io.github.iso53.castiel.model.WorkspaceState;
 import io.github.iso53.castiel.service.WorkspaceSession;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 /**

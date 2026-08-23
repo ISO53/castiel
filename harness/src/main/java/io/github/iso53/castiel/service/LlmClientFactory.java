@@ -12,6 +12,8 @@ import io.github.iso53.castiel.model.HealthStatus;
 import io.github.iso53.castiel.model.LlmProviderConfig;
 import io.github.iso53.castiel.model.ModelInfo;
 import io.github.iso53.castiel.model.ProviderType;
+import org.springframework.stereotype.Service;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -20,7 +22,6 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import org.springframework.stereotype.Service;
 
 /**
  * Builds LangChain4j clients from persisted provider config.

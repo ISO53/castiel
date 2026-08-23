@@ -2,16 +2,16 @@ package io.github.iso53.castiel.controller;
 
 import io.github.iso53.castiel.model.ChatStreamRequest;
 import io.github.iso53.castiel.service.HarnessService;
-import java.util.Map;
+import io.github.iso53.castiel.tool.UserQuestionTool;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.Map;
 
 /**
  * REST & SSE endpoints for streaming AI model interactions.
@@ -21,10 +21,28 @@ import reactor.core.publisher.Mono;
 public class ChatController {
 
 	private final HarnessService harnessService;
+	private final UserQuestionTool userQuestionTool;
 
-	public ChatController(HarnessService harnessService) {
+	public ChatController(HarnessService harnessService, UserQuestionTool userQuestionTool) {
 		this.harnessService = harnessService;
+		this.userQuestionTool = userQuestionTool;
 	}
+
+	/**
+	 * Delivers the user's answer to a pending {@code ask_user_question} tool call.
+	 * The id is the tool call id the frontend received on the {@code tool_call} SSE event.
+	 */
+	@PostMapping("/questions/{id}/answer")
+	public Mono<Map<String, Boolean>> answerQuestion(@PathVariable("id") String id, @RequestBody AnswerRequest body) {
+		boolean delivered = userQuestionTool.completeUserAnswer(id, body.answer());
+		if (!delivered) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No pending question with id: " + id);
+		}
+		return Mono.just(Map.of("delivered", true));
+	}
+
+	/** Request body for answering a pending user question. */
+	public record AnswerRequest(String answer) {}
 
 	/**
 	 * Streams AI completion tokens and tool call events as Server-Sent Events (SSE)

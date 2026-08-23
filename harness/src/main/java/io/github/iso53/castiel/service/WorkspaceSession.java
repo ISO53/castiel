@@ -1,14 +1,16 @@
 package io.github.iso53.castiel.service;
 
-import dev.langchain4j.agent.tool.P;
-import dev.langchain4j.agent.tool.Tool;
 import io.github.iso53.castiel.model.WorkspaceState;
+import org.springframework.stereotype.Service;
+
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import org.springframework.stereotype.Service;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Holds the live workspace session for the harness process.
@@ -16,78 +18,78 @@ import org.springframework.stereotype.Service;
  * <p>Spring creates a single instance; inject this wherever tools need the current working
  * directory. The frontend mirrors the same state via the workspace REST API.
  *
- * <p>Methods annotated with LangChain4j {@code @Tool} are exposed to the LLM as callable
- * tools during chat (see {@link HarnessService}).
+ * <p>The {@code @Tool} methods that operate on the workspace live in the
+ * {@code io.github.iso53.castiel.tool} package; this class only owns the session state they share.
  */
 @Service
 public class WorkspaceSession {
 
-	/** Upper bound for {@link #readFile} so a huge file cannot blow up the model context. */
-	private static final int MAX_TOOL_READ_CHARS = 100_000;
-
 	private volatile WorkspaceState state = new WorkspaceState(null);
 
 	/**
-	 * LangChain4j tool: reads a text file and returns its content to the LLM.
-	 *
-	 * <p>Relative paths are resolved against the current workspace. Absolute paths are allowed,
-	 * but relative paths may never escape the workspace directory.
+	 * Files the model has seen or written during this harness run. Used by the file tools to
+	 * enforce "read before overwrite/edit" semantics; best-effort, in-memory only.
 	 */
-	@Tool(
-		name = "read_file",
-		value = {
-			"Reads a UTF-8 text file and returns its full content.",
-			"Relative paths are resolved against the current workspace directory.",
-			"Use this to inspect source code, configuration files, or notes.",
-		}
-	)
-	public String readFile(@P("Relative or absolute path of the file to read") String path) {
-		Path resolved = requireReadableFile(path);
-		try {
-			String content = Files.readString(resolved);
-			if (content.length() > MAX_TOOL_READ_CHARS) {
-				content =
-					content.substring(0, MAX_TOOL_READ_CHARS) +
-					"\n... [truncated at " +
-					MAX_TOOL_READ_CHARS +
-					" characters]";
-			}
-			return content;
-		} catch (IOException ex) {
-			throw new IllegalArgumentException("Could not read file: " + resolved, ex);
-		}
-	}
-
-	private Path requireReadableFile(String path) {
-		if (state.cwd() == null) {
-			throw new IllegalArgumentException("No workspace is open; open a workspace first or pass an absolute path");
-		}
-		if (path == null || path.isBlank()) {
-			throw new IllegalArgumentException("path is required");
-		}
-		Path requested;
-		try {
-			requested = Path.of(path.trim());
-		} catch (InvalidPathException ex) {
-			throw new IllegalArgumentException("Invalid path: " + path, ex);
-		}
-
-		Path cwd = Path.of(state.cwd());
-		Path resolved = (requested.isAbsolute() ? requested : cwd.resolve(requested)).toAbsolutePath().normalize();
-		if (!resolved.startsWith(cwd)) {
-			throw new IllegalArgumentException("Path escapes the workspace: " + path);
-		}
-		if (!Files.isRegularFile(resolved)) {
-			throw new IllegalArgumentException("Not a readable file: " + resolved);
-		}
-		return resolved;
-	}
+	private final Set<Path> knownFiles = ConcurrentHashMap.newKeySet();
 
 	/**
 	 * Returns the current workspace snapshot.
 	 */
 	public WorkspaceState get() {
 		return state;
+	}
+
+	/**
+	 * Returns the workspace root directory, or empty when no workspace is open.
+	 */
+	public Optional<Path> root() {
+		return Optional.ofNullable(state.cwd()).map(Path::of);
+	}
+
+	/**
+	 * Marks a file as known to the model (it was read or written through a tool).
+	 */
+	public void remember(Path file) {
+		knownFiles.add(file.toAbsolutePath().normalize());
+	}
+
+	/**
+	 * Whether the model has read or written this file during this harness run.
+	 */
+	public boolean isKnown(Path file) {
+		return knownFiles.contains(file.toAbsolutePath().normalize());
+	}
+
+	/**
+	 * Resolves a tool-supplied path against the workspace.
+	 *
+	 * <p>Absolute paths are returned normalized as-is (a pentest harness may inspect any
+	 * file on the system); relative paths must stay inside the workspace.
+	 *
+	 * @throws IllegalArgumentException When the path is blank/invalid, no workspace is open
+	 *                                  for a relative path, or a relative path escapes the workspace.
+	 */
+	public Path resolveInWorkspace(String path) {
+		if (path == null || path.isBlank()) {
+			throw new IllegalArgumentException("path is required");
+		}
+		Path requested;
+		try {
+			requested = Path.of(path.strip());
+		} catch (InvalidPathException ex) {
+			throw new IllegalArgumentException("Invalid path: " + path, ex);
+		}
+		if (requested.isAbsolute()) {
+			return requested.normalize();
+		}
+		Path root = root().orElseThrow(() ->
+			new IllegalArgumentException("No workspace is open; open a workspace first or pass an absolute path")
+		);
+		Path resolved = root.resolve(requested).toAbsolutePath().normalize();
+		if (!resolved.startsWith(root)) {
+			throw new IllegalArgumentException("Path escapes the workspace: " + path);
+		}
+		return resolved;
 	}
 
 	/**

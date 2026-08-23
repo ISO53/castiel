@@ -49,11 +49,13 @@
 								<Message :align="message.role === 'user' ? 'end' : 'start'">
 									<MessageContent>
 										<Collapsible v-for="call in message.toolCalls" :key="call.id"
-											v-model:open="call.open" class="w-full self-start rounded-lg border border-border">
+											v-model:open="call.open"
+											class="w-full self-start rounded-lg border border-border">
 											<CollapsibleTrigger
 												class="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] hover:bg-muted/40">
 												<Wrench class="size-3 shrink-0 text-muted-foreground" />
-												<span class="truncate font-medium text-foreground">{{ call.name }}</span>
+												<span class="truncate font-medium text-foreground">{{ call.name
+													}}</span>
 												<Spinner v-if="call.result === null" class="ml-auto size-3 shrink-0" />
 												<ChevronDown v-else
 													class="ml-auto size-3 shrink-0 text-muted-foreground transition-transform"
@@ -64,14 +66,16 @@
 													<div>
 														<p class="mb-1 font-medium text-muted-foreground">Arguments</p>
 														<pre
-															class="max-h-32 overflow-y-auto whitespace-pre-wrap break-all font-sans leading-relaxed text-foreground">{{
+															class="max-h-32 overflow-y-auto whitespace-pre-wrap break-all font-sans leading-relaxed text-foreground">
+															{{
 																formatArguments(call.arguments)
 															}}</pre>
 													</div>
 													<div v-if="call.result !== null">
 														<p class="mb-1 font-medium text-muted-foreground">Result</p>
 														<pre
-															class="max-h-40 overflow-y-auto whitespace-pre-wrap break-all font-sans leading-relaxed text-muted-foreground">{{
+															class="max-h-40 overflow-y-auto whitespace-pre-wrap break-all font-sans leading-relaxed text-muted-foreground">
+															{{
 																call.result
 															}}</pre>
 													</div>
@@ -79,8 +83,7 @@
 											</CollapsibleContent>
 										</Collapsible>
 										<Collapsible v-if="message.role === 'assistant' && message.thinking"
-											v-model:open="message.thinkingOpen"
-											class="w-full self-start">
+											v-model:open="message.thinkingOpen" class="w-full self-start">
 											<CollapsibleTrigger
 												class="flex w-full items-center justify-between gap-2 py-1 text-left text-[11px] text-muted-foreground hover:text-foreground">
 												Thinking
@@ -88,7 +91,7 @@
 													:class="message.thinkingOpen ? 'rotate-180' : ''" />
 											</CollapsibleTrigger>
 											<CollapsibleContent
-											class="py-1 text-xs leading-relaxed text-muted-foreground">
+												class="py-1 text-xs leading-relaxed text-muted-foreground">
 												<p class="whitespace-pre-wrap">{{ message.thinking }}</p>
 											</CollapsibleContent>
 										</Collapsible>
@@ -139,12 +142,53 @@
 				</Button>
 			</div>
 		</div>
+
+		<Dialog :open="!!pendingQuestion" @update:open="(open) => { if (!open) dismissQuestion(); }">
+			<DialogContent class="max-w-md">
+				<DialogHeader>
+					<DialogTitle>Castiel needs your input</DialogTitle>
+					<DialogDescription>The assistant asked you a question to continue.</DialogDescription>
+				</DialogHeader>
+				<Questionnaire v-if="pendingQuestion" class="w-full" default-item="q" :items="questionnaireItems"
+					shortcuts="letters" @submit="submitAnswer">
+					<QuestionnaireProgress />
+					<QuestionnaireItem name="q" required :multiple="pendingQuestion.multiSelect">
+						<QuestionnaireTitle>{{ pendingQuestion.question }}</QuestionnaireTitle>
+						<QuestionnaireDescription>
+							Choose an answer{{ pendingQuestion.multiSelect ? " (multiple allowed)" : "" }}, or type
+							your own under Other.
+						</QuestionnaireDescription>
+						<QuestionnaireChoices>
+							<QuestionnaireChoice v-for="option in pendingQuestion.options" :key="option"
+								:value="option">
+								<span class="font-medium">{{ option }}</span>
+							</QuestionnaireChoice>
+						</QuestionnaireChoices>
+						<div class="flex flex-col gap-1.5">
+							<p class="text-[11px] font-medium text-muted-foreground">Other</p>
+							<QuestionnaireInput placeholder="Type a custom answer…" />
+						</div>
+						<QuestionnaireError />
+					</QuestionnaireItem>
+					<QuestionnaireActions>
+						<QuestionnaireSubmit>Send answer</QuestionnaireSubmit>
+					</QuestionnaireActions>
+				</Questionnaire>
+			</DialogContent>
+		</Dialog>
 	</section>
 </template>
 
 <script>
 import { ChevronDown, Plus, SendHorizontal, Wrench } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
 	DropdownMenu,
@@ -165,6 +209,19 @@ import {
 } from "@/components/ui/message-scroller";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
+import {
+	Questionnaire,
+	QuestionnaireActions,
+	QuestionnaireChoice,
+	QuestionnaireChoices,
+	QuestionnaireDescription,
+	QuestionnaireError,
+	QuestionnaireInput,
+	QuestionnaireItem,
+	QuestionnaireProgress,
+	QuestionnaireSubmit,
+	QuestionnaireTitle,
+} from "@/components/ui/questionnaire";
 import { useSettingsStore } from "@/stores/settings";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
@@ -179,7 +236,7 @@ const THINK_CLOSE_TAGS = ["</think>", "</thinking>"];
 
 export default {
 	name: "ChatView",
-		components: {
+	components: {
 		Button,
 		ChevronDown,
 		Collapsible,
@@ -204,6 +261,22 @@ export default {
 		Spinner,
 		Textarea,
 		Wrench,
+		Dialog,
+		DialogContent,
+		DialogDescription,
+		DialogHeader,
+		DialogTitle,
+		Questionnaire,
+		QuestionnaireActions,
+		QuestionnaireChoice,
+		QuestionnaireChoices,
+		QuestionnaireDescription,
+		QuestionnaireError,
+		QuestionnaireInput,
+		QuestionnaireItem,
+		QuestionnaireProgress,
+		QuestionnaireSubmit,
+		QuestionnaireTitle,
 	},
 	data() {
 		return {
@@ -216,6 +289,7 @@ export default {
 			loadingModels: false,
 			streaming: false,
 			error: "",
+			pendingQuestion: null,
 		};
 	},
 	computed: {
@@ -239,6 +313,16 @@ export default {
 			if (!this.modelName) return "Choose a model to start chatting";
 			return "Message Castiel…";
 		},
+		questionnaireItems() {
+			if (!this.pendingQuestion) return [];
+			return [
+				{
+					name: "q",
+					required: true,
+					choices: this.pendingQuestion.options.map((option) => ({ value: option })),
+				},
+			];
+		},
 	},
 	async mounted() {
 		if (this.settings.loaded) return;
@@ -257,6 +341,34 @@ export default {
 				return JSON.stringify(JSON.parse(argumentsText), null, 2);
 			} catch {
 				return argumentsText;
+			}
+		},
+		async submitAnswer(event) {
+			if (!this.pendingQuestion) return;
+			event.preventDefault();
+			const form = new FormData(event.target);
+			const answers = form.getAll("q").map((value) => String(value).trim()).filter(Boolean);
+			await this.deliverAnswer(answers.join("; "));
+		},
+		async dismissQuestion() {
+			if (!this.pendingQuestion) return;
+			await this.deliverAnswer("");
+		},
+		async deliverAnswer(answer) {
+			const question = this.pendingQuestion;
+			this.pendingQuestion = null;
+			try {
+				const response = await fetch(
+					`${CHAT_API}/questions/${encodeURIComponent(question.id)}/answer`,
+					{
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ answer }),
+					},
+				);
+				if (!response.ok) throw new Error(await this.readError(response));
+			} catch (error) {
+				this.error = this.messageFor(error, "Could not deliver your answer to the harness.");
 			}
 		},
 		createMessage(role, content) {
@@ -321,11 +433,11 @@ export default {
 								toolCalls:
 									message.role === "assistant"
 										? message.toolCalls.map(({ id, name, arguments: args, result }) => ({
-												id,
-												name,
-												arguments: args,
-												result: result ?? "",
-											}))
+											id,
+											name,
+											arguments: args,
+											result: result ?? "",
+										}))
 										: [],
 							})),
 					}),
@@ -344,6 +456,15 @@ export default {
 							result: null,
 							open: false,
 						});
+						if (call.name === "ask_user_question") {
+							const args = JSON.parse(call.arguments || "{}");
+							this.pendingQuestion = {
+								id: call.id,
+								question: args.question ?? "(no question)",
+								options: Array.isArray(args.options) ? args.options : [],
+								multiSelect: Boolean(args.multiSelect),
+							};
+						}
 						return;
 					}
 					if (event === "tool_result") {

@@ -6,12 +6,13 @@ import io.github.iso53.castiel.model.LlmProviderConfig;
 import io.github.iso53.castiel.model.UserSettings;
 import io.github.iso53.castiel.util.AppPaths;
 import jakarta.annotation.PostConstruct;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 /**
  * Loads and persists {@link UserSettings} as JSON under the OS config directory.

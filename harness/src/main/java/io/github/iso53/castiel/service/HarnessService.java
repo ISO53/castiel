@@ -5,11 +5,7 @@ import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.agent.tool.ToolSpecifications;
-import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.data.message.SystemMessage;
-import dev.langchain4j.data.message.ToolExecutionResultMessage;
-import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.data.message.*;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
@@ -21,6 +17,14 @@ import dev.langchain4j.service.tool.ToolExecutor;
 import io.github.iso53.castiel.model.ChatStreamRequest;
 import io.github.iso53.castiel.model.ChatTurn;
 import io.github.iso53.castiel.model.LlmProviderConfig;
+import io.github.iso53.castiel.tool.ToolProvider;
+import io.github.iso53.castiel.tool.UserQuestionTool;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
+
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -29,11 +33,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.http.codec.ServerSentEvent;
-import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
 
 /**
  * Streams chat completions through LangChain4j using configured providers.
@@ -53,25 +52,37 @@ public class HarnessService {
 
 	private final LlmClientFactory llmClientFactory;
 	private final UserSettingsService userSettingsService;
+	private final UserQuestionTool userQuestionTool;
 	private final List<ToolSpecification> toolSpecifications;
 	private final Map<String, ToolExecutor> toolExecutors;
 
 	public HarnessService(
 		LlmClientFactory llmClientFactory,
 		UserSettingsService userSettingsService,
-		WorkspaceSession workspaceSession
+		List<ToolProvider> toolProviders
 	) {
 		this.llmClientFactory = llmClientFactory;
 		this.userSettingsService = userSettingsService;
 
-		this.toolSpecifications = ToolSpecifications.toolSpecificationsFrom(workspaceSession);
+		UserQuestionTool questionTool = null;
+		this.toolSpecifications = new ArrayList<>();
 		Map<String, ToolExecutor> executors = new LinkedHashMap<>();
-		for (Method method : workspaceSession.getClass().getMethods()) {
-			if (method.isAnnotationPresent(Tool.class)) {
-				String name = ToolSpecifications.toolSpecificationFrom(method).name();
-				executors.put(name, new DefaultToolExecutor(workspaceSession, method));
+		for (ToolProvider provider : toolProviders) {
+			if (provider instanceof UserQuestionTool userTool) {
+				questionTool = userTool;
+			}
+			for (Method method : provider.getClass().getMethods()) {
+				if (method.isAnnotationPresent(Tool.class)) {
+					ToolSpecification specification = ToolSpecifications.toolSpecificationFrom(method);
+					this.toolSpecifications.add(specification);
+					executors.put(specification.name(), new DefaultToolExecutor(provider, method));
+				}
 			}
 		}
+		if (questionTool == null) {
+			throw new IllegalStateException(UserQuestionTool.class.getSimpleName() + " bean is missing");
+		}
+		this.userQuestionTool = questionTool;
 		this.toolExecutors = executors;
 	}
 
@@ -190,7 +201,7 @@ public class HarnessService {
 					nextMessages.add(message);
 					for (int index = 0; index < message.toolExecutionRequests().size(); index++) {
 						ToolExecutionRequest request = withId(message.toolExecutionRequests().get(index), index);
-						String result = executeTool(request);
+						String result = executeTool(request, index);
 						sink.next(
 							event(
 								"tool_result",
@@ -210,7 +221,13 @@ public class HarnessService {
 		);
 	}
 
-	private String executeTool(ToolExecutionRequest request) {
+	private String executeTool(ToolExecutionRequest request, int index) {
+		if (UserQuestionTool.NAME.equals(request.name())) {
+			// Interactive tool: block this round until the frontend answers via
+			// POST /api/chat/questions/{toolCallId}/answer, then feed the answer back to the model.
+			return userQuestionTool.awaitUserAnswer(toolCallId(request, index));
+		}
+
 		ToolExecutor executor = toolExecutors.get(request.name());
 		if (executor == null) {
 			return "Error: unknown tool \"" + request.name() + "\"";

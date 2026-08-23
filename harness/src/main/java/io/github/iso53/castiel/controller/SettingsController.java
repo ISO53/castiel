@@ -1,22 +1,13 @@
 package io.github.iso53.castiel.controller;
 
-import io.github.iso53.castiel.model.HealthStatus;
-import io.github.iso53.castiel.model.LlmProviderConfig;
-import io.github.iso53.castiel.model.ModelInfo;
-import io.github.iso53.castiel.model.ProviderConnectResponse;
-import io.github.iso53.castiel.model.UserSettings;
+import io.github.iso53.castiel.model.*;
 import io.github.iso53.castiel.service.LlmClientFactory;
 import io.github.iso53.castiel.service.UserSettingsService;
-import java.util.List;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
 
 /**
  * Persisted user settings and provider connectivity checks.
