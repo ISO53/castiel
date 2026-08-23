@@ -19,20 +19,20 @@ import io.github.iso53.castiel.model.ChatTurn;
 import io.github.iso53.castiel.model.LlmProviderConfig;
 import io.github.iso53.castiel.tool.ToolProvider;
 import io.github.iso53.castiel.tool.UserQuestionTool;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.http.codec.ServerSentEvent;
-import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
-
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
 
 /**
  * Streams chat completions through LangChain4j using configured providers.
@@ -266,7 +266,7 @@ public class HarnessService {
 
 	private List<ChatMessage> buildMessages(List<ChatTurn> turns) {
 		List<ChatMessage> messages = new ArrayList<>();
-		String systemPrompt = readSystemPrompt();
+		String systemPrompt = systemPrompt();
 		if (!systemPrompt.isBlank()) {
 			messages.add(SystemMessage.from(systemPrompt));
 		}
@@ -324,5 +324,25 @@ public class HarnessService {
 		} catch (IOException | RuntimeException ex) {
 			return "";
 		}
+	}
+
+	/**
+	 * The system prompt from the classpath plus runtime facts the model cannot infer
+	 * (host OS, which shell the bash tool uses), so it stops guessing about its platform.
+	 * Add more build-specific facts here as needed.
+	 */
+	private static String systemPrompt() {
+		String prompt = readSystemPrompt();
+		if (prompt.isBlank()) {
+			return "";
+		}
+		return prompt.stripTrailing() + "\n\n## Environment\n" + environmentContext();
+	}
+
+	private static String environmentContext() {
+		String os = System.getProperty("os.name", "unknown OS");
+		String arch = System.getProperty("os.arch", "");
+		boolean windows = os.toLowerCase(Locale.ROOT).contains("win");
+		return "- You are running on %s (%s).%n".formatted(os, arch);
 	}
 }

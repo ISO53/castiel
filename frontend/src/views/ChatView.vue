@@ -48,45 +48,60 @@
 								:scroll-anchor="message.role === 'user'">
 								<Message :align="message.role === 'user' ? 'end' : 'start'">
 									<MessageContent>
-										<Collapsible v-for="call in message.toolCalls" :key="call.id"
-											v-model:open="call.open"
-											class="w-full self-start rounded-lg border border-border">
-											<CollapsibleTrigger
-												class="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] hover:bg-muted/40">
-												<Wrench class="size-3 shrink-0 text-muted-foreground" />
-												<span class="truncate font-medium text-foreground">{{ call.name
-													}}</span>
-												<Spinner v-if="call.result === null" class="ml-auto size-3 shrink-0" />
-												<ChevronDown v-else
-													class="ml-auto size-3 shrink-0 text-muted-foreground transition-transform"
-													:class="call.open ? 'rotate-180' : ''" />
-											</CollapsibleTrigger>
-											<CollapsibleContent>
-												<div class="space-y-2 border-t border-border px-3 py-2">
-													<div>
-														<p class="mb-1 font-medium text-muted-foreground">Arguments</p>
-														<pre
-															class="max-h-32 overflow-y-auto whitespace-pre-wrap break-all font-sans leading-relaxed text-foreground">
-															{{
-																formatArguments(call.arguments)
-															}}</pre>
+										<template v-for="call in message.toolCalls" :key="call.id">
+											<Collapsible v-if="!isPendingQuestion(call)" v-model:open="call.open"
+												class="w-full self-start">
+												<CollapsibleTrigger
+													class="flex w-full items-center justify-between gap-2 py-1 text-left text-[11px] text-muted-foreground hover:text-foreground">
+													{{ call.name }}
+													<Spinner v-if="call.result === null" class="size-3 shrink-0" />
+													<ChevronDown v-else class="size-3 transition-transform"
+														:class="call.open ? 'rotate-180' : ''" />
+												</CollapsibleTrigger>
+												<CollapsibleContent
+													class="py-1 text-xs leading-relaxed text-muted-foreground">
+													<p class="whitespace-pre-wrap break-all">{{ formatArguments(call.arguments) }}</p>
+													<p v-if="call.result !== null" class="whitespace-pre-wrap break-all">{{ call.result }}</p>
+												</CollapsibleContent>
+											</Collapsible>
+											<Questionnaire v-else class="w-full max-w-md self-start py-1" default-item="q"
+												:items="questionnaireItems(call)" shortcuts="letters"
+												@submit="submitAnswer($event, call)">
+												<QuestionnaireProgress />
+												<QuestionnaireItem name="q" required :multiple="call.multiSelect">
+													<QuestionnaireTitle>{{ call.question }}</QuestionnaireTitle>
+													<QuestionnaireDescription>
+														Choose an answer{{ call.multiSelect ? " (multiple allowed)" : "" }}, or type
+														your own under Other.
+													</QuestionnaireDescription>
+													<QuestionnaireChoices>
+														<QuestionnaireChoice v-for="option in call.options" :key="option"
+															:value="option">
+															<span class="font-medium">{{ option }}</span>
+														</QuestionnaireChoice>
+													</QuestionnaireChoices>
+													<div class="flex flex-col gap-1.5 pt-1">
+														<p class="text-[11px] font-medium">Other</p>
+														<QuestionnaireInput placeholder="Type a custom answer…" />
 													</div>
-													<div v-if="call.result !== null">
-														<p class="mb-1 font-medium text-muted-foreground">Result</p>
-														<pre
-															class="max-h-40 overflow-y-auto whitespace-pre-wrap break-all font-sans leading-relaxed text-muted-foreground">
-															{{
-																call.result
-															}}</pre>
-													</div>
-												</div>
-											</CollapsibleContent>
-										</Collapsible>
+													<QuestionnaireError />
+												</QuestionnaireItem>
+												<QuestionnaireActions>
+													<Button variant="outline" size="sm" @click="dismissQuestion(call)">
+														Dismiss
+													</Button>
+													<QuestionnaireSubmit>Send answer</QuestionnaireSubmit>
+												</QuestionnaireActions>
+											</Questionnaire>
+										</template>
 										<Collapsible v-if="message.role === 'assistant' && message.thinking"
 											v-model:open="message.thinkingOpen" class="w-full self-start">
 											<CollapsibleTrigger
 												class="flex w-full items-center justify-between gap-2 py-1 text-left text-[11px] text-muted-foreground hover:text-foreground">
-												Thinking
+												<span class="flex items-center gap-1.5">
+													<Spinner v-if="streaming && message.isThinking" class="size-3 shrink-0" />
+													Thinking
+												</span>
 												<ChevronDown class="size-3 transition-transform"
 													:class="message.thinkingOpen ? 'rotate-180' : ''" />
 											</CollapsibleTrigger>
@@ -102,7 +117,8 @@
 										<div v-else-if="message.content || streaming"
 											class="typeset typeset-docs max-w-[90%] self-start text-foreground">
 											<div v-html="renderMarkdown(message.content)" />
-											<Spinner v-if="streaming && !message.content" class="size-3" />
+											<Spinner v-if="streaming && !message.content && !isWaitingForUser(message)"
+												class="size-3" />
 										</div>
 									</MessageContent>
 								</Message>
@@ -142,53 +158,12 @@
 				</Button>
 			</div>
 		</div>
-
-		<Dialog :open="!!pendingQuestion" @update:open="(open) => { if (!open) dismissQuestion(); }">
-			<DialogContent class="max-w-md">
-				<DialogHeader>
-					<DialogTitle>Castiel needs your input</DialogTitle>
-					<DialogDescription>The assistant asked you a question to continue.</DialogDescription>
-				</DialogHeader>
-				<Questionnaire v-if="pendingQuestion" class="w-full" default-item="q" :items="questionnaireItems"
-					shortcuts="letters" @submit="submitAnswer">
-					<QuestionnaireProgress />
-					<QuestionnaireItem name="q" required :multiple="pendingQuestion.multiSelect">
-						<QuestionnaireTitle>{{ pendingQuestion.question }}</QuestionnaireTitle>
-						<QuestionnaireDescription>
-							Choose an answer{{ pendingQuestion.multiSelect ? " (multiple allowed)" : "" }}, or type
-							your own under Other.
-						</QuestionnaireDescription>
-						<QuestionnaireChoices>
-							<QuestionnaireChoice v-for="option in pendingQuestion.options" :key="option"
-								:value="option">
-								<span class="font-medium">{{ option }}</span>
-							</QuestionnaireChoice>
-						</QuestionnaireChoices>
-						<div class="flex flex-col gap-1.5">
-							<p class="text-[11px] font-medium text-muted-foreground">Other</p>
-							<QuestionnaireInput placeholder="Type a custom answer…" />
-						</div>
-						<QuestionnaireError />
-					</QuestionnaireItem>
-					<QuestionnaireActions>
-						<QuestionnaireSubmit>Send answer</QuestionnaireSubmit>
-					</QuestionnaireActions>
-				</Questionnaire>
-			</DialogContent>
-		</Dialog>
 	</section>
 </template>
 
 <script>
-import { ChevronDown, Plus, SendHorizontal, Wrench } from "@lucide/vue";
+import { ChevronDown, Plus, SendHorizontal } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
 	DropdownMenu,
@@ -260,12 +235,6 @@ export default {
 		SendHorizontal,
 		Spinner,
 		Textarea,
-		Wrench,
-		Dialog,
-		DialogContent,
-		DialogDescription,
-		DialogHeader,
-		DialogTitle,
 		Questionnaire,
 		QuestionnaireActions,
 		QuestionnaireChoice,
@@ -278,6 +247,7 @@ export default {
 		QuestionnaireSubmit,
 		QuestionnaireTitle,
 	},
+
 	data() {
 		return {
 			settings: useSettingsStore(),
@@ -289,7 +259,6 @@ export default {
 			loadingModels: false,
 			streaming: false,
 			error: "",
-			pendingQuestion: null,
 		};
 	},
 	computed: {
@@ -313,16 +282,6 @@ export default {
 			if (!this.modelName) return "Choose a model to start chatting";
 			return "Message Castiel…";
 		},
-		questionnaireItems() {
-			if (!this.pendingQuestion) return [];
-			return [
-				{
-					name: "q",
-					required: true,
-					choices: this.pendingQuestion.options.map((option) => ({ value: option })),
-				},
-			];
-		},
 	},
 	async mounted() {
 		if (this.settings.loaded) return;
@@ -343,34 +302,22 @@ export default {
 				return argumentsText;
 			}
 		},
-		async submitAnswer(event) {
-			if (!this.pendingQuestion) return;
-			event.preventDefault();
-			const form = new FormData(event.target);
-			const answers = form.getAll("q").map((value) => String(value).trim()).filter(Boolean);
-			await this.deliverAnswer(answers.join("; "));
+		isPendingQuestion(call) {
+			return call.name === "ask_user_question" && call.result === null && !call.answered;
 		},
-		async dismissQuestion() {
-			if (!this.pendingQuestion) return;
-			await this.deliverAnswer("");
+		isWaitingForUser(message) {
+			return message.toolCalls.some((call) => this.isPendingQuestion(call));
 		},
-		async deliverAnswer(answer) {
-			const question = this.pendingQuestion;
-			this.pendingQuestion = null;
-			try {
-				const response = await fetch(
-					`${CHAT_API}/questions/${encodeURIComponent(question.id)}/answer`,
-					{
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ answer }),
-					},
-				);
-				if (!response.ok) throw new Error(await this.readError(response));
-			} catch (error) {
-				this.error = this.messageFor(error, "Could not deliver your answer to the harness.");
-			}
+		questionnaireItems(call) {
+			return [
+				{
+					name: "q",
+					required: true,
+					choices: call.options.map((option) => ({ value: option })),
+				},
+			];
 		},
+
 		createMessage(role, content) {
 			return {
 				id: crypto.randomUUID(),
@@ -433,11 +380,11 @@ export default {
 								toolCalls:
 									message.role === "assistant"
 										? message.toolCalls.map(({ id, name, arguments: args, result }) => ({
-											id,
-											name,
-											arguments: args,
-											result: result ?? "",
-										}))
+												id,
+												name,
+												arguments: args,
+												result: result ?? "",
+											}))
 										: [],
 							})),
 					}),
@@ -449,22 +396,20 @@ export default {
 					if (event === "error") throw new Error(data || "The model could not complete the response.");
 					if (event === "tool_call") {
 						const call = JSON.parse(data);
-						assistantMessage.toolCalls.push({
+						const entry = {
 							id: call.id,
 							name: call.name,
 							arguments: call.arguments ?? "",
 							result: null,
 							open: false,
-						});
+						};
 						if (call.name === "ask_user_question") {
 							const args = JSON.parse(call.arguments || "{}");
-							this.pendingQuestion = {
-								id: call.id,
-								question: args.question ?? "(no question)",
-								options: Array.isArray(args.options) ? args.options : [],
-								multiSelect: Boolean(args.multiSelect),
-							};
+							entry.question = args.question ?? "(no question)";
+							entry.options = Array.isArray(args.options) ? args.options : [];
+							entry.multiSelect = Boolean(args.multiSelect);
 						}
+						assistantMessage.toolCalls.push(entry);
 						return;
 					}
 					if (event === "tool_result") {
@@ -486,7 +431,9 @@ export default {
 				});
 				this.flushStreamBuffer(assistantMessage);
 			} catch (error) {
-				if (!assistantMessage.content && !assistantMessage.thinking) this.messages.pop();
+				if (!assistantMessage.content && !assistantMessage.thinking && !assistantMessage.toolCalls.length) {
+					this.messages.pop();
+				}
 				this.error = this.messageFor(error, "The message could not be sent.");
 			} finally {
 				assistantMessage.isThinking = false;
@@ -494,6 +441,32 @@ export default {
 				this.streaming = false;
 			}
 		},
+		async submitAnswer(event, call) {
+			event.preventDefault();
+			const form = new FormData(event.target);
+			const answers = form.getAll("q").map((value) => String(value).trim()).filter(Boolean);
+			await this.deliverAnswer(call, answers.join("; "));
+		},
+		async dismissQuestion(call) {
+			await this.deliverAnswer(call, "");
+		},
+		async deliverAnswer(call, answer) {
+			call.answered = true;
+			try {
+				const response = await fetch(
+					`${CHAT_API}/questions/${encodeURIComponent(call.id)}/answer`,
+					{
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ answer }),
+					},
+				);
+				if (!response.ok) throw new Error(await this.readError(response));
+			} catch (error) {
+				this.error = this.messageFor(error, "Could not deliver your answer to the harness.");
+			}
+		},
+
 		appendStreamChunk(message, chunk) {
 			message.streamBuffer += chunk;
 			while (message.streamBuffer) {
@@ -598,3 +571,4 @@ export default {
 	},
 };
 </script>
+
