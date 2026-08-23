@@ -1,5 +1,7 @@
 package io.github.iso53.castiel.service;
 
+import dev.langchain4j.agent.tool.P;
+import dev.langchain4j.agent.tool.Tool;
 import io.github.iso53.castiel.model.WorkspaceState;
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
@@ -13,11 +15,73 @@ import org.springframework.stereotype.Service;
  *
  * <p>Spring creates a single instance; inject this wherever tools need the current working
  * directory. The frontend mirrors the same state via the workspace REST API.
+ *
+ * <p>Methods annotated with LangChain4j {@code @Tool} are exposed to the LLM as callable
+ * tools during chat (see {@link HarnessService}).
  */
 @Service
 public class WorkspaceSession {
 
+	/** Upper bound for {@link #readFile} so a huge file cannot blow up the model context. */
+	private static final int MAX_TOOL_READ_CHARS = 100_000;
+
 	private volatile WorkspaceState state = new WorkspaceState(null);
+
+	/**
+	 * LangChain4j tool: reads a text file and returns its content to the LLM.
+	 *
+	 * <p>Relative paths are resolved against the current workspace. Absolute paths are allowed,
+	 * but relative paths may never escape the workspace directory.
+	 */
+	@Tool(
+		name = "read_file",
+		value = {
+			"Reads a UTF-8 text file and returns its full content.",
+			"Relative paths are resolved against the current workspace directory.",
+			"Use this to inspect source code, configuration files, or notes.",
+		}
+	)
+	public String readFile(@P("Relative or absolute path of the file to read") String path) {
+		Path resolved = requireReadableFile(path);
+		try {
+			String content = Files.readString(resolved);
+			if (content.length() > MAX_TOOL_READ_CHARS) {
+				content =
+					content.substring(0, MAX_TOOL_READ_CHARS) +
+					"\n... [truncated at " +
+					MAX_TOOL_READ_CHARS +
+					" characters]";
+			}
+			return content;
+		} catch (IOException ex) {
+			throw new IllegalArgumentException("Could not read file: " + resolved, ex);
+		}
+	}
+
+	private Path requireReadableFile(String path) {
+		if (state.cwd() == null) {
+			throw new IllegalArgumentException("No workspace is open; open a workspace first or pass an absolute path");
+		}
+		if (path == null || path.isBlank()) {
+			throw new IllegalArgumentException("path is required");
+		}
+		Path requested;
+		try {
+			requested = Path.of(path.trim());
+		} catch (InvalidPathException ex) {
+			throw new IllegalArgumentException("Invalid path: " + path, ex);
+		}
+
+		Path cwd = Path.of(state.cwd());
+		Path resolved = (requested.isAbsolute() ? requested : cwd.resolve(requested)).toAbsolutePath().normalize();
+		if (!resolved.startsWith(cwd)) {
+			throw new IllegalArgumentException("Path escapes the workspace: " + path);
+		}
+		if (!Files.isRegularFile(resolved)) {
+			throw new IllegalArgumentException("Not a readable file: " + resolved);
+		}
+		return resolved;
+	}
 
 	/**
 	 * Returns the current workspace snapshot.
@@ -59,18 +123,13 @@ public class WorkspaceSession {
 			throw new IllegalArgumentException("Invalid folder name: " + name);
 		}
 		if (Files.exists(target)) {
-			throw new IllegalArgumentException(
-				"A folder named \"" + folderName + "\" already exists in " + parent
-			);
+			throw new IllegalArgumentException("A folder named \"" + folderName + "\" already exists in " + parent);
 		}
 
 		try {
 			Files.createDirectory(target);
 		} catch (FileAlreadyExistsException ex) {
-			throw new IllegalArgumentException(
-				"A folder named \"" + folderName + "\" already exists in " + parent,
-				ex
-			);
+			throw new IllegalArgumentException("A folder named \"" + folderName + "\" already exists in " + parent, ex);
 		} catch (IOException ex) {
 			throw new IllegalArgumentException("Could not create workspace folder: " + target, ex);
 		}

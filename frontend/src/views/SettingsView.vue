@@ -90,6 +90,71 @@
 						</div>
 					</CollapsibleContent>
 				</Collapsible>
+
+				<Collapsible v-model:open="ollamaOpen" class="rounded-lg border border-border">
+					<CollapsibleTrigger
+						class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/40">
+						<span class="text-sm font-medium text-foreground">Ollama</span>
+						<ChevronDown class="size-4 shrink-0 text-muted-foreground transition-transform duration-200"
+							:class="ollamaOpen ? 'rotate-180' : ''" />
+					</CollapsibleTrigger>
+
+					<CollapsibleContent class="border-t border-border px-4 py-4">
+						<div class="flex flex-col gap-4">
+							<div class="space-y-2 text-xs text-muted-foreground leading-relaxed">
+								<p>
+									Run open models locally with Ollama, or connect to a remote Ollama server.
+								</p>
+								<p>To use a local Ollama server:</p>
+								<ul class="list-disc space-y-1 pl-4">
+									<li>
+										Install Ollama from
+										<a class="underline underline-offset-2 hover:text-foreground"
+											href="https://ollama.com" target="_blank" rel="noreferrer">ollama.com</a>
+									</li>
+									<li>Pull a model: <code class="text-foreground">ollama pull llama3.2</code></li>
+									<li>The server starts automatically on port 11434</li>
+									<li>Click Connect below to start using Ollama in Castiel</li>
+								</ul>
+								<p>
+									Alternatively, connect to a remote Ollama server by specifying its URL:
+								</p>
+							</div>
+
+							<div class="flex flex-col gap-3">
+								<div class="flex flex-col gap-1.5">
+									<Label for="ollama_api_url">API URL</Label>
+									<Input id="ollama_api_url" v-model="ollamaForm.apiUrl" type="url"
+										placeholder="http://localhost:11434" autocomplete="off" spellcheck="false" />
+								</div>
+
+								<div class="flex flex-col gap-1.5">
+									<Label for="ollama_context">Context Window</Label>
+									<Input id="ollama_context" v-model.number="ollamaForm.contextWindow" type="number"
+										min="1" placeholder="8192" />
+									<p class="text-[11px] text-muted-foreground">
+										Default: Discovered from the server
+									</p>
+								</div>
+							</div>
+
+							<div class="flex items-center gap-3 pt-1">
+								<Button size="sm" :disabled="connectingOllama" @click="connectOllama">
+									{{ connectingOllama ? "Connecting..." : "Connect" }}
+								</Button>
+								<div v-if="ollamaHealth" class="flex items-center gap-2 text-xs">
+									<span class="size-2 rounded-full"
+										:class="ollamaHealth.ok ? 'bg-emerald-500' : 'bg-destructive'" aria-hidden="true" />
+									<span :class="ollamaHealth.ok ? 'text-muted-foreground' : 'text-destructive'">
+										{{ ollamaHealth.message }}
+									</span>
+								</div>
+							</div>
+
+							<p v-if="ollamaError" class="text-xs text-destructive wrap-break-word">{{ ollamaError }}</p>
+						</div>
+					</CollapsibleContent>
+				</Collapsible>
 			</section>
 		</div>
 	</ScrollArea>
@@ -133,6 +198,14 @@ export default {
 				contextWindow: 8192,
 				apiKey: "",
 			},
+			ollamaOpen: false,
+			connectingOllama: false,
+			ollamaError: "",
+			ollamaHealth: null,
+			ollamaForm: {
+				apiUrl: "http://localhost:11434",
+				contextWindow: 8192,
+			},
 		};
 	},
 	async mounted() {
@@ -145,6 +218,12 @@ export default {
 				contextWindow: llama.contextWindow,
 				apiKey: llama.apiKey ?? "",
 			};
+			const ollama = settings.ollama;
+			this.ollamaForm = {
+				apiUrl: ollama.apiUrl,
+				contextWindow: ollama.contextWindow,
+			};
+			this.ollamaOpen = Boolean(settings.providers.ollama);
 		} catch (err) {
 			this.error = err instanceof Error ? err.message : String(err);
 		}
@@ -161,6 +240,19 @@ export default {
 				this.error = err instanceof Error ? err.message : String(err);
 			} finally {
 				this.connecting = false;
+			}
+		},
+		async connectOllama() {
+			this.connectingOllama = true;
+			this.ollamaError = "";
+			this.ollamaHealth = null;
+			const settings = useSettingsStore();
+			try {
+				this.ollamaHealth = await settings.connectOllama(this.ollamaForm);
+			} catch (err) {
+				this.ollamaError = err instanceof Error ? err.message : String(err);
+			} finally {
+				this.connectingOllama = false;
 			}
 		},
 	},

@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 const API_BASE_URL = "http://localhost:8081/api/settings";
 
 const LLAMA_CPP_ID = "llama.cpp";
+const OLLAMA_ID = "ollama";
 
 async function readError(response) {
 	const body = await response.text();
@@ -30,6 +31,15 @@ export function defaultLlamaCppProvider() {
 	};
 }
 
+/** Default form values for the Ollama settings section (UI-only). */
+export function defaultOllamaProvider() {
+	return {
+		type: "OLLAMA",
+		apiUrl: "http://localhost:11434",
+		contextWindow: 8192,
+	};
+}
+
 export const useSettingsStore = defineStore("settings", {
 	state: () => ({
 		providers: {},
@@ -41,6 +51,12 @@ export const useSettingsStore = defineStore("settings", {
 			return {
 				...defaultLlamaCppProvider(),
 				...(state.providers[LLAMA_CPP_ID] ?? {}),
+			};
+		},
+		ollama(state) {
+			return {
+				...defaultOllamaProvider(),
+				...(state.providers[OLLAMA_ID] ?? {}),
 			};
 		},
 	},
@@ -84,6 +100,13 @@ export const useSettingsStore = defineStore("settings", {
 				apiUrl: form.apiUrl,
 				contextWindow: Number(form.contextWindow) || 8192,
 				apiKey: form.apiKey ?? "",
+			});
+		},
+		connectOllama(form) {
+			return this.connectProvider(OLLAMA_ID, {
+				type: "OLLAMA",
+				apiUrl: form.apiUrl,
+				contextWindow: Number(form.contextWindow) || 8192,
 			});
 		},
 	},

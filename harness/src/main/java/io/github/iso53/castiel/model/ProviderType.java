@@ -12,5 +12,11 @@ public enum ProviderType {
 	 * OpenAI Chat Completions + Models API (base URL ends with {@code /v1}).
 	 * Covers llama.cpp server, vLLM, LM Studio, and OpenAI itself.
 	 */
-	OPENAI_COMPATIBLE
+	OPENAI_COMPATIBLE,
+
+	/**
+	 * Native Ollama HTTP API ({@code /api/chat}, {@code /api/tags}) served at the
+	 * Ollama root URL (default {@code http://localhost:11434}). No API key required.
+	 */
+	OLLAMA,
 }

@@ -48,6 +48,36 @@
 								:scroll-anchor="message.role === 'user'">
 								<Message :align="message.role === 'user' ? 'end' : 'start'">
 									<MessageContent>
+										<Collapsible v-for="call in message.toolCalls" :key="call.id"
+											v-model:open="call.open" class="w-full self-start rounded-lg border border-border">
+											<CollapsibleTrigger
+												class="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] hover:bg-muted/40">
+												<Wrench class="size-3 shrink-0 text-muted-foreground" />
+												<span class="truncate font-medium text-foreground">{{ call.name }}</span>
+												<Spinner v-if="call.result === null" class="ml-auto size-3 shrink-0" />
+												<ChevronDown v-else
+													class="ml-auto size-3 shrink-0 text-muted-foreground transition-transform"
+													:class="call.open ? 'rotate-180' : ''" />
+											</CollapsibleTrigger>
+											<CollapsibleContent>
+												<div class="space-y-2 border-t border-border px-3 py-2">
+													<div>
+														<p class="mb-1 font-medium text-muted-foreground">Arguments</p>
+														<pre
+															class="max-h-32 overflow-y-auto whitespace-pre-wrap break-all font-sans leading-relaxed text-foreground">{{
+																formatArguments(call.arguments)
+															}}</pre>
+													</div>
+													<div v-if="call.result !== null">
+														<p class="mb-1 font-medium text-muted-foreground">Result</p>
+														<pre
+															class="max-h-40 overflow-y-auto whitespace-pre-wrap break-all font-sans leading-relaxed text-muted-foreground">{{
+																call.result
+															}}</pre>
+													</div>
+												</div>
+											</CollapsibleContent>
+										</Collapsible>
 										<Collapsible v-if="message.role === 'assistant' && message.thinking"
 											v-model:open="message.thinkingOpen"
 											class="w-full self-start">
@@ -113,7 +143,7 @@
 </template>
 
 <script>
-import { ChevronDown, Plus, SendHorizontal } from "@lucide/vue";
+import { ChevronDown, Plus, SendHorizontal, Wrench } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -142,9 +172,14 @@ import { marked } from "marked";
 const SETTINGS_API = "http://localhost:8081/api/settings";
 const CHAT_API = "http://localhost:8081/api/chat/stream";
 
+// The harness normalizes provider-side thinking to <think> tags, but some models emit
+// raw <think>/<thinking> tags inline in the content stream — accept every spelling.
+const THINK_OPEN_TAGS = ["<think>", "<thinking>"];
+const THINK_CLOSE_TAGS = ["</think>", "</thinking>"];
+
 export default {
 	name: "ChatView",
-	components: {
+		components: {
 		Button,
 		ChevronDown,
 		Collapsible,
@@ -168,6 +203,7 @@ export default {
 		SendHorizontal,
 		Spinner,
 		Textarea,
+		Wrench,
 	},
 	data() {
 		return {
@@ -216,6 +252,13 @@ export default {
 		renderMarkdown(content) {
 			return DOMPurify.sanitize(marked.parse(content, { async: false }));
 		},
+		formatArguments(argumentsText) {
+			try {
+				return JSON.stringify(JSON.parse(argumentsText), null, 2);
+			} catch {
+				return argumentsText;
+			}
+		},
 		createMessage(role, content) {
 			return {
 				id: crypto.randomUUID(),
@@ -226,6 +269,7 @@ export default {
 				isThinking: false,
 				streamBuffer: "",
 				trimResponseLeadingNewlines: false,
+				toolCalls: [],
 			};
 		},
 		async startChat(nextProviderId) {
@@ -271,7 +315,19 @@ export default {
 						modelName: this.modelName,
 						messages: this.messages
 							.slice(0, -1)
-							.map(({ role, content: messageContent }) => ({ role, content: messageContent })),
+							.map((message) => ({
+								role: message.role,
+								content: message.content ?? "",
+								toolCalls:
+									message.role === "assistant"
+										? message.toolCalls.map(({ id, name, arguments: args, result }) => ({
+												id,
+												name,
+												arguments: args,
+												result: result ?? "",
+											}))
+										: [],
+							})),
 					}),
 				});
 				if (!response.ok) throw new Error(await this.readError(response));
@@ -279,6 +335,32 @@ export default {
 
 				await this.readEventStream(response.body, (event, data) => {
 					if (event === "error") throw new Error(data || "The model could not complete the response.");
+					if (event === "tool_call") {
+						const call = JSON.parse(data);
+						assistantMessage.toolCalls.push({
+							id: call.id,
+							name: call.name,
+							arguments: call.arguments ?? "",
+							result: null,
+							open: false,
+						});
+						return;
+					}
+					if (event === "tool_result") {
+						const payload = JSON.parse(data);
+						const call = assistantMessage.toolCalls.find((candidate) => candidate.id === payload.id);
+						if (call) call.result = payload.result ?? "";
+						else {
+							assistantMessage.toolCalls.push({
+								id: payload.id,
+								name: payload.name ?? "",
+								arguments: "",
+								result: payload.result ?? "",
+								open: false,
+							});
+						}
+						return;
+					}
 					this.appendStreamChunk(assistantMessage, data);
 				});
 				this.flushStreamBuffer(assistantMessage);
@@ -294,11 +376,19 @@ export default {
 		appendStreamChunk(message, chunk) {
 			message.streamBuffer += chunk;
 			while (message.streamBuffer) {
-				const tag = message.isThinking ? "</think>" : "<think>";
-				const tagIndex = message.streamBuffer.indexOf(tag);
-				if (tagIndex >= 0) {
-					this.appendToActivePart(message, message.streamBuffer.slice(0, tagIndex));
-					message.streamBuffer = message.streamBuffer.slice(tagIndex + tag.length);
+				const tags = message.isThinking ? THINK_CLOSE_TAGS : THINK_OPEN_TAGS;
+				let matchedTag = null;
+				let matchIndex = -1;
+				for (const tag of tags) {
+					const index = message.streamBuffer.indexOf(tag);
+					if (index >= 0 && (matchIndex < 0 || index < matchIndex)) {
+						matchedTag = tag;
+						matchIndex = index;
+					}
+				}
+				if (matchedTag !== null) {
+					this.appendToActivePart(message, message.streamBuffer.slice(0, matchIndex));
+					message.streamBuffer = message.streamBuffer.slice(matchIndex + matchedTag.length);
 					message.isThinking = !message.isThinking;
 					if (message.isThinking) message.thinkingOpen = true;
 					else {
@@ -308,7 +398,7 @@ export default {
 					continue;
 				}
 
-				const retainedLength = this.trailingTagPrefixLength(message.streamBuffer, tag);
+				const retainedLength = Math.max(0, ...tags.map((tag) => this.trailingTagPrefixLength(message.streamBuffer, tag)));
 				this.appendToActivePart(message, message.streamBuffer.slice(0, -retainedLength || undefined));
 				message.streamBuffer = retainedLength ? message.streamBuffer.slice(-retainedLength) : "";
 				return;

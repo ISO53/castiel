@@ -4,7 +4,3 @@ server:
 spring:
   application:
     name: castiel
-
-harness:
-  default-base-url: "http://localhost:8080/v1"
-  default-model-name: "DevQuasar/huihui-ai.Qwen3-0.6B-abliterated-GGUF:Q6_K"

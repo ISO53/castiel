@@ -27,21 +27,19 @@ public class ChatController {
 	}
 
 	/**
-	 * Streams AI completion tokens as Server-Sent Events (SSE) for a full chat thread.
+	 * Streams AI completion tokens and tool call events as Server-Sent Events (SSE)
+	 * for a full chat thread. The event protocol is documented on {@link HarnessService#stream}.
 	 */
 	@PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
 	public Flux<ServerSentEvent<String>> streamChat(@RequestBody ChatStreamRequest request) {
-		return harnessService
-			.stream(request)
-			.map(token -> ServerSentEvent.<String>builder().data(token).build())
-			.onErrorResume(ex ->
-				Flux.just(
-					ServerSentEvent.<String>builder()
-						.event("error")
-						.data(ex.getMessage() != null ? ex.getMessage() : "Unknown provider error")
-						.build()
-				)
-			);
+		return harnessService.stream(request).onErrorResume(ex ->
+			Flux.just(
+				ServerSentEvent.<String>builder()
+					.event("error")
+					.data(ex.getMessage() != null ? ex.getMessage() : "Unknown provider error")
+					.build()
+			)
+		);
 	}
 
 	/**
