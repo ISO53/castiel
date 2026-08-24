@@ -1,10 +1,10 @@
 package io.github.iso53.castiel.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.model.catalog.ModelCatalog;
 import dev.langchain4j.model.catalog.ModelDescription;
 import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.ollama.OllamaModel;
+import dev.langchain4j.model.ollama.OllamaModels;
 import dev.langchain4j.model.ollama.OllamaStreamingChatModel;
 import dev.langchain4j.model.openai.OpenAiModelCatalog;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
@@ -14,14 +14,10 @@ import io.github.iso53.castiel.model.ModelInfo;
 import io.github.iso53.castiel.model.ProviderType;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Builds LangChain4j clients from persisted provider config.
@@ -33,8 +29,8 @@ public class LlmClientFactory {
 
 	private static final String FALLBACK_API_KEY = "no-key-required";
 	private static final Duration HEALTH_TIMEOUT = Duration.ofSeconds(5);
-	private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder().connectTimeout(HEALTH_TIMEOUT).build();
-	private static final ObjectMapper JSON = new ObjectMapper();
+	/** Model metadata (/api/show via OllamaModels#modelCard) may load from disk on first call. */
+	private static final Duration SHOW_TIMEOUT = Duration.ofSeconds(10);
 
 	/**
 	 * Streaming chat model for a persisted provider entry.
@@ -56,6 +52,9 @@ public class LlmClientFactory {
 			case OLLAMA -> OllamaStreamingChatModel.builder()
 				.baseUrl(rootUrl(config.apiUrl()))
 				.modelName(modelName)
+				// Honor the user-configured runtime context window; otherwise Ollama
+				// silently truncates history at its own default (~2-4k tokens).
+				.numCtx(config.contextWindow())
 				.returnThinking(true)
 				.timeout(Duration.ofSeconds(120))
 				.logRequests(false)
@@ -66,13 +65,15 @@ public class LlmClientFactory {
 
 	/**
 	 * Lists models advertised by the provider: via LangChain4j {@link ModelCatalog}
-	 * ({@code GET /v1/models}) for OpenAI-compatible servers, or via {@code GET /api/tags}
-	 * for Ollama (no catalog support yet in LangChain4j).
+	 * ({@code GET /v1/models}) for OpenAI-compatible servers, or via LangChain4j's
+	 * {@link OllamaModels} helper ({@code GET /api/tags} + {@code POST /api/show})
+	 * for Ollama, which has no catalog implementation yet. For Ollama, each model's
+	 * true context length is additionally resolved from its model card (best-effort).
 	 */
 	public List<ModelInfo> listModels(LlmProviderConfig config) {
 		return switch (config.type()) {
 			case OPENAI_COMPATIBLE -> openAiModelNames(config);
-			case OLLAMA -> ollamaModelNames(config);
+			case OLLAMA -> ollamaModelInfos(config);
 		};
 	}
 
@@ -110,40 +111,59 @@ public class LlmClientFactory {
 			.toList();
 	}
 
-	private List<ModelInfo> ollamaModelNames(LlmProviderConfig config) {
-		HttpRequest request = HttpRequest.newBuilder()
-			.uri(URI.create(rootUrl(config.apiUrl()) + "/api/tags"))
-			.timeout(HEALTH_TIMEOUT)
-			.GET()
-			.build();
-		HttpResponse<String> response;
+	private List<ModelInfo> ollamaModelInfos(LlmProviderConfig config) {
+		OllamaModels ollama = ollamaModels(config.apiUrl());
+		List<OllamaModel> available;
 		try {
-			response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
-		} catch (IOException ex) {
+			available = ollama.availableModels().content();
+		} catch (RuntimeException ex) {
 			throw new IllegalStateException("Could not reach Ollama at " + config.apiUrl(), ex);
-		} catch (InterruptedException ex) {
-			Thread.currentThread().interrupt();
-			throw new IllegalStateException("Interrupted while calling Ollama at " + config.apiUrl(), ex);
 		}
-		if (response.statusCode() != 200) {
-			throw new IllegalStateException("Ollama returned HTTP " + response.statusCode());
+		if (available == null) {
+			return List.of();
 		}
+		List<ModelInfo> models = new ArrayList<>();
+		for (OllamaModel model : available) {
+			String name = model.getName();
+			if (name == null || name.isBlank()) {
+				continue;
+			}
+			models.add(new ModelInfo(name, ollamaContextLength(ollama, name)));
+		}
+		return models;
+	}
 
-		JsonNode tags;
+	/**
+	 * Resolves the model's true trained context length from its Ollama model card
+	 * (served by {@code POST /api/show}). The card's {@code model_info} map carries
+	 * an architecture-specific key (e.g. {@code llama.context_length}). Best-effort:
+	 * returns {@code null} when unavailable, so that model listing keeps working.
+	 */
+	private Integer ollamaContextLength(OllamaModels ollama, String modelName) {
+		Map<String, Object> modelInfo;
 		try {
-			tags = JSON.readTree(response.body());
-		} catch (IOException ex) {
-			throw new IllegalStateException("Could not parse Ollama model list", ex);
+			modelInfo = ollama.modelCard(modelName).content().getModelInfo();
+		} catch (RuntimeException ex) {
+			return null;
 		}
-		List<String> names = new ArrayList<>();
-		for (JsonNode model : tags.path("models")) {
-			names.add(model.path("name").asText(null));
+		if (modelInfo == null) {
+			return null;
 		}
-		return names
-			.stream()
-			.filter(name -> name != null && !name.isBlank())
-			.map(ModelInfo::new)
-			.toList();
+		for (Map.Entry<String, Object> field : modelInfo.entrySet()) {
+			if (field.getKey().endsWith(".context_length") && field.getValue() instanceof Number number) {
+				return number.intValue();
+			}
+		}
+		return null;
+	}
+
+	private OllamaModels ollamaModels(String apiUrl) {
+		return OllamaModels.builder()
+			.baseUrl(rootUrl(apiUrl))
+			.timeout(SHOW_TIMEOUT)
+			.logRequests(false)
+			.logResponses(false)
+			.build();
 	}
 
 	/**
