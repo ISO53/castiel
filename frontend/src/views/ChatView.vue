@@ -48,6 +48,22 @@
 								:scroll-anchor="message.role === 'user'">
 								<Message :align="message.role === 'user' ? 'end' : 'start'">
 									<MessageContent>
+										<Collapsible v-if="message.role === 'assistant' && message.thinking"
+											v-model:open="message.thinkingOpen" class="w-full self-start">
+											<CollapsibleTrigger
+												class="flex w-full items-center justify-between gap-2 py-1 text-left text-[11px] text-muted-foreground hover:text-foreground">
+												<span class="flex items-center gap-1.5">
+													<Spinner v-if="streaming && message.isThinking" class="size-3 shrink-0" />
+													Thinking
+												</span>
+												<ChevronDown class="size-3 transition-transform"
+													:class="message.thinkingOpen ? 'rotate-180' : ''" />
+											</CollapsibleTrigger>
+											<CollapsibleContent
+												class="py-1 text-xs leading-relaxed text-muted-foreground">
+												<p class="whitespace-pre-wrap">{{ message.thinking }}</p>
+											</CollapsibleContent>
+										</Collapsible>
 										<template v-for="call in message.toolCalls" :key="call.id">
 											<Collapsible v-if="!isPendingQuestion(call)" v-model:open="call.open"
 												class="w-full self-start">
@@ -94,22 +110,6 @@
 												</QuestionnaireActions>
 											</Questionnaire>
 										</template>
-										<Collapsible v-if="message.role === 'assistant' && message.thinking"
-											v-model:open="message.thinkingOpen" class="w-full self-start">
-											<CollapsibleTrigger
-												class="flex w-full items-center justify-between gap-2 py-1 text-left text-[11px] text-muted-foreground hover:text-foreground">
-												<span class="flex items-center gap-1.5">
-													<Spinner v-if="streaming && message.isThinking" class="size-3 shrink-0" />
-													Thinking
-												</span>
-												<ChevronDown class="size-3 transition-transform"
-													:class="message.thinkingOpen ? 'rotate-180' : ''" />
-											</CollapsibleTrigger>
-											<CollapsibleContent
-												class="py-1 text-xs leading-relaxed text-muted-foreground">
-												<p class="whitespace-pre-wrap">{{ message.thinking }}</p>
-											</CollapsibleContent>
-										</Collapsible>
 										<div v-if="message.role === 'user'"
 											class="max-w-[90%] self-end whitespace-pre-wrap rounded-lg bg-primary px-3 py-2 text-xs leading-relaxed text-primary-foreground">
 											{{ message.content }}
@@ -117,8 +117,6 @@
 										<div v-else-if="message.content || streaming"
 											class="typeset typeset-docs max-w-[90%] self-start text-foreground">
 											<div v-html="renderMarkdown(message.content)" />
-											<Spinner v-if="streaming && !message.content && !isWaitingForUser(message)"
-												class="size-3" />
 										</div>
 									</MessageContent>
 								</Message>
@@ -203,6 +201,7 @@ import { marked } from "marked";
 
 const SETTINGS_API = "http://localhost:8081/api/settings";
 const CHAT_API = "http://localhost:8081/api/chat/stream";
+const CHAT_BASE = "http://localhost:8081/api/chat";
 
 // The harness normalizes provider-side thinking to <think> tags, but some models emit
 // raw <think>/<thinking> tags inline in the content stream — accept every spelling.
@@ -304,9 +303,6 @@ export default {
 		},
 		isPendingQuestion(call) {
 			return call.name === "ask_user_question" && call.result === null && !call.answered;
-		},
-		isWaitingForUser(message) {
-			return message.toolCalls.some((call) => this.isPendingQuestion(call));
 		},
 		questionnaireItems(call) {
 			return [
@@ -454,7 +450,7 @@ export default {
 			call.answered = true;
 			try {
 				const response = await fetch(
-					`${CHAT_API}/questions/${encodeURIComponent(call.id)}/answer`,
+					`${CHAT_BASE}/questions/${encodeURIComponent(call.id)}/answer`,
 					{
 						method: "POST",
 						headers: { "Content-Type": "application/json" },

@@ -57,38 +57,68 @@ public class WebSearchTool implements ToolProvider {
 		}
 		int limit = maxResults == null ? DEFAULT_RESULTS : Math.clamp(maxResults.intValue(), 1, MAX_RESULTS);
 
-		try {
-			String form = "q=" + URLEncoder.encode(query.strip(), StandardCharsets.UTF_8) + "&b=&l=us-en";
-			HttpRequest request = HttpRequest.newBuilder(URI.create(SEARCH_ENDPOINT))
-				.timeout(Duration.ofSeconds(15))
-				.header("Content-Type", "application/x-www-form-urlencoded")
-				.header("User-Agent", USER_AGENTS.get((int) (Math.random() * USER_AGENTS.size())))
-				.POST(HttpRequest.BodyPublishers.ofString(form))
-				.build();
-			HttpResponse<String> response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
-			if (response.statusCode() != 200) {
-				return "Error: DuckDuckGo returned HTTP " + response.statusCode();
+		// DuckDuckGo's endpoint intermittently rate-limits automation (HTTP 429/202). Retry a
+		// couple of times with a fresh user agent before giving up.
+		SearchResponse response = null;
+		IOException lastError = null;
+		for (int attempt = 0; attempt < 3 && response == null; attempt++) {
+			try {
+				String form = "q=" + URLEncoder.encode(query.strip(), StandardCharsets.UTF_8) + "&b=&l=us-en";
+				HttpRequest request =
+					HttpRequest
+						.newBuilder(URI.create(SEARCH_ENDPOINT))
+						.timeout(Duration.ofSeconds(20))
+						.header("Content-Type", "application/x-www-form-urlencoded")
+						.header(
+							"User-Agent",
+							USER_AGENTS.get((int) (Math.random() * USER_AGENTS.size()))
+						)
+						.POST(HttpRequest.BodyPublishers.ofString(form))
+						.build();
+				HttpResponse<byte[]> candidate =
+					HTTP.send(request, HttpResponse.BodyHandlers.ofByteArray());
+				// DuckDuckGo serves UTF-8 bytes but mislabels them as ISO-8859-1, so decode
+				// manually instead of trusting the response charset header.
+				if (candidate.statusCode() == 429 || candidate.statusCode() == 503 || candidate.statusCode() == 202) {
+					Thread.sleep(2_000L * (attempt + 1));
+					continue;
+				}
+				response = new SearchResponse(
+					candidate.statusCode(),
+					new String(candidate.body(), StandardCharsets.UTF_8)
+				);
+			} catch (IOException ex) {
+				lastError = ex;
+			} catch (InterruptedException ex) {
+				Thread.currentThread().interrupt();
+				return "Error: interrupted while searching";
 			}
-
-			List<SearchResult> results = parseResults(response.body(), limit);
-			if (results.isEmpty()) {
-				return "No results found for: " + query.strip();
-			}
-			StringBuilder out = new StringBuilder();
-			for (int i = 0; i < results.size(); i++) {
-				SearchResult result = results.get(i);
-				out.append("[%d] %s%n%s%n%s%n%n".formatted(i + 1, result.title(), result.url(), result.snippet()));
-			}
-			return out.toString().strip();
-		} catch (IOException ex) {
-			return "Error: search failed: " + ex.getMessage();
-		} catch (InterruptedException ex) {
-			Thread.currentThread().interrupt();
-			return "Error: interrupted while searching";
 		}
+
+		if (response == null) {
+			return lastError != null
+				? "Error: search failed after retries: " + lastError.getMessage()
+				: "Error: DuckDuckGo kept rejecting the request; try again shortly";
+		}
+		if (response.statusCode() != 200) {
+			return "Error: DuckDuckGo returned HTTP " + response.statusCode();
+		}
+
+		List<SearchResult> results = parseResults(response.body(), limit);
+		if (results.isEmpty()) {
+			return "No results found for: " + query.strip();
+		}
+		StringBuilder out = new StringBuilder();
+		for (int i = 0; i < results.size(); i++) {
+			SearchResult result = results.get(i);
+			out.append("[%d] %s%n%s%n%s%n%n".formatted(i + 1, result.title(), result.url(), result.snippet()));
+		}
+		return out.toString().strip();
 	}
 
 	private record SearchResult(String title, String url, String snippet) {}
+
+	private record SearchResponse(int statusCode, String body) {}
 
 	/**
 	 * Parses the results page: each organic result lives in a {@code div.result__body} with an

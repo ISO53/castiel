@@ -50,16 +50,46 @@ public class WebFetchTool implements ToolProvider {
 		}
 
 		try {
-			HttpRequest request = HttpRequest.newBuilder(URI.create(cleanedUrl))
-				.timeout(Duration.ofSeconds(30))
-				.header(
-					"User-Agent",
-					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
-				)
-				.header("Accept", "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8")
-				.GET()
-				.build();
-			HttpResponse<String> response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
+			IOException lastError = null;
+			HttpResponse<String> response = null;
+			for (int attempt = 0; attempt < 2 && response == null; attempt++) {
+				try {
+					HttpRequest request =
+						HttpRequest
+							.newBuilder(URI.create(cleanedUrl))
+							.timeout(Duration.ofSeconds(60))
+							.header(
+								"User-Agent",
+								"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+							)
+							.header("Accept", "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8")
+							.GET()
+							.build();
+					HttpResponse<String> candidate = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
+					if (candidate.statusCode() == 429 || candidate.statusCode() == 503) {
+						Thread.sleep(2_000L * (attempt + 1));
+						continue;
+					}
+					response = candidate;
+				} catch (IOException ex) {
+					lastError = ex;
+					try {
+						Thread.sleep(1_500L);
+					} catch (InterruptedException sleepEx) {
+						Thread.currentThread().interrupt();
+						return "Error: interrupted while fetching " + cleanedUrl;
+					}
+				} catch (InterruptedException ex) {
+					Thread.currentThread().interrupt();
+					return "Error: interrupted while fetching " + cleanedUrl;
+				}
+			}
+
+			if (response == null) {
+				return lastError != null
+					? "Error: could not fetch " + cleanedUrl + ": " + lastError.getMessage()
+					: "Error: could not fetch " + cleanedUrl + " after retries";
+			}
 			if (response.statusCode() != 200) {
 				return "Error: the server returned HTTP " + response.statusCode() + " for " + cleanedUrl;
 			}
@@ -77,11 +107,6 @@ public class WebFetchTool implements ToolProvider {
 			return "# " + title + "\nURL: " + cleanedUrl + "\n\n" + markdown;
 		} catch (IllegalArgumentException ex) {
 			return "Error: invalid URL: " + cleanedUrl;
-		} catch (IOException ex) {
-			return "Error: could not fetch " + cleanedUrl + ": " + ex.getMessage();
-		} catch (InterruptedException ex) {
-			Thread.currentThread().interrupt();
-			return "Error: interrupted while fetching " + cleanedUrl;
 		}
 	}
 
