@@ -22,11 +22,8 @@
 			</DropdownMenu>
 		</header>
 
-		<div class="min-h-0 flex-1">
-			<MessageScrollerProvider>
-				<MessageScroller>
-					<MessageScrollerViewport class="px-3 py-4">
-						<MessageScrollerContent class="gap-4">
+		<Conversation class="min-h-0" aria-label="Chat messages">
+			<ConversationContent class="gap-4 px-3 py-4">
 							<div v-if="!providerId"
 								class="m-auto max-w-56 text-center text-xs leading-relaxed text-muted-foreground">
 								Start a new chat and choose one of your configured providers.
@@ -44,125 +41,180 @@
 								Choose a model below to start chatting.
 							</div>
 
-							<MessageScrollerItem v-for="message in messages" :key="message.id" :message-id="message.id"
-								:scroll-anchor="message.role === 'user'">
-								<Message :align="message.role === 'user' ? 'end' : 'start'">
-									<MessageContent>
-										<Collapsible v-if="message.role === 'assistant' && message.thinking"
-											v-model:open="message.thinkingOpen" class="w-full self-start">
-											<CollapsibleTrigger
-												class="flex w-full items-center justify-between gap-2 py-1 text-left text-[11px] text-muted-foreground hover:text-foreground">
-												<span class="flex items-center gap-1.5">
-													<Spinner v-if="streaming && message.isThinking" class="size-3 shrink-0" />
-													Thinking
-												</span>
-												<ChevronDown class="size-3 transition-transform"
-													:class="message.thinkingOpen ? 'rotate-180' : ''" />
-											</CollapsibleTrigger>
-											<CollapsibleContent
-												class="py-1 text-xs leading-relaxed text-muted-foreground">
-												<p class="whitespace-pre-wrap">{{ message.thinking }}</p>
-											</CollapsibleContent>
-										</Collapsible>
-										<template v-for="call in message.toolCalls" :key="call.id">
-											<Collapsible v-if="!isPendingQuestion(call)" v-model:open="call.open"
+							<Message v-for="message in messages" :key="message.id"
+								:align="message.role === 'user' ? 'end' : 'start'">
+								<MessageContent>
+									<div v-if="message.role === 'user'"
+										class="max-w-[90%] self-end whitespace-pre-wrap rounded-lg bg-primary px-3 py-2 text-xs leading-relaxed text-primary-foreground">
+										{{ messageText(message) }}
+									</div>
+									<template v-for="(part, partIndex) in message.parts" v-else :key="partIndex">
+										<!-- Thinking/reasoning segment -->
+										<Reasoning v-if="part.type === 'thinking'" class="w-full self-start"
+											:is-streaming="streaming && message.isThinking
+												&& partIndex === message.parts.length - 1">
+											<ReasoningTrigger />
+											<ReasoningContent :content="part.text"
+												class="text-xs leading-relaxed text-muted-foreground/80" />
+										</Reasoning>
+
+										<!-- Tool call segment -->
+										<template v-else-if="part.type === 'tool'">
+											<Tool v-if="!isPendingQuestion(part)" :default-open="part.result === null"
 												class="w-full self-start">
-												<CollapsibleTrigger
-													class="flex w-full items-center justify-between gap-2 py-1 text-left text-[11px] text-muted-foreground hover:text-foreground">
-													{{ call.name }}
-													<Spinner v-if="call.result === null" class="size-3 shrink-0" />
-													<ChevronDown v-else class="size-3 transition-transform"
-														:class="call.open ? 'rotate-180' : ''" />
-												</CollapsibleTrigger>
-												<CollapsibleContent
-													class="py-1 text-xs leading-relaxed text-muted-foreground">
-													<p class="whitespace-pre-wrap break-all">{{ formatArguments(call.arguments) }}</p>
-													<p v-if="call.result !== null" class="whitespace-pre-wrap break-all">{{ call.result }}</p>
-												</CollapsibleContent>
-											</Collapsible>
-											<Questionnaire v-else class="w-full max-w-md self-start py-1" default-item="q"
-												:items="questionnaireItems(call)" shortcuts="letters"
-												@submit="submitAnswer($event, call)">
+												<ToolHeader :state="toolState(part)" :title="part.name"
+													:type="`tool-${part.name}`" />
+												<ToolContent>
+													<ToolInput :input="toolInput(part)" />
+													<ToolOutput v-if="part.result !== null" :output="part.result" />
+												</ToolContent>
+											</Tool>
+
+											<Sources v-if="!isPendingQuestion(part) && sourcesFor(part).length"
+												class="w-full self-start">
+												<SourcesTrigger :count="sourcesFor(part).length" />
+												<SourcesContent>
+													<Source v-for="source in sourcesFor(part)" :key="source.href"
+														:href="source.href" :title="source.title" class="text-xs" />
+												</SourcesContent>
+											</Sources>
+
+											<Questionnaire v-if="isPendingQuestion(part)"
+												class="w-full max-w-md self-start py-1" default-item="q"
+												:items="questionnaireItems(part)" shortcuts="letters"
+												@submit="submitAnswer($event, part)">
 												<QuestionnaireProgress />
-												<QuestionnaireItem name="q" required :multiple="call.multiSelect">
-													<QuestionnaireTitle>{{ call.question }}</QuestionnaireTitle>
+												<QuestionnaireItem name="q" required :multiple="part.multiSelect">
+													<QuestionnaireTitle>{{ part.question }}</QuestionnaireTitle>
 													<QuestionnaireDescription>
-														Choose an answer{{ call.multiSelect ? " (multiple allowed)" : "" }}, or type
-														your own under Other.
+														Choose an answer{{ part.multiSelect ? " (multiple allowed)" : "" }},
+														or type your own under Other.
 													</QuestionnaireDescription>
 													<QuestionnaireChoices>
-														<QuestionnaireChoice v-for="option in call.options" :key="option"
+														<QuestionnaireChoice v-for="option in part.options" :key="option"
 															:value="option">
 															<span class="font-medium">{{ option }}</span>
 														</QuestionnaireChoice>
 													</QuestionnaireChoices>
 													<div class="flex flex-col gap-1.5 pt-1">
 														<p class="text-[11px] font-medium">Other</p>
-														<QuestionnaireInput placeholder="Type a custom answer…" />
+														<QuestionnaireInput placeholder="Type a custom answer�" />
 													</div>
 													<QuestionnaireError />
 												</QuestionnaireItem>
 												<QuestionnaireActions>
-													<Button variant="outline" size="sm" @click="dismissQuestion(call)">
+													<Button variant="outline" size="sm" @click="dismissQuestion(part)">
 														Dismiss
 													</Button>
 													<QuestionnaireSubmit>Send answer</QuestionnaireSubmit>
 												</QuestionnaireActions>
 											</Questionnaire>
 										</template>
-										<div v-if="message.role === 'user'"
-											class="max-w-[90%] self-end whitespace-pre-wrap rounded-lg bg-primary px-3 py-2 text-xs leading-relaxed text-primary-foreground">
-											{{ message.content }}
+
+										<!-- Assistant text segment (markdown + code blocks) -->
+										<div v-else
+											class="flex min-w-0 max-w-[90%] flex-col items-start gap-2 self-start text-foreground">
+											<template v-for="(segment, segmentIndex) in contentSegments(part.text)"
+												:key="segmentIndex">
+												<div v-if="segment.type === 'text'" class="typeset typeset-docs w-full"
+													v-html="segment.html" />
+												<CodeBlock v-else class="w-full" :code="segment.code"
+													:language="segment.language">
+													<CodeBlockHeader>
+														<CodeBlockTitle>
+															<CodeBlockFilename>{{ segment.filename }}</CodeBlockFilename>
+														</CodeBlockTitle>
+														<CodeBlockActions>
+															<CodeBlockCopyButton />
+														</CodeBlockActions>
+													</CodeBlockHeader>
+												</CodeBlock>
+											</template>
 										</div>
-										<div v-else-if="message.content || streaming"
-											class="typeset typeset-docs max-w-[90%] self-start text-foreground">
-											<div v-html="renderMarkdown(message.content)" />
-										</div>
-									</MessageContent>
-								</Message>
-							</MessageScrollerItem>
-						</MessageScrollerContent>
-					</MessageScrollerViewport>
-					<MessageScrollerButton />
-				</MessageScroller>
-			</MessageScrollerProvider>
-		</div>
+									</template>
+								</MessageContent>
+							</Message>
+
+							<Loader v-if="assistantIdle" class="mx-auto" />
+							</ConversationContent>
+							<ConversationScrollButton />
+						</Conversation>
 
 		<div class="shrink-0 border-t p-3">
 			<p v-if="error" class="mb-2 text-xs text-destructive">{{ error }}</p>
-			<Textarea v-model="prompt" class="min-h-18" :disabled="!ready || streaming"
-				:placeholder="composerPlaceholder" @keydown="handlePromptKeydown" />
-			<div class="mt-2 flex items-center justify-between gap-2">
-				<DropdownMenu>
-					<DropdownMenuTrigger as-child>
-						<Button variant="outline" size="sm"
-							:disabled="!providerId || loadingModels || !models.length || streaming">
-							<span class="max-w-56 truncate">{{ selectedModel?.name ?? "Select model" }}</span>
-							<ChevronDown />
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="start" class="w-72!">
-						<DropdownMenuItem v-for="model in models" :key="model.name" :text-value="model.name"
-							@select="modelName = model.name">
-							<span class="min-w-0 truncate">{{ model.name }}</span>
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
+			<PromptInput class="w-full" @submit="handlePromptSubmit">
+				<PromptInputTextarea :disabled="!ready || streaming" :placeholder="composerPlaceholder"
+					class="min-h-16" />
+				<PromptInputFooter class="mt-2 items-center justify-between gap-2 border-none">
+					<PromptInputTools>
+						<div class="flex items-center gap-2">
+							<Context v-if="lastUsage" :used-tokens="lastUsage.totalTokens ?? 0" :max-tokens="contextWindow"
+								:usage="lastUsage">
+								<ContextTrigger />
+								<ContextContent class="w-64">
+									<ContextContentHeader />
+									<ContextContentBody>
+										<ContextInputUsage />
+										<ContextOutputUsage />
+										<ContextReasoningUsage />
+										<ContextCacheUsage />
+									</ContextContentBody>
+									<ContextContentFooter>
+										<span class="text-muted-foreground">Total tokens</span>
+										<span>{{ (lastUsage.totalTokens ?? 0).toLocaleString() }}</span>
+									</ContextContentFooter>
+								</ContextContent>
+							</Context>
 
-				<Button size="sm" :disabled="!ready || !prompt.trim() || streaming" @click="sendMessage">
-					<Spinner v-if="streaming" />
-					<SendHorizontal v-else />
-					<span class="sr-only">Send message</span>
-				</Button>
-			</div>
+							<DropdownMenu>
+							<DropdownMenuTrigger as-child>
+								<Button variant="outline" size="sm"
+									:disabled="!providerId || loadingModels || !models.length || streaming">
+									<span class="max-w-56 truncate">{{ selectedModel?.name ?? "Select model" }}</span>
+									<ChevronDown />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="start" class="w-72!">
+								<DropdownMenuItem v-for="model in models" :key="model.name" :text-value="model.name"
+									@select="modelName = model.name">
+									<span class="min-w-0 truncate">{{ model.name }}</span>
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+						</div>
+					</PromptInputTools>
+					<PromptInputSubmit :status="streaming ? 'streaming' : 'ready'" :disabled="!ready"
+						@click="handleSubmitClick" />
+				</PromptInputFooter>
+			</PromptInput>
 		</div>
 	</section>
 </template>
 
 <script>
-import { ChevronDown, Plus, SendHorizontal } from "@lucide/vue";
+import {
+	CodeBlock,
+	CodeBlockActions,
+	CodeBlockCopyButton,
+	CodeBlockFilename,
+	CodeBlockHeader,
+	CodeBlockTitle,
+} from "@/components/ai-elements/code-block";
+import { Conversation, ConversationContent, ConversationScrollButton } from "@/components/ai-elements/conversation";
+import { Context, ContextCacheUsage, ContextContent, ContextContentBody, ContextContentFooter, ContextContentHeader, ContextInputUsage, ContextOutputUsage, ContextReasoningUsage, ContextTrigger } from "@/components/ai-elements/context";
+import { Loader } from "@/components/ai-elements/loader";
+import {
+	PromptInput,
+	PromptInputFooter,
+	PromptInputSubmit,
+	PromptInputTextarea,
+	PromptInputTools,
+} from "@/components/ai-elements/prompt-input";
+import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
+import { Source, Sources, SourcesContent, SourcesTrigger } from "@/components/ai-elements/sources";
+import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "@/components/ai-elements/tool";
+import { ChevronDown, Plus } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -172,15 +224,6 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Message, MessageContent } from "@/components/ui/message";
-import {
-	MessageScroller,
-	MessageScrollerButton,
-	MessageScrollerContent,
-	MessageScrollerItem,
-	MessageScrollerProvider,
-	MessageScrollerViewport,
-} from "@/components/ui/message-scroller";
-import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import {
 	Questionnaire,
@@ -208,32 +251,60 @@ const CHAT_BASE = "http://localhost:8081/api/chat";
 const THINK_OPEN_TAGS = ["<think>", "<thinking>"];
 const THINK_CLOSE_TAGS = ["</think>", "</thinking>"];
 
+// Fence tags models emit most often that shiki names differently.
+const LANGUAGE_ALIASES = {
+	js: "javascript",
+	ts: "typescript",
+	sh: "bash",
+	shell: "bash",
+	zsh: "bash",
+	py: "python",
+	rb: "ruby",
+	rs: "rust",
+	ps1: "powershell",
+	yml: "yaml",
+	md: "markdown",
+};
+
 export default {
 	name: "ChatView",
 	components: {
 		Button,
 		ChevronDown,
-		Collapsible,
-		CollapsibleContent,
-		CollapsibleTrigger,
+		CodeBlock,
+		CodeBlockActions,
+		CodeBlockCopyButton,
+		CodeBlockFilename,
+		CodeBlockHeader,
+		CodeBlockTitle,
+		Conversation,
+		ConversationContent,
+		ConversationScrollButton,
+		Context,
+		ContextCacheUsage,
+		ContextContent,
+		ContextContentBody,
+		ContextContentFooter,
+		ContextContentHeader,
+		ContextInputUsage,
+		ContextOutputUsage,
+		ContextReasoningUsage,
+		ContextTrigger,
 		DropdownMenu,
 		DropdownMenuContent,
 		DropdownMenuItem,
 		DropdownMenuLabel,
 		DropdownMenuSeparator,
 		DropdownMenuTrigger,
+		Loader,
 		Message,
 		MessageContent,
-		MessageScroller,
-		MessageScrollerButton,
-		MessageScrollerContent,
-		MessageScrollerItem,
-		MessageScrollerProvider,
-		MessageScrollerViewport,
 		Plus,
-		SendHorizontal,
-		Spinner,
-		Textarea,
+		PromptInput,
+		PromptInputFooter,
+		PromptInputSubmit,
+		PromptInputTextarea,
+		PromptInputTools,
 		Questionnaire,
 		QuestionnaireActions,
 		QuestionnaireChoice,
@@ -245,6 +316,19 @@ export default {
 		QuestionnaireProgress,
 		QuestionnaireSubmit,
 		QuestionnaireTitle,
+		Reasoning,
+		ReasoningContent,
+		ReasoningTrigger,
+		Source,
+		Sources,
+		SourcesContent,
+		SourcesTrigger,
+		Spinner,
+		Tool,
+		ToolContent,
+		ToolHeader,
+		ToolInput,
+		ToolOutput,
 	},
 
 	data() {
@@ -254,7 +338,9 @@ export default {
 			modelName: null,
 			models: [],
 			messages: [],
-			prompt: "",
+			generationId: null,
+			abortController: null,
+			lastUsage: null,
 			loadingModels: false,
 			streaming: false,
 			error: "",
@@ -281,8 +367,24 @@ export default {
 			if (!this.modelName) return "Choose a model to start chatting";
 			return "Message Castiel…";
 		},
+		// Advertised input limit of the selected model; sensible fallback when the
+		// provider catalog does not report one (e.g. Ollama).
+		contextWindow() {
+			return this.selectedModel?.contextWindow ?? 128000;
+		},
+			// A response was requested but nothing streamed yet — show the loader.
+		assistantIdle() {
+			if (!this.streaming) return false;
+			const last = this.messages[this.messages.length - 1];
+			return Boolean(
+				last &&
+				last.role === "assistant" &&
+				!this.hasRenderableContent(last),
+			);
+		},
 	},
 	async mounted() {
+		window.addEventListener("keydown", this.handleWindowKeydown);
 		if (this.settings.loaded) return;
 		try {
 			await this.settings.fetch();
@@ -290,16 +392,126 @@ export default {
 			this.error = this.messageFor(error, "Could not load configured providers.");
 		}
 	},
+	beforeUnmount() {
+		window.removeEventListener("keydown", this.handleWindowKeydown);
+	},
 	methods: {
+		handleWindowKeydown(event) {
+			if (event.key === "Escape" && this.streaming) {
+				event.preventDefault();
+				this.stopGeneration();
+			}
+		},
+		// Tells the harness to cancel the generation (aborting the provider stream and any
+		// pending tool rounds), then drops the SSE connection itself.
+		async stopGeneration() {
+			if (!this.streaming) return;
+			const controller = this.abortController;
+			this.abortController = null;
+			if (this.generationId) {
+				try {
+					await fetch(`${CHAT_API}/${encodeURIComponent(this.generationId)}/cancel`, { method: "POST" });
+				} catch {
+					// Best effort — aborting the local stream is enough to stop the UI.
+				}
+			}
+			controller?.abort();
+		},
+		// While streaming the submit button acts as a stop button.
+		handleSubmitClick(event) {
+			if (!this.streaming) return;
+			event.preventDefault();
+			event.stopPropagation();
+			this.stopGeneration();
+		},
 		renderMarkdown(content) {
 			return DOMPurify.sanitize(marked.parse(content, { async: false }));
 		},
-		formatArguments(argumentsText) {
-			try {
-				return JSON.stringify(JSON.parse(argumentsText), null, 2);
-			} catch {
-				return argumentsText;
+		// Splits assistant text into prose (markdown HTML) and fenced code segments so
+		// code blocks can be rendered with the CodeBlock component while streaming.
+		contentSegments(text) {
+			const lines = String(text ?? "").split("\n");
+			const segments = [];
+			let textLines = [];
+			let codeLines = null;
+			let info = "";
+
+			const flushText = () => {
+				if (textLines.length) {
+					segments.push({ type: "text", html: this.renderMarkdown(textLines.join("\n")) });
+					textLines = [];
+				}
+			};
+
+			for (const line of lines) {
+				if (codeLines === null) {
+					const open = line.match(/^```(.*)$/);
+					if (open) {
+						flushText();
+						codeLines = [];
+						info = open[1].trim();
+					} else {
+						textLines.push(line);
+					}
+				} else if (/^```\s*$/.test(line)) {
+					segments.push(this.codeSegment(codeLines.join("\n"), info));
+					codeLines = null;
+					info = "";
+				} else {
+					codeLines.push(line);
+				}
 			}
+
+			if (codeLines !== null) {
+				// Unterminated fence — still streaming, render what we have as code.
+				segments.push(this.codeSegment(codeLines.join("\n"), info));
+			} else {
+				flushText();
+			}
+			return segments;
+		},
+		codeSegment(code, info) {
+			const [tag, ...rest] = info.split(/\s+/).filter(Boolean);
+			const language = LANGUAGE_ALIASES[tag?.toLowerCase()] ?? tag?.toLowerCase() ?? "text";
+			return { type: "code", code, language, filename: rest.join(" ") || language };
+		},
+		toolState(call) {
+			return call.result === null ? "input-available" : "output-available";
+		},
+		// Maps the harness `usage` SSE payload onto the AI SDK usage shape the
+		// Context component expects; only keeps fields the provider reported.
+		applyUsage(usage) {
+			if (!usage || typeof usage !== "object") return;
+			const mapped = {};
+			for (const [key, value] of Object.entries({
+				inputTokens: usage.inputTokens,
+				outputTokens: usage.outputTokens,
+				totalTokens: usage.totalTokens,
+				reasoningTokens: usage.reasoningTokens,
+				cachedInputTokens: usage.cachedInputTokens,
+			})) {
+				if (typeof value === "number") mapped[key] = value;
+			}
+			this.lastUsage = mapped;
+		},
+		toolInput(call) {
+			try {
+				return JSON.parse(call.arguments || "{}");
+			} catch {
+				return call.arguments ? { input: call.arguments } : {};
+			}
+		},
+		// web_search results arrive as "[1] title\nurl\nsnippet" blocks; turn them into
+		// link sources for the Sources component. Anything unparsable renders nothing.
+		sourcesFor(call) {
+			if (call.name !== "web_search" || typeof call.result !== "string") return [];
+			const sources = [];
+			const pattern = /^\[\d+\]\s+(.+)\n(https?:\/\/\S+)/gm;
+			let match;
+			while ((match = pattern.exec(call.result)) !== null) {
+				sources.push({ title: match[1].trim(), href: match[2].trim() });
+			}
+			return sources;
 		},
 		isPendingQuestion(call) {
 			return call.name === "ask_user_question" && call.result === null && !call.answered;
@@ -318,14 +530,24 @@ export default {
 			return {
 				id: crypto.randomUUID(),
 				role,
-				content,
-				thinking: "",
-				thinkingOpen: false,
+				// Ordered stream of segments: {type:"thinking"|"text", text} and
+				// {type:"tool", id, name, arguments, result, ...}. Preserves the real
+				// interleaving of thinking, tool calls and answers.
+				parts: content ? [{ type: "text", text: content }] : [],
 				isThinking: false,
 				streamBuffer: "",
 				trimResponseLeadingNewlines: false,
-				toolCalls: [],
 			};
+		},
+		// Plain text of a message (used for user bubbles and history serialization).
+		messageText(message) {
+			return message.parts
+				.filter((part) => part.type === "text")
+				.map((part) => part.text)
+				.join("");
+		},
+		hasRenderableContent(message) {
+			return message.parts.some((part) => part.type === "tool" || (part.text ?? "").length > 0);
 		},
 		async startChat(nextProviderId) {
 			if (this.streaming) return;
@@ -333,7 +555,8 @@ export default {
 			this.modelName = null;
 			this.models = [];
 			this.messages = [];
-			this.prompt = "";
+			this.generationId = null;
+			this.lastUsage = null;
 			this.error = "";
 			this.loadingModels = true;
 
@@ -349,22 +572,25 @@ export default {
 				if (this.providerId === nextProviderId) this.loadingModels = false;
 			}
 		},
-		async sendMessage() {
-			const content = this.prompt.trim();
-			if (!content || !this.ready || this.streaming) return;
+		async sendMessage(content) {
+			const text = String(content ?? "").trim();
+			if (!text || !this.ready || this.streaming) return;
 
 			this.error = "";
-			this.prompt = "";
-			this.messages.push(this.createMessage("user", content));
+			this.messages.push(this.createMessage("user", text));
 			this.messages.push(this.createMessage("assistant", ""));
 			// Read the item back from Vue's reactive array so each incoming token repaints immediately.
 			const assistantMessage = this.messages[this.messages.length - 1];
 			this.streaming = true;
+			this.generationId = null;
+			const controller = new AbortController();
+			this.abortController = controller;
 
 			try {
 				const response = await fetch(CHAT_API, {
 					method: "POST",
 					headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+					signal: controller.signal,
 					body: JSON.stringify({
 						providerId: this.providerId,
 						modelName: this.modelName,
@@ -372,10 +598,12 @@ export default {
 							.slice(0, -1)
 							.map((message) => ({
 								role: message.role,
-								content: message.content ?? "",
+								content: this.messageText(message),
 								toolCalls:
 									message.role === "assistant"
-										? message.toolCalls.map(({ id, name, arguments: args, result }) => ({
+										? message.parts
+											.filter((part) => part.type === "tool")
+											.map(({ id, name, arguments: args, result }) => ({
 												id,
 												name,
 												arguments: args,
@@ -390,14 +618,22 @@ export default {
 
 				await this.readEventStream(response.body, (event, data) => {
 					if (event === "error") throw new Error(data || "The model could not complete the response.");
+					if (event === "start") {
+						this.generationId = JSON.parse(data).id ?? null;
+						return;
+					}
+					if (event === "usage") {
+						this.applyUsage(JSON.parse(data));
+						return;
+					}
 					if (event === "tool_call") {
 						const call = JSON.parse(data);
 						const entry = {
+							type: "tool",
 							id: call.id,
 							name: call.name,
 							arguments: call.arguments ?? "",
 							result: null,
-							open: false,
 						};
 						if (call.name === "ask_user_question") {
 							const args = JSON.parse(call.arguments || "{}");
@@ -405,20 +641,25 @@ export default {
 							entry.options = Array.isArray(args.options) ? args.options : [];
 							entry.multiSelect = Boolean(args.multiSelect);
 						}
-						assistantMessage.toolCalls.push(entry);
+						// A tool call always starts a new segment — any thinking that follows
+						// (next round) must not merge into a previous block.
+						assistantMessage.isThinking = false;
+						assistantMessage.parts.push(entry);
 						return;
 					}
 					if (event === "tool_result") {
 						const payload = JSON.parse(data);
-						const call = assistantMessage.toolCalls.find((candidate) => candidate.id === payload.id);
-						if (call) call.result = payload.result ?? "";
+						const part = assistantMessage.parts.find(
+							(candidate) => candidate.type === "tool" && candidate.id === payload.id,
+						);
+						if (part) part.result = payload.result ?? "";
 						else {
-							assistantMessage.toolCalls.push({
+							assistantMessage.parts.push({
+								type: "tool",
 								id: payload.id,
 								name: payload.name ?? "",
 								arguments: "",
 								result: payload.result ?? "",
-								open: false,
 							});
 						}
 						return;
@@ -427,14 +668,19 @@ export default {
 				});
 				this.flushStreamBuffer(assistantMessage);
 			} catch (error) {
-				if (!assistantMessage.content && !assistantMessage.thinking && !assistantMessage.toolCalls.length) {
+				if (error?.name === "AbortError") {
+					// User stopped the generation — keep whatever streamed, no error shown.
+					this.flushStreamBuffer(assistantMessage);
+					return;
+				}
+				if (!this.hasRenderableContent(assistantMessage)) {
 					this.messages.pop();
 				}
 				this.error = this.messageFor(error, "The message could not be sent.");
 			} finally {
 				assistantMessage.isThinking = false;
-				assistantMessage.thinkingOpen = false;
 				this.streaming = false;
+				this.abortController = null;
 			}
 		},
 		async submitAnswer(event, call) {
@@ -480,11 +726,7 @@ export default {
 					this.appendToActivePart(message, message.streamBuffer.slice(0, matchIndex));
 					message.streamBuffer = message.streamBuffer.slice(matchIndex + matchedTag.length);
 					message.isThinking = !message.isThinking;
-					if (message.isThinking) message.thinkingOpen = true;
-					else {
-						message.thinkingOpen = false;
-						message.trimResponseLeadingNewlines = true;
-					}
+					if (!message.isThinking) message.trimResponseLeadingNewlines = true;
 					continue;
 				}
 
@@ -494,17 +736,23 @@ export default {
 				return;
 			}
 		},
+		// Appends streamed text to the message's last part, opening a new part whenever
+		// the thinking/text mode changed or a tool call intervened — this is what keeps
+		// interleaved thinking blocks separate instead of merging them at the top.
 		appendToActivePart(message, text) {
 			if (!text) return;
-			if (message.isThinking) message.thinking += text;
-			else {
-				if (message.trimResponseLeadingNewlines) {
-					text = text.replace(/^[\r\n]+/, "");
-					if (!text) return;
-					message.trimResponseLeadingNewlines = false;
-				}
-				message.content += text;
+			const type = message.isThinking ? "thinking" : "text";
+			let last = message.parts[message.parts.length - 1];
+			if (!last || last.type !== type) {
+				last = { type, text: "" };
+				message.parts.push(last);
 			}
+			if (type === "text" && message.trimResponseLeadingNewlines) {
+				text = text.replace(/^[\r\n]+/, "");
+				if (!text) return;
+				message.trimResponseLeadingNewlines = false;
+			}
+			last.text += text;
 		},
 		trailingTagPrefixLength(text, tag) {
 			const maxLength = Math.min(text.length, tag.length - 1);
@@ -517,11 +765,9 @@ export default {
 			this.appendToActivePart(message, message.streamBuffer);
 			message.streamBuffer = "";
 		},
-		handlePromptKeydown(event) {
-			if (event.key === "Enter" && !event.shiftKey) {
-				event.preventDefault();
-				this.sendMessage();
-			}
+		// PromptInput clears its own input before calling submit and restores it on error.
+		handlePromptSubmit(message) {
+			this.sendMessage(message?.text);
 		},
 		async readEventStream(stream, onEvent) {
 			const reader = stream.getReader();

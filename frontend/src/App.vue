@@ -3,7 +3,9 @@
 		<MenuBar />
 
 		<ResizablePanelGroup direction="horizontal" class="flex-1 min-h-0">
-			<ResizablePanel collapsible :defaultSize="20" :minSize="3" :maxSize="45"></ResizablePanel>
+			<ResizablePanel collapsible :defaultSize="20" :minSize="3" :maxSize="45">
+				<FileTreeView />
+			</ResizablePanel>
 
 			<ResizableHandle />
 
@@ -21,7 +23,7 @@
 
 			<ResizableHandle />
 
-			<ResizablePanel collapsible :defaultSize="25" :minSize="3" :maxSize="45">
+			<ResizablePanel collapsible :defaultSize="30" :minSize="3" :maxSize="45">
 				<ChatView />
 			</ResizablePanel>
 		</ResizablePanelGroup>
@@ -31,6 +33,7 @@
 <script setup>
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import ChatView from "@/views/ChatView.vue";
+import FileTreeView from "@/components/FileTreeView.vue";
 import MenuBar from "@/views/MenuBar.vue";
 import TabbedView from "./views/TabbedView.vue";
 </script>

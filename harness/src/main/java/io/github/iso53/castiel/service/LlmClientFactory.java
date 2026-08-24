@@ -70,15 +70,10 @@ public class LlmClientFactory {
 	 * for Ollama (no catalog support yet in LangChain4j).
 	 */
 	public List<ModelInfo> listModels(LlmProviderConfig config) {
-		List<String> names = switch (config.type()) {
+		return switch (config.type()) {
 			case OPENAI_COMPATIBLE -> openAiModelNames(config);
 			case OLLAMA -> ollamaModelNames(config);
 		};
-		return names
-			.stream()
-			.filter(name -> name != null && !name.isBlank())
-			.map(ModelInfo::new)
-			.toList();
 	}
 
 	/**
@@ -94,8 +89,7 @@ public class LlmClientFactory {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
-	private List<String> openAiModelNames(LlmProviderConfig config) {
+	private List<ModelInfo> openAiModelNames(LlmProviderConfig config) {
 		ModelCatalog catalog = OpenAiModelCatalog.builder()
 			.baseUrl(openAiBaseUrl(config.apiUrl()))
 			.apiKey(resolveApiKey(config.apiKey()))
@@ -105,14 +99,18 @@ public class LlmClientFactory {
 			.logResponses(false)
 			.build();
 
-		List<ModelDescription> models = (List<ModelDescription>) (List<?>) catalog.listModels();
+		List<ModelDescription> models = catalog.listModels();
 		if (models == null || models.isEmpty()) {
 			return List.of();
 		}
-		return models.stream().map(ModelDescription::name).toList();
+		return models
+			.stream()
+			.filter(description -> description.name() != null && !description.name().isBlank())
+			.map(description -> new ModelInfo(description.name(), description.maxInputTokens()))
+			.toList();
 	}
 
-	private List<String> ollamaModelNames(LlmProviderConfig config) {
+	private List<ModelInfo> ollamaModelNames(LlmProviderConfig config) {
 		HttpRequest request = HttpRequest.newBuilder()
 			.uri(URI.create(rootUrl(config.apiUrl()) + "/api/tags"))
 			.timeout(HEALTH_TIMEOUT)
@@ -141,7 +139,11 @@ public class LlmClientFactory {
 		for (JsonNode model : tags.path("models")) {
 			names.add(model.path("name").asText(null));
 		}
-		return names;
+		return names
+			.stream()
+			.filter(name -> name != null && !name.isBlank())
+			.map(ModelInfo::new)
+			.toList();
 	}
 
 	/**

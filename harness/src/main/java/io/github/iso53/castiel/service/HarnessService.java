@@ -10,8 +10,14 @@ import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.CompleteToolCall;
+import dev.langchain4j.model.chat.response.PartialResponse;
+import dev.langchain4j.model.chat.response.PartialResponseContext;
+import dev.langchain4j.model.chat.response.PartialThinkingContext;
 import dev.langchain4j.model.chat.response.PartialThinking;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
+import dev.langchain4j.model.chat.response.StreamingHandle;
+import dev.langchain4j.model.openai.OpenAiTokenUsage;
+import dev.langchain4j.model.output.TokenUsage;
 import dev.langchain4j.service.tool.DefaultToolExecutor;
 import dev.langchain4j.service.tool.ToolExecutor;
 import io.github.iso53.castiel.model.ChatStreamRequest;
@@ -27,6 +33,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.codec.ServerSentEvent;
@@ -55,6 +64,17 @@ public class HarnessService {
 	private final UserQuestionTool userQuestionTool;
 	private final List<ToolSpecification> toolSpecifications;
 	private final Map<String, ToolExecutor> toolExecutors;
+	private final ConcurrentMap<String, GenerationState> generations = new ConcurrentHashMap<>();
+
+	/**
+	 * Bookkeeping for one in-flight chat stream: the LangChain4j {@link StreamingHandle}
+	 * used to cancel it and the token usage accumulated across all its model rounds.
+	 */
+	private static final class GenerationState {
+		final AtomicBoolean cancelled = new AtomicBoolean(false);
+		volatile StreamingHandle handle;
+		volatile TokenUsage totalUsage;
+	}
 
 	public HarnessService(
 		LlmClientFactory llmClientFactory,
@@ -91,9 +111,11 @@ public class HarnessService {
 	 *
 	 * <p>Event protocol:
 	 * <ul>
+	 *   <li>{@code start} — JSON {@code {id}} identifying this generation (use with {@link #cancel})</li>
 	 *   <li>default event — raw assistant token; thinking is wrapped in {@code <think>} tags</li>
 	 *   <li>{@code tool_call} — JSON {@code {id, name, arguments}} when the model calls a tool</li>
 	 *   <li>{@code tool_result} — JSON {@code {id, name, result}} once the tool has run</li>
+	 *   <li>{@code usage} — JSON token usage totals accumulated across all model rounds so far</li>
 	 *   <li>{@code error} — plain text error message</li>
 	 * </ul>
 	 */
@@ -121,19 +143,55 @@ public class HarnessService {
 		StreamingChatModel model = llmClientFactory.streamingChatModel(config, request.modelName().trim());
 		List<ChatMessage> messages = buildMessages(request.messages());
 
-		return Flux.create(sink -> streamRound(model, messages, sink, 0));
+		String generationId = UUID.randomUUID().toString();
+		GenerationState state = new GenerationState();
+		generations.put(generationId, state);
+
+		return Flux.create(sink -> {
+			sink.onDispose(() -> generations.remove(generationId));
+			sink.next(event("start", json(Map.of("id", generationId))));
+			streamRound(model, messages, sink, state, 0);
+		});
+	}
+
+	/**
+	 * Cancels an in-flight generation via its LangChain4j {@link StreamingHandle}. The provider
+	 * HTTP stream is aborted and no further tool executions or model rounds are started.
+	 *
+	 * @return {@code true} if a generation with the given id was still running.
+	 */
+	public boolean cancel(String generationId) {
+		if (generationId == null || generationId.isBlank()) {
+			return false;
+		}
+		GenerationState state = generations.remove(generationId);
+		if (state == null) {
+			return false;
+		}
+		state.cancelled.set(true);
+		StreamingHandle handle = state.handle;
+		if (handle != null) {
+			handle.cancel();
+		}
+		return true;
 	}
 
 	/**
 	 * One round-trip to the model. When the completed response asks for tools, executes them,
-	 * appends the results to the thread, and starts another round.
+	 * appends the results to the thread, and starts another round. Every callback checks the
+	 * generation's cancelled flag first, so a cancel request stops the stream immediately.
 	 */
 	private void streamRound(
 		StreamingChatModel model,
 		List<ChatMessage> messages,
 		FluxSink<ServerSentEvent<String>> sink,
+		GenerationState state,
 		int round
 	) {
+		if (state.cancelled.get()) {
+			sink.complete();
+			return;
+		}
 		if (round >= MAX_TOOL_ROUNDS) {
 			sink.next(event("error", "The model exceeded " + MAX_TOOL_ROUNDS + " tool call rounds for one message."));
 			sink.complete();
@@ -146,7 +204,8 @@ public class HarnessService {
 			ChatRequest.builder().messages(messages).toolSpecifications(toolSpecifications).build(),
 			new StreamingChatResponseHandler() {
 				@Override
-				public void onPartialThinking(PartialThinking partialThinking) {
+				public void onPartialThinking(PartialThinking partialThinking, PartialThinkingContext context) {
+					state.handle = context.streamingHandle();
 					if (partialThinking != null && partialThinking.text() != null) {
 						if (inThinking.compareAndSet(false, true)) {
 							sink.next(data("<think>\n"));
@@ -156,17 +215,23 @@ public class HarnessService {
 				}
 
 				@Override
-				public void onPartialResponse(String partialResponse) {
-					if (partialResponse != null) {
+				public void onPartialResponse(PartialResponse partialResponse,
+					PartialResponseContext context
+				) {
+					state.handle = context.streamingHandle();
+					if (partialResponse != null && partialResponse.text() != null) {
 						if (inThinking.compareAndSet(true, false)) {
 							sink.next(data("\n</think>\n\n"));
 						}
-						sink.next(data(partialResponse));
+						sink.next(data(partialResponse.text()));
 					}
 				}
 
 				@Override
 				public void onCompleteToolCall(CompleteToolCall completeToolCall) {
+					if (state.cancelled.get()) {
+						return;
+					}
 					ToolExecutionRequest request = completeToolCall.toolExecutionRequest();
 					sink.next(
 						event(
@@ -187,12 +252,16 @@ public class HarnessService {
 
 				@Override
 				public void onCompleteResponse(ChatResponse response) {
+					emitUsage(state, response, sink);
+
 					if (inThinking.compareAndSet(true, false)) {
 						sink.next(data("\n</think>\n\n"));
 					}
 
 					AiMessage message = response.aiMessage();
-					if (!message.hasToolExecutionRequests()) {
+
+					// Stop here on cancel: no tool executions, no further model rounds.
+					if (state.cancelled.get() || !message.hasToolExecutionRequests()) {
 						sink.complete();
 						return;
 					}
@@ -210,15 +279,54 @@ public class HarnessService {
 						);
 						nextMessages.add(ToolExecutionResultMessage.from(request, result));
 					}
-					streamRound(model, nextMessages, sink, round + 1);
+					streamRound(model, nextMessages, sink, state, round + 1);
 				}
 
 				@Override
 				public void onError(Throwable error) {
+					if (state.cancelled.get()) {
+						// Expected fallout of handle.cancel(): swallow instead of surfacing an error.
+						sink.complete();
+						return;
+					}
 					sink.error(error);
 				}
 			}
 		);
+	}
+
+	/** Accumulates this round's token usage and reports running totals to the frontend. */
+	private void emitUsage(GenerationState state, ChatResponse response, FluxSink<ServerSentEvent<String>> sink) {
+		TokenUsage used = response.metadata() == null ? null : response.metadata().tokenUsage();
+		if (used == null) {
+			return;
+		}
+		TokenUsage total = TokenUsage.sum(state.totalUsage, used);
+		state.totalUsage = total;
+
+		Map<String, Object> payload = new LinkedHashMap<>();
+		putIfNotNull(payload, "inputTokens", total.inputTokenCount());
+		putIfNotNull(payload, "outputTokens", total.outputTokenCount());
+		putIfNotNull(payload, "totalTokens", total.totalTokenCount());
+		if (total instanceof OpenAiTokenUsage openAiUsage) {
+			if (openAiUsage.inputTokensDetails() != null) {
+				putIfNotNull(payload, "cachedInputTokens", openAiUsage.inputTokensDetails().cachedTokens());
+			}
+			if (openAiUsage.outputTokensDetails() != null) {
+				putIfNotNull(payload, "reasoningTokens", openAiUsage.outputTokensDetails().reasoningTokens());
+			}
+		}
+		try {
+			sink.next(event("usage", JSON.writeValueAsString(payload)));
+		} catch (IOException ignored) {
+			// Usage reporting is best-effort; never fail the stream over it.
+		}
+	}
+
+	private static void putIfNotNull(Map<String, Object> map, String key, Object value) {
+		if (value != null) {
+			map.put(key, value);
+		}
 	}
 
 	private String executeTool(ToolExecutionRequest request, int index) {

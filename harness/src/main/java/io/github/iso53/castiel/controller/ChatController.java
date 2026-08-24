@@ -61,6 +61,17 @@ public class ChatController {
 	}
 
 	/**
+	 * Cancels an in-flight chat generation. The id comes from the {@code start} SSE event
+	 * emitted at the beginning of a stream. Aborts the provider HTTP stream and prevents
+	 * any further tool executions or model rounds for that generation.
+	 */
+	@PostMapping("/stream/{generationId}/cancel")
+	public Mono<Map<String, Boolean>> cancelGeneration(@PathVariable("generationId") String generationId) {
+		boolean cancelled = harnessService.cancel(generationId);
+		return Mono.just(Map.of("cancelled", cancelled));
+	}
+
+	/**
 	 * Healthcheck and status verification endpoint.
 	 */
 	@GetMapping("/health")
