@@ -55,7 +55,7 @@
 												&& partIndex === message.parts.length - 1">
 											<ReasoningTrigger />
 											<ReasoningContent :content="part.text"
-												class="text-xs leading-relaxed text-muted-foreground/80" />
+												class="text-xs leading-relaxed opacity-60" />
 										</Reasoning>
 
 										<!-- Tool call segment -->
