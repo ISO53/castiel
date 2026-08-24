@@ -12,8 +12,8 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.CompleteToolCall;
 import dev.langchain4j.model.chat.response.PartialResponse;
 import dev.langchain4j.model.chat.response.PartialResponseContext;
-import dev.langchain4j.model.chat.response.PartialThinkingContext;
 import dev.langchain4j.model.chat.response.PartialThinking;
+import dev.langchain4j.model.chat.response.PartialThinkingContext;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import dev.langchain4j.model.chat.response.StreamingHandle;
 import dev.langchain4j.model.openai.OpenAiTokenUsage;
@@ -55,7 +55,7 @@ import reactor.core.publisher.FluxSink;
 public class HarnessService {
 
 	private static final String SYSTEM_PROMPT_PATH = "prompts/SYSTEM_PROMPT.md";
-	private static final int MAX_TOOL_ROUNDS = 8;
+	private static final int MAX_TOOL_ROUNDS = 64;
 
 	private static final ObjectMapper JSON = new ObjectMapper();
 
@@ -71,6 +71,7 @@ public class HarnessService {
 	 * used to cancel it and the token usage accumulated across all its model rounds.
 	 */
 	private static final class GenerationState {
+
 		final AtomicBoolean cancelled = new AtomicBoolean(false);
 		volatile StreamingHandle handle;
 		volatile TokenUsage totalUsage;
@@ -215,9 +216,7 @@ public class HarnessService {
 				}
 
 				@Override
-				public void onPartialResponse(PartialResponse partialResponse,
-					PartialResponseContext context
-				) {
+				public void onPartialResponse(PartialResponse partialResponse, PartialResponseContext context) {
 					state.handle = context.streamingHandle();
 					if (partialResponse != null && partialResponse.text() != null) {
 						if (inThinking.compareAndSet(true, false)) {
@@ -448,9 +447,13 @@ public class HarnessService {
 	}
 
 	private static String environmentContext() {
-		String os = System.getProperty("os.name", "unknown OS");
-		String arch = System.getProperty("os.arch", "");
-		boolean windows = os.toLowerCase(Locale.ROOT).contains("win");
-		return "- You are running on %s (%s).%n".formatted(os, arch);
+		// Some info about the OS that will help the agent understand its environment
+		String info = "Here is some information about the users OS that will be useful for you.\n";
+		List<String> OSFacts = List.of(
+			"Operating System: " + System.getProperty("os.name", "unknown OS"),
+			"File Separator: " + System.getProperty("file.separator", "unknown file separator"),
+			"Architecture: " + System.getProperty("os.arch", "unknown architecture")
+		);
+		return info + String.join("\n", OSFacts);
 	}
 }
