@@ -12,7 +12,7 @@
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" class="w-64!">
-					<DropdownMenuLabel>New chat</DropdownMenuLabel>
+					<DropdownMenuLabel>Start a new chat with the providers below</DropdownMenuLabel>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem v-for="provider in providers" :key="provider.id"
 						@select="startChat(provider.id)">
@@ -63,7 +63,7 @@
 
 										<!-- Tool call segment -->
 										<template v-else-if="part.type === 'tool'">
-											<Tool v-if="!isPendingQuestion(part)" :default-open="part.result === null"
+											<Tool v-if="!isPendingQuestion(part)" v-model:open="part.open"
 												class="w-full self-start">
 												<ToolHeader :state="toolState(part)" :title="part.name"
 													:type="`tool-${part.name}`" />
@@ -709,6 +709,9 @@ export default {
 							name: call.name,
 							arguments: call.arguments ?? "",
 							result: null,
+							// Expanded while running; collapsed automatically when its
+							// result arrives or the generation ends.
+							open: true,
 						};
 						if (call.name === "ask_user_question") {
 							const args = JSON.parse(call.arguments || "{}");
@@ -727,14 +730,17 @@ export default {
 						const part = assistantMessage.parts.find(
 							(candidate) => candidate.type === "tool" && candidate.id === payload.id,
 						);
-						if (part) part.result = payload.result ?? "";
-						else {
+						if (part) {
+							part.result = payload.result ?? "";
+							part.open = false;
+						} else {
 							assistantMessage.parts.push({
 								type: "tool",
 								id: payload.id,
 								name: payload.name ?? "",
 								arguments: "",
 								result: payload.result ?? "",
+								open: false,
 							});
 						}
 						return;
@@ -756,6 +762,10 @@ export default {
 				assistantMessage.isThinking = false;
 				this.streaming = false;
 				this.abortController = null;
+				// Collapse any tool calls that never produced a result (stop, error, abort).
+				for (const part of assistantMessage.parts) {
+					if (part.type === "tool" && part.result === null) part.open = false;
+				}
 			}
 		},
 		async submitAnswer(event, call) {
@@ -892,4 +902,3 @@ export default {
 	},
 };
 </script>
-

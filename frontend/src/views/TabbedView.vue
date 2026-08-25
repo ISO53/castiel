@@ -13,6 +13,7 @@
 				class="h-full overflow-hidden">
 				<HomeView v-if="tab.component === 'HomeView'" />
 				<SettingsView v-else-if="tab.component === 'SettingsView'" />
+				<FileEditorView v-else-if="tab.component === 'FileEditorView'" :path="tab.path" />
 			</TabsContent>
 		</Tabs>
 	</div>
@@ -22,6 +23,10 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import HomeView from "@/views/HomeView.vue";
 import SettingsView from "@/views/SettingsView.vue";
+import { defineAsyncComponent } from "vue";
+
+// The editor (CodeMirror core + language chunks) only loads when a file tab opens.
+const FileEditorView = defineAsyncComponent(() => import("@/views/FileEditorView.vue"));
 import { useTabsStore } from "@/stores/tabs";
 
 const tabsStore = useTabsStore();

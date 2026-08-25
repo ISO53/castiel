@@ -10,14 +10,18 @@ export const useTabsStore = defineStore("tabs", {
 		active: "home",
 	}),
 	actions: {
-		openTab({ value, label, component, closable = true }) {
+		openTab({ value, label, component, closable = true, path = null }) {
 			const existing = this.tabs.find((tab) => tab.value === value);
 			if (existing) {
 				this.active = value;
 				return;
 			}
-			this.tabs.push({ value, label, component, closable });
+			this.tabs.push({ value, label, component, closable, path });
 			this.active = value;
+		},
+		setTabLabel(value, label) {
+			const tab = this.tabs.find((candidate) => candidate.value === value);
+			if (tab) tab.label = label;
 		},
 		closeTab(value) {
 			const index = this.tabs.findIndex((tab) => tab.value === value);
