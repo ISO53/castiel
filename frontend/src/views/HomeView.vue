@@ -61,6 +61,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import FileViewer from "@/components/FileViewer.vue";
+import { useTabsStore } from "@/stores/tabs";
 import { FolderPlus, FolderOpen } from "@lucide/vue";
 
 export default {
@@ -130,6 +131,7 @@ export default {
 		},
 		onWorkspaceReady() {
 			this.fileDialogOpen = false;
+			useTabsStore().closeTab("home");
 		},
 	},
 };
