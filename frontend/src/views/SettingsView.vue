@@ -202,12 +202,6 @@
 
 							<div class="flex flex-col gap-3">
 								<div class="flex flex-col gap-1.5">
-									<Label for="openrouter_api_url">API URL</Label>
-									<Input id="openrouter_api_url" v-model="openrouterForm.apiUrl" type="url"
-										placeholder="https://openrouter.ai/api/v1" autocomplete="off" spellcheck="false" />
-								</div>
-
-								<div class="flex flex-col gap-1.5">
 									<Label for="openrouter_api_key">API key</Label>
 									<Input id="openrouter_api_key" v-model="openrouterForm.apiKey" type="password"
 										placeholder="sk-or-..." autocomplete="off" spellcheck="false" />
@@ -292,7 +286,6 @@ export default {
 			openrouterError: "",
 			openrouterHealth: null,
 			openrouterForm: {
-				apiUrl: "https://openrouter.ai/api/v1",
 				apiKey: "",
 			},
 		};
@@ -315,7 +308,6 @@ export default {
 			this.ollamaOpen = Boolean(settings.providers.ollama);
 			const openrouter = settings.openrouter;
 			this.openrouterForm = {
-				apiUrl: openrouter.apiUrl,
 				apiKey: openrouter.apiKey ?? "",
 			};
 			this.openrouterOpen = Boolean(settings.providers.openrouter);

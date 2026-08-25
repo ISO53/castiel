@@ -151,23 +151,6 @@
 				<PromptInputFooter class="mt-2 items-center justify-between gap-2 border-none">
 					<PromptInputTools>
 						<div class="flex items-center gap-2">
-							<DropdownMenu>
-								<DropdownMenuTrigger as-child>
-									<Button variant="outline" size="sm" :disabled="!ready || streaming">
-										<Brain class="size-3.5" />
-										<span>{{ reasoningLabel }}</span>
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent align="start">
-									<DropdownMenuItem v-for="option in reasoningOptions"
-										:key="option.value ?? 'default'" @select="reasoningEffort = option.value">
-										<Check v-if="(reasoningEffort ?? null) === option.value" class="size-3.5 shrink-0" />
-										<span v-else class="size-3.5 shrink-0" />
-										{{ option.label }}
-									</DropdownMenuItem>
-								</DropdownMenuContent>
-							</DropdownMenu>
-
 							<Context v-if="lastUsage" :used-tokens="lastUsage.totalTokens ?? 0" :max-tokens="contextWindow"
 								:usage="lastUsage">
 								<ContextTrigger />
@@ -187,22 +170,46 @@
 							</Context>
 
 							<DropdownMenu>
-							<DropdownMenuTrigger as-child>
-								<Button variant="outline" size="sm"
-									:disabled="!providerId || loadingModels || !models.length || streaming">
-									<span class="max-w-56 truncate">{{ selectedModel?.name ?? "Select model" }}</span>
-									<ChevronDown />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="start" class="w-72!">
-								<DropdownMenuItem v-for="model in models" :key="model.name" :text-value="model.name"
-									@select="modelName = model.name">
-									<img v-if="providerLogo(providerId)" :src="providerLogo(providerId)"
-										class="size-3.5 shrink-0" alt="" aria-hidden="true" />
-									<span class="min-w-0 truncate">{{ model.name }}</span>
-								</DropdownMenuItem>
-							</DropdownMenuContent>
-						</DropdownMenu>
+								<DropdownMenuTrigger as-child>
+									<Button variant="outline" size="sm" :disabled="!ready || streaming">
+										<Brain class="size-3.5" />
+										<span>{{ reasoningLabel }}</span>
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="start">
+									<DropdownMenuItem v-for="option in reasoningOptions"
+										:key="option.value ?? 'default'" @select="reasoningEffort = option.value">
+										<Check v-if="(reasoningEffort ?? null) === option.value" class="size-3.5 shrink-0" />
+										<span v-else class="size-3.5 shrink-0" />
+										{{ option.label }}
+									</DropdownMenuItem>
+								</DropdownMenuContent>
+							</DropdownMenu>
+
+							<ModelSelector v-model:open="modelSelectorOpen">
+								<ModelSelectorTrigger as-child>
+									<Button variant="outline" size="sm"
+										:disabled="!providerId || loadingModels || !models.length || streaming">
+										<img v-if="providerLogo(providerId)" :src="providerLogo(providerId)"
+											class="size-3.5 shrink-0" alt="" aria-hidden="true" />
+										<span class="max-w-56 truncate">{{ selectedModel?.name ?? "Select model" }}</span>
+									</Button>
+								</ModelSelectorTrigger>
+								<ModelSelectorContent title="Select model" class="sm:max-w-xl">
+									<ModelSelectorInput v-model="modelSearch" placeholder="Search models…" />
+									<ModelSelectorList>
+										<ModelSelectorEmpty v-if="!visibleModels.length">No models found.</ModelSelectorEmpty>
+										<ModelSelectorGroup :heading="providerId ?? 'Models'">
+											<ModelSelectorItem v-for="model in visibleModels" :key="model.name"
+												:value="model.name" @select="selectModel(model.name)">
+												<img v-if="providerLogo(providerId)" :src="providerLogo(providerId)"
+													class="size-3.5 shrink-0" alt="" aria-hidden="true" />
+												<ModelSelectorName>{{ model.name }}</ModelSelectorName>
+											</ModelSelectorItem>
+										</ModelSelectorGroup>
+									</ModelSelectorList>
+								</ModelSelectorContent>
+							</ModelSelector>
 						</div>
 					</PromptInputTools>
 					<PromptInputSubmit :status="streaming ? 'streaming' : 'ready'" :disabled="!ready"
@@ -225,6 +232,7 @@ import {
 import { Conversation, ConversationContent, ConversationScrollButton } from "@/components/ai-elements/conversation";
 import { Context, ContextCacheUsage, ContextContent, ContextContentBody, ContextContentFooter, ContextContentHeader, ContextInputUsage, ContextOutputUsage, ContextReasoningUsage, ContextTrigger } from "@/components/ai-elements/context";
 import { Loader } from "@/components/ai-elements/loader";
+import { ModelSelector, ModelSelectorContent, ModelSelectorEmpty, ModelSelectorGroup, ModelSelectorInput, ModelSelectorItem, ModelSelectorList, ModelSelectorName, ModelSelectorTrigger } from "@/components/ai-elements/model-selector";
 import {
 	PromptInput,
 	PromptInputFooter,
@@ -324,6 +332,15 @@ export default {
 		Loader,
 		Message,
 		MessageContent,
+		ModelSelector,
+		ModelSelectorContent,
+		ModelSelectorEmpty,
+		ModelSelectorGroup,
+		ModelSelectorInput,
+		ModelSelectorItem,
+		ModelSelectorList,
+		ModelSelectorName,
+		ModelSelectorTrigger,
 		Plus,
 		PromptInput,
 		PromptInputFooter,
@@ -367,6 +384,8 @@ export default {
 			abortController: null,
 			lastUsage: null,
 			reasoningEffort: null,
+			modelSelectorOpen: false,
+			modelSearch: "",
 			loadingModels: false,
 			streaming: false,
 			error: "",
@@ -411,6 +430,16 @@ export default {
 			const option = this.reasoningOptions.find((candidate) => candidate.value === this.reasoningEffort);
 			return option ? `Reasoning: ${option.label}` : "Reasoning";
 		},
+		// Rendering hundreds of command items (OpenRouter catalogs 400+ models) makes the
+		// dialog mount crawl, so we filter and cap the list ourselves — the search box
+		// covers everything beyond the cap.
+		visibleModels() {
+			const query = this.modelSearch.trim().toLowerCase();
+			const filtered = query
+				? this.models.filter((model) => model.name.toLowerCase().includes(query))
+				: this.models;
+			return filtered.slice(0, 100);
+		},
 			// A response was requested but nothing streamed yet — show the loader.
 		assistantIdle() {
 			if (!this.streaming) return false;
@@ -433,6 +462,12 @@ export default {
 	},
 	beforeUnmount() {
 		window.removeEventListener("keydown", this.handleWindowKeydown);
+	},
+	watch: {
+		// Reset the search so reopening starts from the full (capped) list.
+		modelSelectorOpen(open) {
+			if (!open) this.modelSearch = "";
+		},
 	},
 	methods: { providerLogo,
 		handleWindowKeydown(event) {
@@ -808,6 +843,10 @@ export default {
 		// PromptInput clears its own input before calling submit and restores it on error.
 		handlePromptSubmit(message) {
 			this.sendMessage(message?.text);
+		},
+		selectModel(name) {
+			this.modelName = name;
+			this.modelSelectorOpen = false;
 		},
 		async readEventStream(stream, onEvent) {
 			const reader = stream.getReader();
