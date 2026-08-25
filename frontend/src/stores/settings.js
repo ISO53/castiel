@@ -4,6 +4,7 @@ const API_BASE_URL = "http://localhost:8081/api/settings";
 
 const LLAMA_CPP_ID = "llama.cpp";
 const OLLAMA_ID = "ollama";
+const OPENROUTER_ID = "openrouter";
 
 async function readError(response) {
 	const body = await response.text();
@@ -40,6 +41,15 @@ export function defaultOllamaProvider() {
 	};
 }
 
+/** Default form values for the OpenRouter settings section (UI-only). */
+export function defaultOpenRouterProvider() {
+	return {
+		type: "OPENAI_COMPATIBLE",
+		apiUrl: "https://openrouter.ai/api/v1",
+		apiKey: "",
+	};
+}
+
 export const useSettingsStore = defineStore("settings", {
 	state: () => ({
 		providers: {},
@@ -57,6 +67,12 @@ export const useSettingsStore = defineStore("settings", {
 			return {
 				...defaultOllamaProvider(),
 				...(state.providers[OLLAMA_ID] ?? {}),
+			};
+		},
+		openrouter(state) {
+			return {
+				...defaultOpenRouterProvider(),
+				...(state.providers[OPENROUTER_ID] ?? {}),
 			};
 		},
 	},
@@ -107,6 +123,13 @@ export const useSettingsStore = defineStore("settings", {
 				type: "OLLAMA",
 				apiUrl: form.apiUrl,
 				contextWindow: Number(form.contextWindow) || 8192,
+			});
+		},
+		connectOpenRouter(form) {
+			return this.connectProvider(OPENROUTER_ID, {
+				type: "OPENAI_COMPATIBLE",
+				apiUrl: form.apiUrl,
+				apiKey: form.apiKey ?? "",
 			});
 		},
 	},

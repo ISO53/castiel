@@ -14,7 +14,10 @@
 				<DropdownMenuContent align="end" class="w-64!">
 					<DropdownMenuLabel>New chat</DropdownMenuLabel>
 					<DropdownMenuSeparator />
-					<DropdownMenuItem v-for="provider in providers" :key="provider.id" @select="startChat(provider.id)">
+					<DropdownMenuItem v-for="provider in providers" :key="provider.id"
+						@select="startChat(provider.id)">
+						<img v-if="providerLogo(provider.id)" :src="providerLogo(provider.id)"
+							class="size-3.5 shrink-0" alt="" aria-hidden="true" />
 						{{ provider.id }}
 					</DropdownMenuItem>
 					<DropdownMenuItem v-if="!providers.length" disabled>No providers configured</DropdownMenuItem>
@@ -194,6 +197,8 @@
 							<DropdownMenuContent align="start" class="w-72!">
 								<DropdownMenuItem v-for="model in models" :key="model.name" :text-value="model.name"
 									@select="modelName = model.name">
+									<img v-if="providerLogo(providerId)" :src="providerLogo(providerId)"
+										class="size-3.5 shrink-0" alt="" aria-hidden="true" />
 									<span class="min-w-0 truncate">{{ model.name }}</span>
 								</DropdownMenuItem>
 							</DropdownMenuContent>
@@ -256,6 +261,7 @@ import {
 	QuestionnaireTitle,
 } from "@/components/ui/questionnaire";
 import { useSettingsStore } from "@/stores/settings";
+import { providerLogo } from "@/lib/provider-logos";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 
@@ -428,7 +434,7 @@ export default {
 	beforeUnmount() {
 		window.removeEventListener("keydown", this.handleWindowKeydown);
 	},
-	methods: {
+	methods: { providerLogo,
 		handleWindowKeydown(event) {
 			if (event.key === "Escape" && this.streaming) {
 				event.preventDefault();
