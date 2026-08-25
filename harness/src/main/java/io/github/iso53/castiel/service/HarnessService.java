@@ -16,14 +16,10 @@ import dev.langchain4j.service.tool.ToolExecutor;
 import io.github.iso53.castiel.model.ChatStreamRequest;
 import io.github.iso53.castiel.model.ChatTurn;
 import io.github.iso53.castiel.model.LlmProviderConfig;
+import io.github.iso53.castiel.provider.GenerationOptions;
+import io.github.iso53.castiel.provider.LlmProvider;
 import io.github.iso53.castiel.tool.ToolProvider;
 import io.github.iso53.castiel.tool.UserQuestionTool;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.http.codec.ServerSentEvent;
-import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
-
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -31,6 +27,11 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
 
 /**
  * Streams chat completions through LangChain4j using configured providers.
@@ -130,8 +131,10 @@ public class HarnessService {
 			return Flux.error(ex);
 		}
 
-		StreamingChatModel model = llmClientFactory.streamingChatModel(config, request.modelName().trim());
+		LlmProvider provider = llmClientFactory.create(config);
+		String modelName = request.modelName().trim();
 		List<ChatMessage> messages = buildMessages(request.messages());
+		GenerationOptions options = new GenerationOptions(request.reasoningEffort());
 
 		String generationId = UUID.randomUUID().toString();
 		GenerationState state = new GenerationState();
@@ -140,7 +143,7 @@ public class HarnessService {
 		return Flux.create(sink -> {
 			sink.onDispose(() -> generations.remove(generationId));
 			sink.next(event("start", json(Map.of("id", generationId))));
-			streamRound(model, messages, sink, state, 0);
+			streamRound(provider, modelName, options, messages, sink, state, 0);
 		});
 	}
 
@@ -172,7 +175,9 @@ public class HarnessService {
 	 * generation's cancelled flag first, so a cancel request stops the stream immediately.
 	 */
 	private void streamRound(
-		StreamingChatModel model,
+		LlmProvider provider,
+		String modelName,
+		GenerationOptions options,
 		List<ChatMessage> messages,
 		FluxSink<ServerSentEvent<String>> sink,
 		GenerationState state,
@@ -189,6 +194,7 @@ public class HarnessService {
 		}
 
 		AtomicBoolean inThinking = new AtomicBoolean(false);
+		StreamingChatModel model = provider.chatModel(modelName, options);
 
 		model.chat(
 			ChatRequest.builder().messages(messages).toolSpecifications(toolSpecifications).build(),
@@ -267,7 +273,7 @@ public class HarnessService {
 						);
 						nextMessages.add(ToolExecutionResultMessage.from(request, result));
 					}
-					streamRound(model, nextMessages, sink, state, round + 1);
+					streamRound(provider, modelName, options, nextMessages, sink, state, round + 1);
 				}
 
 				@Override

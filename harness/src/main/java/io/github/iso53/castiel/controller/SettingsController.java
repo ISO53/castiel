@@ -51,7 +51,7 @@ public class SettingsController {
 		}
 		try {
 			UserSettings settings = userSettingsService.upsertProvider(id, body);
-			HealthStatus health = llmClientFactory.healthCheck(settings.requireProvider(id));
+			HealthStatus health = llmClientFactory.create(settings.requireProvider(id)).healthCheck();
 			return new ProviderConnectResponse(settings, health);
 		} catch (IllegalArgumentException ex) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
@@ -66,7 +66,7 @@ public class SettingsController {
 	@GetMapping("/providers/{id}/models")
 	public List<ModelInfo> listModels(@PathVariable("id") String id) {
 		try {
-			return llmClientFactory.listModels(userSettingsService.get().requireProvider(id));
+			return llmClientFactory.create(userSettingsService.get().requireProvider(id)).listModels();
 		} catch (IllegalArgumentException ex) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
 		} catch (Exception ex) {

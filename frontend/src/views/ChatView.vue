@@ -148,6 +148,23 @@
 				<PromptInputFooter class="mt-2 items-center justify-between gap-2 border-none">
 					<PromptInputTools>
 						<div class="flex items-center gap-2">
+							<DropdownMenu>
+								<DropdownMenuTrigger as-child>
+									<Button variant="outline" size="sm" :disabled="!ready || streaming">
+										<Brain class="size-3.5" />
+										<span>{{ reasoningLabel }}</span>
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="start">
+									<DropdownMenuItem v-for="option in reasoningOptions"
+										:key="option.value ?? 'default'" @select="reasoningEffort = option.value">
+										<Check v-if="(reasoningEffort ?? null) === option.value" class="size-3.5 shrink-0" />
+										<span v-else class="size-3.5 shrink-0" />
+										{{ option.label }}
+									</DropdownMenuItem>
+								</DropdownMenuContent>
+							</DropdownMenu>
+
 							<Context v-if="lastUsage" :used-tokens="lastUsage.totalTokens ?? 0" :max-tokens="contextWindow"
 								:usage="lastUsage">
 								<ContextTrigger />
@@ -213,7 +230,7 @@ import {
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "@/components/ai-elements/sources";
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "@/components/ai-elements/tool";
-import { ChevronDown, Plus } from "@lucide/vue";
+import { Brain, Check, ChevronDown, Plus } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -269,7 +286,9 @@ const LANGUAGE_ALIASES = {
 export default {
 	name: "ChatView",
 	components: {
+		Brain,
 		Button,
+		Check,
 		ChevronDown,
 		CodeBlock,
 		CodeBlockActions,
@@ -341,6 +360,7 @@ export default {
 			generationId: null,
 			abortController: null,
 			lastUsage: null,
+			reasoningEffort: null,
 			loadingModels: false,
 			streaming: false,
 			error: "",
@@ -371,6 +391,19 @@ export default {
 		// provider catalog does not report one (e.g. Ollama).
 		contextWindow() {
 			return this.selectedModel?.contextWindow ?? 128000;
+		},
+		reasoningOptions() {
+			return [
+				{ value: null, label: "Default" },
+				{ value: "off", label: "Off" },
+				{ value: "low", label: "Low" },
+				{ value: "medium", label: "Medium" },
+				{ value: "high", label: "High" },
+			];
+		},
+		reasoningLabel() {
+			const option = this.reasoningOptions.find((candidate) => candidate.value === this.reasoningEffort);
+			return option ? `Reasoning: ${option.label}` : "Reasoning";
 		},
 			// A response was requested but nothing streamed yet — show the loader.
 		assistantIdle() {
@@ -594,6 +627,7 @@ export default {
 					body: JSON.stringify({
 						providerId: this.providerId,
 						modelName: this.modelName,
+						reasoningEffort: this.reasoningEffort,
 						messages: this.messages
 							.slice(0, -1)
 							.map((message) => ({
