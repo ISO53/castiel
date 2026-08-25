@@ -23,9 +23,16 @@
 
 			<ResizableHandle />
 
-			<ResizablePanel collapsible :defaultSize="30" :minSize="3" :maxSize="45">
+			<ResizablePanel collapsible :defaultSize="chats.historyOpen ? 25 : 30" :minSize="15" :maxSize="50">
 				<ChatView />
 			</ResizablePanel>
+
+			<template v-if="chats.historyOpen">
+				<ResizableHandle />
+				<ResizablePanel collapsible :defaultSize="18" :minSize="10" :maxSize="35">
+					<ChatHistoryPanel />
+				</ResizablePanel>
+			</template>
 		</ResizablePanelGroup>
 	</div>
 </template>
@@ -33,9 +40,13 @@
 <script setup>
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import ChatView from "@/views/ChatView.vue";
+import ChatHistoryPanel from "@/components/ChatHistoryPanel.vue";
 import FileTreeView from "@/components/FileTreeView.vue";
 import MenuBar from "@/views/MenuBar.vue";
 import TabbedView from "./views/TabbedView.vue";
+import { useChatsStore } from "@/stores/chats";
+
+const chats = useChatsStore();
 </script>
 
 <style scoped>

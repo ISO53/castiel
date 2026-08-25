@@ -5,44 +5,63 @@
 				<p class="truncate text-xs font-medium text-foreground">{{ headerTitle }}</p>
 			</div>
 
-			<DropdownMenu>
-				<DropdownMenuTrigger as-child>
-					<Button variant="ghost" size="icon-sm" :disabled="streaming" aria-label="Start a new chat">
-						<Plus />
-					</Button>
-				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" class="w-64!">
-					<DropdownMenuLabel>Start a new chat with the providers below</DropdownMenuLabel>
-					<DropdownMenuSeparator />
-					<DropdownMenuItem v-for="provider in providers" :key="provider.id"
-						@select="startChat(provider.id)">
-						<img v-if="providerLogo(provider.id)" :src="providerLogo(provider.id)"
-							class="size-3.5 shrink-0" alt="" aria-hidden="true" />
-						{{ provider.id }}
-					</DropdownMenuItem>
-					<DropdownMenuItem v-if="!providers.length" disabled>No providers configured</DropdownMenuItem>
-				</DropdownMenuContent>
-			</DropdownMenu>
+			<div class="flex items-center gap-1">
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					:class="{ 'bg-accent text-accent-foreground': chats.historyOpen }"
+					:disabled="streaming || !cwd"
+					aria-label="Chat history"
+					:title="!cwd ? 'Open a workspace first to view history' : 'Chat history'"
+					@click="chats.toggleHistory()"
+				>
+					<History class="size-3.5" />
+				</Button>
+
+				<DropdownMenu>
+					<DropdownMenuTrigger as-child>
+						<Button variant="ghost" size="icon-sm" :disabled="streaming || !cwd" aria-label="Start a new chat" :title="!cwd ? 'Open a workspace first to start a chat' : 'New chat'">
+							<Plus class="size-3.5" />
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end" class="w-64!">
+						<DropdownMenuLabel>Start a new chat with the providers below</DropdownMenuLabel>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem v-for="provider in providers" :key="provider.id"
+							@select="startChat(provider.id)">
+							<img v-if="providerLogo(provider.id)" :src="providerLogo(provider.id)"
+								class="size-3.5 shrink-0" alt="" aria-hidden="true" />
+							{{ provider.id }}
+						</DropdownMenuItem>
+						<DropdownMenuItem v-if="!providers.length" disabled>No providers configured</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+			</div>
 		</header>
 
-		<Conversation class="min-h-0" aria-label="Chat messages">
-			<ConversationContent class="gap-4 px-3 py-4">
-							<div v-if="!providerId"
-								class="m-auto max-w-56 text-center text-xs leading-relaxed text-muted-foreground">
-								Start a new chat and choose one of your configured providers.
-							</div>
-							<div v-else-if="loadingModels"
-								class="m-auto flex items-center gap-2 text-xs text-muted-foreground">
-								<Spinner class="size-3" /> Loading models…
-							</div>
-							<div v-else-if="!models.length && !error"
-								class="m-auto max-w-56 text-center text-xs leading-relaxed text-muted-foreground">
-								This provider did not report any available models.
-							</div>
-							<div v-else-if="!modelName"
-								class="m-auto max-w-56 text-center text-xs leading-relaxed text-muted-foreground">
-								Choose a model below to start chatting.
-							</div>
+			<Conversation class="min-h-0 flex-1" aria-label="Chat messages">
+				<ConversationContent class="gap-4 px-3 py-4">
+					<div v-if="!cwd"
+						class="m-auto flex max-w-64 flex-col items-center gap-2.5 text-center text-xs leading-relaxed text-muted-foreground">
+						<FolderOpen class="size-6 text-muted-foreground/60" />
+						<span>Please open or create a workspace from the Home tab or File menu to start chatting.</span>
+					</div>
+					<div v-else-if="!providerId"
+						class="m-auto max-w-56 text-center text-xs leading-relaxed text-muted-foreground">
+						Start a new chat and choose one of your configured providers.
+					</div>
+					<div v-else-if="loadingModels"
+						class="m-auto flex items-center gap-2 text-xs text-muted-foreground">
+						<Spinner class="size-3" /> Loading models…
+					</div>
+					<div v-else-if="!models.length && !error"
+						class="m-auto max-w-56 text-center text-xs leading-relaxed text-muted-foreground">
+						This provider did not report any available models.
+					</div>
+					<div v-else-if="!modelName"
+						class="m-auto max-w-56 text-center text-xs leading-relaxed text-muted-foreground">
+						Choose a model below to start chatting.
+					</div>
 
 							<Message v-for="message in messages" :key="message.id"
 								:align="message.role === 'user' ? 'end' : 'start'">
@@ -243,7 +262,7 @@ import {
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "@/components/ai-elements/sources";
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "@/components/ai-elements/tool";
-import { Brain, Check, ChevronDown, Plus } from "@lucide/vue";
+import { Brain, Check, ChevronDown, FolderOpen, History, Plus, Trash2, X } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -269,6 +288,8 @@ import {
 	QuestionnaireTitle,
 } from "@/components/ui/questionnaire";
 import { useSettingsStore } from "@/stores/settings";
+import { useWorkspaceStore } from "@/stores/workspace";
+import { useChatsStore } from "@/stores/chats";
 import { providerLogo } from "@/lib/provider-logos";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
@@ -329,6 +350,8 @@ export default {
 		DropdownMenuLabel,
 		DropdownMenuSeparator,
 		DropdownMenuTrigger,
+		FolderOpen,
+		History,
 		Loader,
 		Message,
 		MessageContent,
@@ -371,11 +394,19 @@ export default {
 		ToolHeader,
 		ToolInput,
 		ToolOutput,
+		Trash2,
+		X,
 	},
 
 	data() {
 		return {
 			settings: useSettingsStore(),
+			workspace: useWorkspaceStore(),
+			chats: useChatsStore(),
+			historyOpen: false,
+			currentChatId: null,
+			chatTitle: "",
+			chatCreatedAt: null,
 			providerId: null,
 			modelName: null,
 			models: [],
@@ -387,11 +418,18 @@ export default {
 			modelSelectorOpen: false,
 			modelSearch: "",
 			loadingModels: false,
+			loadingHistory: false,
 			streaming: false,
 			error: "",
 		};
 	},
 	computed: {
+		cwd() {
+			return this.workspace.cwd;
+		},
+		chatList() {
+			return this.chats.chats;
+		},
 		providers() {
 			return Object.entries(this.settings.providers).map(([id, config]) => ({ id, config }));
 		},
@@ -402,12 +440,16 @@ export default {
 			return this.models.find((model) => model.name === this.modelName) ?? null;
 		},
 		ready() {
-			return Boolean(this.providerId && this.modelName);
+			return Boolean(this.cwd && this.providerId && this.modelName);
 		},
 		headerTitle() {
+			if (this.chatTitle) {
+				return this.chatTitle;
+			}
 			return this.selectedProvider?.id ?? "New chat";
 		},
 		composerPlaceholder() {
+			if (!this.cwd) return "Open a workspace to start chatting";
 			if (!this.providerId) return "Choose a provider to start a chat";
 			if (!this.modelName) return "Choose a model to start chatting";
 			return "Message Castiel…";
@@ -440,7 +482,7 @@ export default {
 				: this.models;
 			return filtered.slice(0, 100);
 		},
-			// A response was requested but nothing streamed yet — show the loader.
+		// A response was requested but nothing streamed yet — show the loader.
 		assistantIdle() {
 			if (!this.streaming) return false;
 			const last = this.messages[this.messages.length - 1];
@@ -453,11 +495,15 @@ export default {
 	},
 	async mounted() {
 		window.addEventListener("keydown", this.handleWindowKeydown);
-		if (this.settings.loaded) return;
-		try {
-			await this.settings.fetch();
-		} catch (error) {
-			this.error = this.messageFor(error, "Could not load configured providers.");
+		if (this.cwd) {
+			this.chats.fetchList().catch(() => {});
+		}
+		if (!this.settings.loaded) {
+			try {
+				await this.settings.fetch();
+			} catch (error) {
+				this.error = this.messageFor(error, "Could not load configured providers.");
+			}
 		}
 	},
 	beforeUnmount() {
@@ -468,8 +514,174 @@ export default {
 		modelSelectorOpen(open) {
 			if (!open) this.modelSearch = "";
 		},
+		"chats.selectedSession"(session) {
+			if (!session) return;
+			this.applySession(session);
+		},
+		cwd(newCwd) {
+			if (newCwd) {
+				this.chats.fetchList().catch(() => {});
+			} else {
+				this.chats.chats = [];
+				this.chats.historyOpen = false;
+				this.messages = [];
+				this.currentChatId = null;
+				this.chatTitle = "";
+				this.providerId = null;
+				this.modelName = null;
+			}
+		},
 	},
-	methods: { providerLogo,
+	methods: {
+		providerLogo,
+		applySession(session) {
+			if (this.streaming) return;
+			this.currentChatId = session.id;
+			this.chatTitle = session.title;
+			this.chatCreatedAt = session.createdAt;
+			this.providerId = session.providerId;
+			this.modelName = session.modelName;
+			this.reasoningEffort = session.reasoningEffort ?? null;
+			this.messages = (session.messages || []).map((msg) => ({
+				id: msg.id || crypto.randomUUID(),
+				role: msg.role,
+				parts: msg.parts || [],
+				isThinking: false,
+				streamBuffer: "",
+				trimResponseLeadingNewlines: false,
+			}));
+			this.generationId = null;
+			this.lastUsage = null;
+			if (this.providerId) {
+				this.loadProviderModels(this.providerId);
+			}
+		},
+		formatChatDate(isoString) {
+			if (!isoString) return "";
+			const date = new Date(isoString);
+			if (isNaN(date.getTime())) return "";
+			const now = new Date();
+			const isToday = date.toDateString() === now.toDateString();
+			if (isToday) {
+				return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+			}
+			const isThisYear = date.getFullYear() === now.getFullYear();
+			if (isThisYear) {
+				return date.toLocaleDateString([], { month: "short", day: "numeric" });
+			}
+			return date.toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" });
+		},
+		async toggleHistory() {
+			this.historyOpen = !this.historyOpen;
+			if (this.historyOpen && this.cwd) {
+				this.loadingHistory = true;
+				try {
+					await this.chats.fetchList();
+				} catch (err) {
+					this.error = this.messageFor(err, "Could not load chat history.");
+				} finally {
+					this.loadingHistory = false;
+				}
+			}
+		},
+		async selectChat(chatId) {
+			if (this.streaming) return;
+			this.error = "";
+			try {
+				const session = await this.chats.loadChat(chatId);
+				this.currentChatId = session.id;
+				this.chatTitle = session.title;
+				this.chatCreatedAt = session.createdAt;
+				this.providerId = session.providerId;
+				this.modelName = session.modelName;
+				this.reasoningEffort = session.reasoningEffort ?? null;
+				this.messages = (session.messages || []).map((msg) => ({
+					id: msg.id || crypto.randomUUID(),
+					role: msg.role,
+					parts: msg.parts || [],
+					isThinking: false,
+					streamBuffer: "",
+					trimResponseLeadingNewlines: false,
+				}));
+				this.generationId = null;
+				this.lastUsage = null;
+
+				if (this.providerId) {
+					this.loadProviderModels(this.providerId);
+				}
+
+				// Close history sidebar upon selecting a chat
+				this.historyOpen = false;
+			} catch (err) {
+				this.error = this.messageFor(err, "Could not load chat.");
+			}
+		},
+		async loadProviderModels(providerId) {
+			this.loadingModels = true;
+			try {
+				const response = await fetch(`${SETTINGS_API}/providers/${encodeURIComponent(providerId)}/models`);
+				if (!response.ok) throw new Error(await this.readError(response));
+				if (this.providerId === providerId) this.models = await response.json();
+			} catch (error) {
+				if (this.providerId === providerId) {
+					this.error = this.messageFor(error, "Could not load models for this provider.");
+				}
+			} finally {
+				if (this.providerId === providerId) this.loadingModels = false;
+			}
+		},
+		async handleDeleteChat(chatId) {
+			try {
+				await this.chats.deleteChat(chatId);
+				if (this.currentChatId === chatId) {
+					this.currentChatId = null;
+					this.chatTitle = "";
+					this.messages = [];
+				}
+			} catch (err) {
+				this.error = this.messageFor(err, "Could not delete chat.");
+			}
+		},
+		async persistCurrentChat() {
+			if (!this.cwd || !this.currentChatId || !this.messages.length) return;
+			try {
+				const serializableMessages = this.messages
+					.filter((m) => this.hasRenderableContent(m) || m.role === "user")
+					.map((m) => ({
+						id: m.id,
+						role: m.role,
+						parts: (m.parts || []).map((part) => {
+							const clean = { type: part.type };
+							if (part.text !== undefined) clean.text = part.text;
+							if (part.id !== undefined) clean.id = part.id;
+							if (part.name !== undefined) clean.name = part.name;
+							if (part.arguments !== undefined) clean.arguments = part.arguments;
+							if (part.result !== undefined) clean.result = part.result;
+							if (part.question !== undefined) clean.question = part.question;
+							if (part.options !== undefined) clean.options = part.options;
+							if (part.multiSelect !== undefined) clean.multiSelect = part.multiSelect;
+							return clean;
+						}),
+					}));
+
+				const firstUserMsg = this.messages.find((m) => m.role === "user");
+				const title = this.chatTitle || (firstUserMsg ? this.messageText(firstUserMsg).slice(0, 80).trim() : "New Chat");
+				this.chatTitle = title;
+
+				await this.chats.saveChat({
+					id: this.currentChatId,
+					title: this.chatTitle,
+					providerId: this.providerId,
+					modelName: this.modelName,
+					reasoningEffort: this.reasoningEffort,
+					createdAt: this.chatCreatedAt || new Date().toISOString(),
+					updatedAt: new Date().toISOString(),
+					messages: serializableMessages,
+				});
+			} catch (err) {
+				console.error("Failed to persist chat:", err);
+			}
+		},
 		handleWindowKeydown(event) {
 			if (event.key === "Escape" && this.streaming) {
 				event.preventDefault();
@@ -624,7 +836,10 @@ export default {
 			return message.parts.some((part) => part.type === "tool" || (part.text ?? "").length > 0);
 		},
 		async startChat(nextProviderId) {
-			if (this.streaming) return;
+			if (!this.cwd || this.streaming) return;
+			this.currentChatId = crypto.randomUUID();
+			this.chatTitle = "";
+			this.chatCreatedAt = new Date().toISOString();
 			this.providerId = nextProviderId;
 			this.modelName = null;
 			this.models = [];
@@ -648,7 +863,17 @@ export default {
 		},
 		async sendMessage(content) {
 			const text = String(content ?? "").trim();
-			if (!text || !this.ready || this.streaming) return;
+			if (!this.cwd || !text || !this.ready || this.streaming) return;
+
+			if (!this.currentChatId) {
+				this.currentChatId = crypto.randomUUID();
+			}
+			if (!this.chatCreatedAt) {
+				this.chatCreatedAt = new Date().toISOString();
+			}
+			if (!this.chatTitle) {
+				this.chatTitle = text.slice(0, 80);
+			}
 
 			this.error = "";
 			this.messages.push(this.createMessage("user", text));
@@ -766,6 +991,7 @@ export default {
 				for (const part of assistantMessage.parts) {
 					if (part.type === "tool" && part.result === null) part.open = false;
 				}
+				await this.persistCurrentChat();
 			}
 		},
 		async submitAnswer(event, call) {
