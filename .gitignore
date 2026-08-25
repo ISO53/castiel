@@ -30,6 +30,7 @@ dist/
 
 # IDE files
 .vscode/
+.idea/
 
 # lock files
 package-lock.json
