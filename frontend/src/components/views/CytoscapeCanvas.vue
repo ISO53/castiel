@@ -7,7 +7,11 @@ import cytoscape from "cytoscape";
 import fcose from "cytoscape-fcose";
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 
-cytoscape.use(fcose);
+try {
+	cytoscape.use(fcose);
+} catch {
+	// Duplicate cytoscape copy — runLayout() falls back to the built-in cose layout.
+}
 
 /**
  * Mounts a Cytoscape graph. Re-layouts happen only when the elements actually change
@@ -45,7 +49,7 @@ const STYLESHEET = [
 			"border-width": 1,
 			"border-color": "#52525b",
 			shape: "round-rectangle",
-			"padding": "8px",
+			padding: "8px",
 		},
 	},
 	{
@@ -112,19 +116,50 @@ const STYLESHEET = [
 	},
 ];
 
+let containerObserver = null;
+let didInitialLayout = false;
+
 onMounted(() => {
 	instance = cytoscape({
 		container: container.value,
 		elements: props.elements,
 		style: STYLESHEET,
-		layout: { ...props.layout },
 	});
 	instance.on("tap", "node, edge", (event) => emit("select", event.target.json()));
 	instance.on("tap", (event) => {
 		if (event.target === instance) emit("select", null);
 	});
 	signature = JSON.stringify(props.elements);
+
+	// The canvas may mount at 0x0 (e.g. while its pane is hidden); run the layout
+	// once a real size exists, then just re-center on subsequent resizes.
+	didInitialLayout = layoutIfVisible();
+	containerObserver = new ResizeObserver((entries) => {
+		if (!instance) return;
+		instance.resize();
+		const rect = entries[0]?.contentRect;
+		if (!rect || (rect.width === 0 && rect.height === 0)) return;
+		if (!didInitialLayout) {
+			didInitialLayout = layoutIfVisible();
+		} else {
+			instance.center();
+		}
+	});
+	containerObserver.observe(container.value);
 });
+
+/** Runs the configured layout, falling back to a built-in one if unavailable. */
+function layoutIfVisible() {
+	const rect = container.value?.getBoundingClientRect();
+	if (!rect || rect.width === 0 || rect.height === 0) return false;
+	try {
+		instance.layout({ ...props.layout }).run();
+	} catch {
+		// Requested layout (e.g. fcose) failed to register — degrade gracefully.
+		instance.layout({ name: "cose", animate: true, padding: 30 }).run();
+	}
+	return true;
+}
 
 watch(
 	() => props.elements,
@@ -137,11 +172,13 @@ watch(
 			instance.elements().remove();
 			instance.add(next);
 		});
-		instance.layout({ ...props.layout }).run();
+		layoutIfVisible();
 	},
 );
 
 onBeforeUnmount(() => {
+	containerObserver?.disconnect();
+	containerObserver = null;
 	if (instance) {
 		instance.destroy();
 		instance = null;

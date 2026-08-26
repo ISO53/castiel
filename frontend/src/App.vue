@@ -1,13 +1,14 @@
-<template>
+﻿<template>
 	<div class="app">
 		<MenuBar />
 
 		<ResizablePanelGroup direction="horizontal" class="flex-1 min-h-0">
-			<ResizablePanel collapsible :defaultSize="20" :minSize="3" :maxSize="45">
-				<FileTreeView />
-			</ResizablePanel>
-
-			<ResizableHandle />
+			<template v-if="docks.left">
+				<ResizablePanel collapsible :defaultSize="20" :minSize="3" :maxSize="45">
+					<FileTreeView />
+				</ResizablePanel>
+				<ResizableHandle />
+			</template>
 
 			<ResizablePanel>
 				<ResizablePanelGroup direction="vertical">
@@ -15,23 +16,27 @@
 						<TabbedView />
 					</ResizablePanel>
 
-					<ResizableHandle />
+					<template v-if="docks.bottom">
+						<ResizableHandle />
 
-					<ResizablePanel collapsible :defaultSize="40" :minSize="8"></ResizablePanel>
+						<ResizablePanel collapsible :defaultSize="40" :minSize="8"></ResizablePanel>
+					</template>
 				</ResizablePanelGroup>
 			</ResizablePanel>
 
-			<ResizableHandle />
-
-			<ResizablePanel collapsible :defaultSize="chats.historyOpen ? 25 : 30" :minSize="15" :maxSize="50">
-				<ChatView />
-			</ResizablePanel>
-
-			<template v-if="chats.historyOpen">
+			<template v-if="docks.right">
 				<ResizableHandle />
-				<ResizablePanel collapsible :defaultSize="18" :minSize="10" :maxSize="35">
-					<ChatHistoryPanel />
+
+				<ResizablePanel collapsible :defaultSize="chats.historyOpen ? 25 : 30" :minSize="15" :maxSize="50">
+					<ChatView />
 				</ResizablePanel>
+
+				<template v-if="chats.historyOpen">
+					<ResizableHandle />
+					<ResizablePanel collapsible :defaultSize="18" :minSize="10" :maxSize="35">
+						<ChatHistoryPanel />
+					</ResizablePanel>
+				</template>
 			</template>
 		</ResizablePanelGroup>
 	</div>
@@ -45,8 +50,10 @@ import FileTreeView from "@/components/FileTreeView.vue";
 import MenuBar from "@/views/MenuBar.vue";
 import TabbedView from "./views/TabbedView.vue";
 import { useChatsStore } from "@/stores/chats";
+import { useDocksStore } from "@/stores/docks";
 
 const chats = useChatsStore();
+const docks = useDocksStore();
 </script>
 
 <style scoped>

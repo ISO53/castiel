@@ -23,8 +23,6 @@ public class WorkspaceInfoTool implements ToolProvider {
 		"network.json",
 		"web.json",
 		"findings.json",
-		"credentials.json",
-		"identity.json",
 		"evidence.json",
 		"tasks.json"
 	);

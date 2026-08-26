@@ -5,7 +5,7 @@
 			<div class="shrink-0 flex justify-center overflow-x-auto py-2">
 				<pre
 					class="font-mono text-[5px] sm:text-[6px] md:text-[7px] lg:text-[8px] leading-[1.1] text-primary/80 dark:text-primary tracking-tighter transition-all duration-300">
-					{{ asciiArt }}</pre>
+					{{ castielAscii }}</pre>
 			</div>
 
 			<!-- Intro & Actions (Right) -->
@@ -35,32 +35,14 @@
 			</div>
 		</div>
 
-		<Dialog :open="fileDialogOpen" @update:open="fileDialogOpen = $event">
-			<DialogContent class="sm:max-w-136">
-				<DialogHeader>
-					<DialogTitle>{{ dialogTitle }}</DialogTitle>
-					<DialogDescription>
-						{{ dialogDescription }}
-					</DialogDescription>
-				</DialogHeader>
-
-				<FileViewer v-if="fileDialogOpen" :include-files="includeFiles" :mode="explorerMode"
-					@workspace-ready="onWorkspaceReady" />
-			</DialogContent>
-		</Dialog>
+		<WorkspaceDialog v-model:open="fileDialogOpen" :mode="explorerMode" @workspace-ready="onWorkspaceReady" />
 	</div>
 </template>
 
 <script>
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
-import FileViewer from "@/components/FileViewer.vue";
+import { CASTIEL_ASCII } from "@/lib/ascii-art";
+import WorkspaceDialog from "@/components/WorkspaceDialog.vue";
 import { useTabsStore } from "@/stores/tabs";
 import { FolderPlus, FolderOpen } from "@lucide/vue";
 
@@ -68,57 +50,16 @@ export default {
 	name: "HomeView",
 	components: {
 		Button,
-		Dialog,
-		DialogContent,
-		DialogDescription,
-		DialogHeader,
-		DialogTitle,
-		FileViewer,
+		WorkspaceDialog,
 		FolderPlus,
 		FolderOpen,
 	},
 	data() {
 		return {
 			fileDialogOpen: false,
-			includeFiles: false,
 			explorerMode: "open",
-			asciiArt: `
-⠀⠀⠀⠀⠀⠀⠀⢠⡄⠀⠀⢠⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⢹⣿⣄⠀⠈⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⢷⢽⢦⡀⢹⣇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠘⣯⠳⡙⢦⣿⣦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⢿⡦⣄⣀⠀⠀⠀⠀⠀⠈⢷⡙⢦⡙⢿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠈⠻⣮⡿⣿⢶⣤⣀⠀⠀⠀⠻⣄⠙⢦⡙⠿⣿⣦⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⢨⠻⣮⣝⠲⢌⣙⠒⠦⣤⣈⡳⣤⡉⠲⢬⡑⠿⣟⣷⢶⣤⣤⣄⣀⣤⣀⣀⣄⣀⣀⣀⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠻⣿⡷⣿⣿⣶⣬⣙⠲⢤⣀⡉⠙⠛⠳⢤⣈⡑⠲⠬⣍⣉⡒⠛⠛⠛⣿⠛⠛⠻⠭⣍⣉⣉⣛⣛⠻⠷⣶⣤⣄⣰⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠈⠻⣿⣗⠦⣍⡙⠛⠶⢦⣍⡙⠒⠦⢤⣄⣉⠓⠲⢦⢤⣭⡤⠶⠒⠚⢷⣦⣀⠀⠸⣧⡄⠀⠉⠙⠒⠀⠈⠙⠳⡿⣦⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⢰⣶⣶⣽⣷⣦⣍⣑⠒⠤⢌⣉⣙⠒⠶⠤⢬⣹⣿⣄⢹⣇⡒⠒⠦⠤⡸⣧⡉⠛⠒⠈⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⣷⣤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠉⠻⢾⣕⡺⠭⣙⣛⠲⠶⢦⣭⣍⣑⣒⠒⠒⠒⠂⠉⠉⢛⡖⠆⣀⣀⣈⣙⣶⠒⠒⠚⠀⠀⠀⠀⠀⢀⣠⣤⣀⣀⠀⠘⢿⣆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠈⠙⢓⣶⣬⣍⣑⣒⣶⠶⠭⠭⠭⠉⠉⠉⠍⠭⠉⠙⠶⣥⣄⣀⣀⣩⣿⡓⠒⠀⠀⠀⠀⠀⢻⣁⣀⠀⠈⠙⢦⠈⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⢿⣭⣉⠉⢭⣉⡛⠛⠓⠒⠲⠶⠶⠶⠶⠖⠒⠒⣚⡩⠍⠉⢻⣍⣤⠀⠀⠀⠀⠀⠀⠀⢾⡉⠉⠛⠓⠀⠀⠈⣇⢸⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢩⣻⣳⣶⣮⣭⣭⣍⣉⣉⣉⣉⣉⣭⣭⠤⠴⠒⢋⡿⢋⠤⠔⠒⠊⠉⢀⡴⠚⠛⢛⠓⠶⠆⠀⠀⠀⢻⠈⣷⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠿⣍⣧⡤⠭⣍⣉⣉⣉⣀⣠⡤⠤⠴⠒⠊⣉⣨⠿⠒⠒⢶⣛⣀⣠⣞⣛⣶⠖⠲⠶⠀⠀⢀⡄⠀⠸⡦⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠛⠛⡶⣶⣦⣤⣤⣿⡦⠤⠴⠖⠛⠋⣉⣀⠤⠔⣀⡤⢿⣛⡩⢤⣈⣻⡤⠶⠆⠀⠀⡞⠁⠀⠀⠉⢽⣇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠻⢯⣭⣓⣀⣤⣒⣒⣒⣾⣉⣉⣁⣤⡴⢚⡥⠖⢋⣥⠶⠚⡉⠉⢧⣤⣤⠀⠸⢿⡶⠃⠀⠀⠀⢻⣆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠉⣽⣯⣭⡥⠴⢻⡟⠘⣉⣠⡾⢋⡤⠖⣭⡴⢖⠻⣯⡴⠗⠀⠀⣧⣠⡆⠀⠀⠀⠹⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠛⢛⣿⣫⠖⠉⣰⠟⣡⠖⢉⣾⣏⣀⣠⢤⡄⠈⣿⣠⡗⢀⠀⠀⠀⠙⠻⣦⣄⡀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⣁⣱⣶⡞⣡⠞⣁⡴⢋⡴⢋⡿⢶⡟⠀⠀⠈⢻⣀⡿⠀⢀⡇⠀⠀⠀⠈⠙⠓⠶⢤⣄
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⢠⡟⡝⣡⣾⢋⡴⠋⣴⠏⣠⠋⣿⠦⣶⠀⢈⠿⣧⢀⣾⣷⡀⢠⡀⠀⠀⠀⠀⠁⢸
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⡷⠚⣹⣣⢞⣷⣿⢇⡼⣡⣿⣵⢃⣾⡟⣹⢠⢸⢩⠘⡏⣳⡞⢧⣀⣿⣦⣷⢀⡞
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠷⠛⠁⣿⣿⡾⢛⣿⣡⢾⣹⢡⣿⡏⣾⣼⢠⣿⡇⣷⣀⣽⠀⢨⢉⡄⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠁⠀⠀⠋⠁⢸⣷⠟⣿⣣⠟⣿⡾⣿⣷⡏⠛⠛⠶⠾⠾⠇⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠋⠀⠀⠀⠈⠉⠀⠀⠀⠀⠀⠀⠀⠀`,
+			castielAscii: CASTIEL_ASCII,
 		};
-	},
-	computed: {
-		dialogTitle() {
-			return this.explorerMode === "new" ? "New Workspace" : "Open Workspace";
-		},
-		dialogDescription() {
-			return this.explorerMode === "new"
-				? "Choose a parent folder and enter a name for the new workspace."
-				: "Select an existing directory to use as your workspace.";
-		},
 	},
 	methods: {
 		openNewWorkspace() {

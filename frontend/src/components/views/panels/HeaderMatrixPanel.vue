@@ -5,42 +5,23 @@
 		message="No HTTP security headers collected yet."
 		hint="Response headers captured during recon will build this matrix automatically."
 	/>
-	<div v-else class="h-full min-h-0 overflow-auto rounded-md border">
-		<table class="w-full border-collapse text-xs">
-			<thead class="sticky top-0 z-10 bg-muted">
-				<tr>
-					<th class="border-b px-2.5 py-1.5 text-left font-medium text-muted-foreground">Site</th>
-					<th
-						v-for="header in headerNames"
-						:key="header"
-						class="border-b px-2.5 py-1.5 text-center font-medium whitespace-nowrap text-muted-foreground"
-					>
-						{{ header }}
-					</th>
-				</tr>
-			</thead>
-			<tbody>
-				<tr v-for="row in matrix" :key="row.site" class="hover:bg-muted/40">
-					<td class="max-w-56 truncate border-b border-border/40 px-2.5 py-1.5 font-mono text-[11px]" :title="row.site">
-						{{ row.site }}
-					</td>
-					<td
-						v-for="header in headerNames"
-						:key="header"
-						class="border-b border-border/40 px-2.5 py-1.5 text-center"
-						:title="row.values[header] ?? 'not present'"
-					>
-						<span v-if="row.values[header] !== undefined" class="font-semibold text-green-500">✓</span>
-						<span v-else class="text-muted-foreground/50">✗</span>
-					</td>
-				</tr>
-			</tbody>
-		</table>
-	</div>
+	<DataTable
+		v-else
+		:columns="columns"
+		:data="rows"
+		search-placeholder="Filter site or header…"
+		empty-message="No entries match the filter."
+	>
+		<template #cell-present="{ value }">
+			<span v-if="value" class="font-semibold text-green-500">✓ present</span>
+			<span v-else class="text-muted-foreground/60">✗ missing</span>
+		</template>
+	</DataTable>
 </template>
 
 <script setup>
 import { computed } from "vue";
+import DataTable from "@/components/views/DataTable.vue";
 import EmptyHint from "@/components/views/EmptyHint.vue";
 
 const props = defineProps({ data: { type: Object, default: null } });
@@ -66,18 +47,45 @@ function headerEntries(site) {
 		.filter((entry) => entry.name);
 }
 
-const headerNames = computed(() => {
-	const names = new Set(SECURITY_HEADERS);
+const rows = computed(() => {
+	const result = [];
 	for (const site of sites.value) {
-		for (const entry of headerEntries(site)) names.add(entry.name);
+		const captured = new Map(headerEntries(site).map((entry) => [entry.name.toLowerCase(), entry.value]));
+		for (const header of SECURITY_HEADERS) {
+			const value = captured.get(header.toLowerCase());
+			result.push({ site: site.url, header, value: value ?? "", present: value !== undefined });
+		}
+		captured.forEach((value, name) => {
+			if (!SECURITY_HEADERS.some((standard) => standard.toLowerCase() === name)) {
+				result.push({ site: site.url, header: `${name} (extra)`, value, present: true });
+			}
+		});
 	}
-	return [...names];
+	return result;
 });
 
-const matrix = computed(() =>
-	sites.value.map((site) => ({
-		site: site.url,
-		values: Object.fromEntries(headerEntries(site).map((entry) => [entry.name, entry.value])),
-	})),
-);
+const columns = [
+	{
+		id: "site",
+		header: "Site",
+		accessorFn: (row) => row.site,
+	},
+	{
+		id: "header",
+		header: "Header",
+		accessorFn: (row) => row.header,
+	},
+	{
+		id: "value",
+		header: "Value",
+		enableSorting: false,
+		accessorFn: (row) => row.value,
+		cell: ({ getValue }) => getValue() || "—",
+	},
+	{
+		id: "present",
+		header: "State",
+		accessorFn: (row) => (row.present ? 1 : 0),
+	},
+];
 </script>

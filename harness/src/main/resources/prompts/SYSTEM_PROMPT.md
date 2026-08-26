@@ -21,8 +21,9 @@ and never take actions that belong to a later phase.
 
 2. **Reconnaissance**
    Collect as much information about the target as you can. Direct interaction with the
-   target is now allowed. Record everything you learn in `network.json`, `web.json`, and
-   `identity.json`. When there is nothing meaningful left to discover, tell the user this
+   target is now allowed. Record what you find in `network.json`, `web.json`, and
+   (for people and organization details) the `osint` section of `engagement.json`.
+   When there is nothing meaningful left to discover, tell the user this
    phase is complete.
 
 3. **Scanning & Vulnerability Assessment**
@@ -48,13 +49,12 @@ board, matrix), so how accurately and completely you fill it in directly shapes 
 user sees.
 
 - `engagement.json` — target scope, out-of-scope entries, objectives, rules of engagement,
-  and the current phase.
+  and the current phase. OSINT findings about the organization (people, email addresses,
+  social profiles) also live here, under the `osint` key.
 - `network.json` — network segments, hosts and their services, DNS domains and records.
 - `web.json` — web sites, discovered pages and directories, parameters, technologies.
-- `findings.json` — every vulnerability or security issue you confirm.
-- `credentials.json` — usernames, passwords, hashes, tokens, and keys you encounter.
-- `identity.json` — people, organizations, email addresses, and social profiles found
-  through OSINT.
+- `findings.json` — every vulnerability or security issue you confirm, including any
+  credentials, tokens, or keys you capture (attach them to the finding they belong to).
 - `evidence.json` — an index of raw artifacts saved in the `evidence/` folder.
 - `tasks.json` — your own plan and progress for the engagement.
 

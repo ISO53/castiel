@@ -52,7 +52,7 @@
 			<template v-else>
 				<div class="space-y-0.5">
 					<button
-						v-for="entry in ENGAGEMENT_DOCUMENTS"
+						v-for="entry in documents"
 						:key="entry.id"
 						type="button"
 						class="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted/60"
@@ -60,7 +60,7 @@
 						@click="openDocumentView(entry)"
 					>
 						<span class="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded border bg-muted/40 text-muted-foreground">
-							<component :is="DOC_ICONS[entry.id]" class="size-3.5" />
+							<component :is="docIcons[entry.id]" class="size-3.5" />
 						</span>
 						<span class="min-w-0">
 							<span class="block truncate text-xs font-medium text-foreground">{{ entry.label }}</span>
@@ -85,12 +85,10 @@ import {
 	FolderTree,
 	Globe,
 	Image as ImageIcon,
-	KeyRound,
 	LayoutGrid,
 	ListChecks,
 	Network,
 	RotateCw,
-	Users,
 } from "@lucide/vue";
 import { ENGAGEMENT_DOCUMENTS } from "@/lib/documents";
 import { useTabsStore } from "@/stores/tabs";
@@ -102,8 +100,6 @@ const DOC_ICONS = {
 	network: Network,
 	web: Globe,
 	findings: Bug,
-	credentials: KeyRound,
-	identity: Users,
 	evidence: ImageIcon,
 	tasks: ListChecks,
 };

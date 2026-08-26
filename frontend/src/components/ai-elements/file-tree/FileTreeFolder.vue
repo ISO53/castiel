@@ -64,8 +64,8 @@ provide(FileTreeFolderKey, {
             "
           />
           <FileTreeIcon>
-            <FolderOpenIcon v-if="isExpanded" class="size-4 text-blue-500" />
-            <FolderIcon v-else class="size-4 text-blue-500" />
+            <FolderOpenIcon v-if="isExpanded" class="size-4 text-primary" />
+            <FolderIcon v-else class="size-4 text-primary" />
           </FileTreeIcon>
           <FileTreeName>{{ props.name }}</FileTreeName>
         </button>

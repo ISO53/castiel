@@ -27,20 +27,6 @@ export const ENGAGEMENT_DOCUMENTS = [
 		description: "Vulnerabilities & severity",
 	},
 	{
-		id: "credentials",
-		file: "credentials.json",
-		label: "Credentials",
-		component: "CredentialsView",
-		description: "Secrets, hashes & tokens",
-	},
-	{
-		id: "identity",
-		file: "identity.json",
-		label: "Identity",
-		component: "IdentityView",
-		description: "People, organizations & OSINT",
-	},
-	{
 		id: "evidence",
 		file: "evidence.json",
 		label: "Evidence",

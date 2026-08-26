@@ -4,10 +4,19 @@
 		<MenubarMenu>
 			<MenubarTrigger>File</MenubarTrigger>
 			<MenubarContent>
-				<MenubarItem>New Project</MenubarItem>
-				<MenubarItem>Open Project</MenubarItem>
+				<MenubarItem @click="newWorkspace">New Workspace</MenubarItem>
+				<MenubarItem @click="openWorkspace">Open Workspace</MenubarItem>
 				<MenubarSeparator />
 				<MenubarItem>Close App</MenubarItem>
+			</MenubarContent>
+		</MenubarMenu>
+
+		<MenubarMenu>
+			<MenubarTrigger>Window</MenubarTrigger>
+			<MenubarContent>
+				<MenubarItem @click="docks.toggle('left')">Toggle left dock</MenubarItem>
+				<MenubarItem @click="docks.toggle('right')">Toggle right dock</MenubarItem>
+				<MenubarItem @click="docks.bottom = !docks.bottom">Toggle bottom dock</MenubarItem>
 			</MenubarContent>
 		</MenubarMenu>
 
@@ -15,8 +24,13 @@
 			<MenubarTrigger>Help</MenubarTrigger>
 			<MenubarContent>
 				<MenubarItem @click="openSettings">Settings</MenubarItem>
-				<MenubarItem>About</MenubarItem>
-				<MenubarItem>Report Issue</MenubarItem>
+				<MenubarSeparator />
+				<MenubarItem @click="showWelcome">Show Welcome</MenubarItem>
+				<MenubarSeparator />
+				<MenubarItem @click="requestFeature">Request Feature</MenubarItem>
+				<MenubarItem @click="fileIssue">File Issue</MenubarItem>
+				<MenubarSeparator />
+				<MenubarItem @click="aboutOpen = true">About Castiel</MenubarItem>
 			</MenubarContent>
 		</MenubarMenu>
 
@@ -44,12 +58,15 @@
 				<span class="whitespace-nowrap font-medium">{{ item.short }}</span>
 			</button>
 		</div>
+
+		<WorkspaceDialog v-model:open="workspaceDialogOpen" :mode="workspaceMode" />
+		<AboutDialog v-model:open="aboutOpen" />
 	</Menubar>
 </template>
 
 <script setup>
 import { Check } from "@lucide/vue";
-import { onBeforeUnmount, watch } from "vue";
+import { onBeforeUnmount, ref, watch } from "vue";
 import {
 	Menubar,
 	MenubarContent,
@@ -59,12 +76,44 @@ import {
 	MenubarTrigger,
 } from "@/components/ui/menubar";
 import { ENGAGEMENT_PHASES, useEngagementStore } from "@/stores/engagement";
+import { useDocksStore } from "@/stores/docks";
 import { useTabsStore } from "@/stores/tabs";
 import { useWorkspaceStore } from "@/stores/workspace";
+import AboutDialog from "@/components/AboutDialog.vue";
+import WorkspaceDialog from "@/components/WorkspaceDialog.vue";
 
 const tabs = useTabsStore();
 const engagement = useEngagementStore();
 const workspace = useWorkspaceStore();
+const docks = useDocksStore();
+
+const GITHUB_REPO = "https://github.com/iso53/castiel";
+
+const workspaceDialogOpen = ref(false);
+const workspaceMode = ref("open");
+const aboutOpen = ref(false);
+
+function newWorkspace() {
+	workspaceMode.value = "new";
+	workspaceDialogOpen.value = true;
+}
+
+function openWorkspace() {
+	workspaceMode.value = "open";
+	workspaceDialogOpen.value = true;
+}
+
+function showWelcome() {
+	tabs.openTab({ value: "home", label: "Home", component: "HomeView", closable: true });
+}
+
+function requestFeature() {
+	window.open(`${GITHUB_REPO}/issues/new?labels=enhancement`, "_blank", "noopener,noreferrer");
+}
+
+function fileIssue() {
+	window.open(`${GITHUB_REPO}/issues/new`, "_blank", "noopener,noreferrer");
+}
 
 let pollTimer = null;
 

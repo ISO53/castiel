@@ -26,7 +26,7 @@
 						<tr v-for="(service, index) in selectionServices" :key="index" class="border-t border-border/50">
 							<td class="py-0.5 pr-3 font-mono">{{ service.port }}/{{ service.protocol ?? "tcp" }}</td>
 							<td class="py-0.5 pr-3">{{ service.service ?? "?" }}</td>
-							<td class="py-0.5 pr-3 text-muted-foreground">{{ service.version ?? "—" }}</td>
+							<td class="py-0.5 pr-3 text-muted-foreground">{{ service.version ?? service.product ?? "—" }}</td>
 						</tr>
 					</tbody>
 				</table>
@@ -68,6 +68,22 @@ const knownIds = computed(() => {
 	return ids;
 });
 
+/** Normalizes DNS records given either as arrays or type-keyed object maps. */
+function normalizeRecords(records) {
+	if (!records) return [];
+	const flatten = (type, values) =>
+		(Array.isArray(values) ? values : [values]).map((value) => ({
+			type,
+			value: typeof value === "string" ? value : String(value.exchange ?? value.value ?? JSON.stringify(value)),
+		}));
+	if (Array.isArray(records)) {
+		return records.flatMap((record) =>
+			typeof record === "string" ? flatten("REC", [record]) : flatten(record.type ?? "REC", [record.value ?? record]),
+		);
+	}
+	return Object.entries(records).flatMap(([type, values]) => flatten(type, values));
+}
+
 const elements = computed(() => {
 	const d = props.data;
 	if (!d) return [];
@@ -96,8 +112,8 @@ const elements = computed(() => {
 			classes: host.status === "down" ? "down" : "up",
 			data: {
 				id: `host:${host.ip}`,
-				label: host.ip,
-				subtitle: [host.os, host.status].filter(Boolean).join(" · "),
+				label: host.hostname ?? host.ip,
+				subtitle: [host.ip, host.os ?? host.type, host.status].filter(Boolean).join(" · "),
 				parent: host.segment ? `seg:${host.segment}` : undefined,
 			},
 		});
@@ -112,12 +128,13 @@ const elements = computed(() => {
 			data: {
 				id: domainId,
 				label: domain.domain,
-				subtitle: (domain.records ?? []).map((record) => `${record.type} ${record.value}`).join("\n") || undefined,
+				subtitle: normalizeRecords(domain.records)
+					.map((record) => `${record.type} ${record.value}`)
+					.join("\n") || undefined,
 			},
 		});
-		for (const record of domain.records ?? []) {
-			const target = idFor(record.value);
-			if (target) pushEdge(domainId, target, record.type);
+		for (const record of normalizeRecords(domain.records)) {
+			pushEdge(domainId, idFor(record.value), record.type);
 		}
 	}
 

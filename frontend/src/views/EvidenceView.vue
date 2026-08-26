@@ -17,7 +17,8 @@
 				<article
 					v-for="artifact in filtered(data)"
 					:key="artifact.path"
-					class="group flex cursor-pointer flex-col overflow-hidden rounded-md border bg-background transition-colors hover:border-ring"
+					class="group flex flex-col overflow-hidden rounded-md border bg-background transition-colors"
+					:class="isDirectory(artifact) ? '' : 'cursor-pointer hover:border-ring'"
 					@click="openArtifact(artifact)"
 				>
 					<div class="flex h-24 items-center justify-center overflow-hidden bg-muted/40">
@@ -28,6 +29,7 @@
 							class="h-full w-full object-cover"
 							loading="lazy"
 						/>
+						<Folder v-else-if="isDirectory(artifact)" class="size-6 text-muted-foreground/50" />
 						<FileText v-else class="size-6 text-muted-foreground/50" />
 					</div>
 					<div class="min-w-0 p-1.5">
@@ -53,7 +55,7 @@
 </template>
 
 <script setup>
-import { FileText, Image as ImageIcon, Search } from "@lucide/vue";
+import { FileText, Folder, Image as ImageIcon, Search } from "@lucide/vue";
 import { ref } from "vue";
 import DocumentShell from "@/components/views/DocumentShell.vue";
 import EmptyHint from "@/components/views/EmptyHint.vue";
@@ -85,16 +87,28 @@ function rawUrl(path) {
 	return `${FILES_API}/raw?path=${encodeURIComponent(joinWorkspacePath(workspace.cwd ?? "", path))}`;
 }
 
+function isDirectory(artifact) {
+	return artifact.path.endsWith("/") || artifact.path.endsWith("\\");
+}
+
 function filtered(data) {
-	const artifacts = (data?.artifacts ?? []).filter((artifact) => artifact?.path);
+	const artifacts = (data?.artifacts ?? [])
+		.map((artifact) => ({
+			...artifact,
+			path: artifact.path ?? artifact.file ?? artifact.location ?? "",
+			description: artifact.description ?? artifact.note ?? "",
+			entity: artifact.related_to ?? artifact.entity ?? "",
+		}))
+		.filter((artifact) => artifact?.path);
 	const needle = filter.value.trim().toLowerCase();
 	if (!needle) return artifacts;
 	return artifacts.filter((artifact) =>
-		`${artifact.path} ${artifact.description ?? ""} ${artifact.related_to ?? ""}`.toLowerCase().includes(needle),
+		`${artifact.path} ${artifact.description} ${artifact.entity}`.toLowerCase().includes(needle),
 	);
 }
 
 async function openArtifact(artifact) {
+	if (isDirectory(artifact)) return;
 	if (!isImage(artifact)) {
 		const path = joinWorkspacePath(workspace.cwd ?? "", artifact.path);
 		tabs.openTab({ value: `file:${path}`, label: fileName(artifact.path), component: "FileEditorView", path });

@@ -58,6 +58,12 @@ public class WorkspaceScaffoldService {
 			    "forbidden_actions": [],
 			    "testing_window": "",
 			    "contacts": []
+			  },
+			  "osint": {
+			    "organizations": [],
+			    "people": [],
+			    "emails": [],
+			    "social_profiles": []
 			  }
 			}
 			""");
@@ -85,24 +91,6 @@ public class WorkspaceScaffoldService {
 		scaffolds.put("findings.json", """
 			{
 			  "findings": [],
-			  "relationships": []
-			}
-			""");
-
-		scaffolds.put("credentials.json", """
-			{
-			  "credentials": [],
-			  "relationships": []
-			}
-			""");
-
-		scaffolds.put("identity.json", """
-			{
-			  "organizations": [],
-			  "people": [],
-			  "emails": [],
-			  "social_profiles": [],
-			  "leaks": [],
 			  "relationships": []
 			}
 			""");

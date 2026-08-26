@@ -16,6 +16,25 @@ import EmptyHint from "@/components/views/EmptyHint.vue";
 
 const props = defineProps({ data: { type: Object, default: null } });
 
+/**
+ * Records arrive either as an array ({ type, value } entries or plain strings)
+ * or as an object map keyed by type ({ A: ["1.2.3.4"], MX: [{ exchange }] }).
+ */
+function normalizeRecords(records) {
+	if (!records) return [];
+	const flatten = (type, values) =>
+		(Array.isArray(values) ? values : [values]).map((value) => ({
+			type,
+			value: typeof value === "string" ? value : String(value.exchange ?? value.value ?? JSON.stringify(value)),
+		}));
+	if (Array.isArray(records)) {
+		return records.flatMap((record) =>
+			typeof record === "string" ? flatten("REC", [record]) : flatten(record.type ?? "REC", [record.value ?? record]),
+		);
+	}
+	return Object.entries(records).flatMap(([type, values]) => flatten(type, values));
+}
+
 const treeData = computed(() => ({
 	name: "DNS",
 	children: (props.data?.domains ?? [])
@@ -23,9 +42,8 @@ const treeData = computed(() => ({
 		.map((domain) => ({
 			name: domain.domain,
 			itemStyle: { color: "#1e293b", borderColor: "#60a5fa" },
-			children: (domain.records ?? []).map((record) => ({
+			children: normalizeRecords(domain.records).map((record) => ({
 				name: `${record.type}  ${record.value}`,
-				value: record.value,
 			})),
 		})),
 }));
@@ -44,6 +62,7 @@ const chartOption = computed(() => ({
 			symbol: "circle",
 			symbolSize: 8,
 			initialTreeDepth: -1,
+			roam: true,
 			lineStyle: { color: "#3f3f46" },
 			label: {
 				position: "left",

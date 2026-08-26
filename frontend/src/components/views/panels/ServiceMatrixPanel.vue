@@ -29,12 +29,12 @@ const rows = computed(() => {
 		for (const service of host.services ?? []) {
 			result.push({
 				ip: host.ip,
-				os: host.os ?? "",
+				hostname: host.hostname ?? "",
 				port: service.port,
 				protocol: service.protocol ?? "tcp",
 				state: service.state ?? "open",
 				service: service.service ?? "",
-				version: service.version ?? "",
+				version: service.version ?? service.product ?? "",
 			});
 		}
 	}
@@ -51,7 +51,6 @@ const columns = [
 	},
 	{ accessorKey: "state", header: "State" },
 	{ accessorKey: "service", header: "Service" },
-	{ accessorKey: "version", header: "Version", cell: ({ getValue }) => getValue() || "—" },
-	{ accessorKey: "os", header: "OS", cell: ({ getValue }) => getValue() || "—" },
+	{ accessorKey: "version", header: "Product / Version", cell: ({ getValue }) => getValue() || "—" },
 ];
 </script>

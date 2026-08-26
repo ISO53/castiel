@@ -32,7 +32,7 @@
 </template>
 
 <script>
-import { Bug, Globe, Image as ImageIcon, KeyRound, ListChecks, Network, RotateCw, Users } from "@lucide/vue";
+import { Bug, Globe, Image as ImageIcon, ListChecks, Network, RotateCw } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { documentByFile, saveDocument } from "@/lib/documents";
@@ -43,8 +43,6 @@ const ICONS = {
 	network: Network,
 	web: Globe,
 	findings: Bug,
-	credentials: KeyRound,
-	identity: Users,
 	evidence: ImageIcon,
 	tasks: ListChecks,
 };
