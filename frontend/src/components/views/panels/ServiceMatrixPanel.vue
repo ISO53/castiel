@@ -1,17 +1,8 @@
 <template>
-	<EmptyHint
-		v-if="rows.length === 0"
-		:icon="Network"
-		message="No open services discovered yet."
-		hint="Port and service findings appear here as hosts are scanned."
-	/>
-	<DataTable
-		v-else
-		:columns="columns"
-		:data="rows"
-		search-placeholder="Filter services…"
-		empty-message="No services match the filter."
-	/>
+	<EmptyHint v-if="rows.length === 0" :icon="Network" message="No open services discovered yet."
+		hint="Port and service findings appear here as hosts are scanned." />
+	<DataTable v-else :columns="columns" :data="rows" search-placeholder="Filter services…"
+		empty-message="No services match the filter." />
 </template>
 
 <script setup>

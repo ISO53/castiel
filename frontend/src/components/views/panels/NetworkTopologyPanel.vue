@@ -7,7 +7,7 @@
 			hint="As recon fills network.json, hosts and their services will appear here as an interactive topology."
 		/>
 		<template v-else>
-			<div class="min-h-0 flex-1 overflow-hidden rounded-md border">
+			<div class="min-h-0 flex-1 overflow-hidden">
 				<CytoscapeCanvas :elements="elements" @select="selected = $event" />
 			</div>
 

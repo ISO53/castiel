@@ -15,7 +15,7 @@
 			<TabsContent value="topology" class="min-h-0 flex-1 overflow-hidden pt-2">
 				<NetworkTopologyPanel :data="data" />
 			</TabsContent>
-			<TabsContent value="services" class="min-h-0 flex-1 overflow-hidden pt-2">
+			<TabsContent value="services" class="min-h-0 flex-1 overflow-hidden">
 				<ServiceMatrixPanel :data="data" />
 			</TabsContent>
 			<TabsContent value="dns" class="min-h-0 flex-1 overflow-hidden pt-2">

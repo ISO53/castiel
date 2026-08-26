@@ -1,54 +1,42 @@
 <template>
 	<DocumentShell doc-id="evidence" v-slot="{ data }">
-		<div class="flex h-full min-h-0 flex-col gap-2">
+		<div class="flex h-full min-h-0 flex-col gap-2 bg-card">
 			<div v-if="(data?.artifacts ?? []).length > 0" class="relative shrink-0">
 				<Search class="absolute left-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground" />
-				<input
-					v-model="filter"
-					class="h-7 w-full rounded-md border bg-background pl-7 pr-2 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-ring"
-					placeholder="Filter artifacts…"
-				/>
+				<input v-model="filter"
+					class="h-7 w-full border-b bg-cart pl-7 pr-2 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-ring"
+					placeholder="Filter artifacts…" />
 			</div>
 
-			<div
-				v-if="filtered(data).length > 0"
-				class="grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3 lg:grid-cols-4"
-			>
-				<article
-					v-for="artifact in filtered(data)"
-					:key="artifact.path"
-					class="group flex flex-col overflow-hidden rounded-md border bg-background transition-colors"
+			<div v-if="filtered(data).length > 0"
+				class="grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3 lg:grid-cols-4">
+				<article v-for="artifact in filtered(data)" :key="artifact.path"
+					class="group flex flex-col overflow-hidden rounded-md border bg-background"
 					:class="isDirectory(artifact) ? '' : 'cursor-pointer hover:border-ring'"
-					@click="openArtifact(artifact)"
-				>
+					@click="openArtifact(artifact)">
 					<div class="flex h-24 items-center justify-center overflow-hidden bg-muted/40">
-						<img
-							v-if="isImage(artifact)"
-							:src="rawUrl(artifact.path)"
-							:alt="artifact.description ?? fileName(artifact.path)"
-							class="h-full w-full object-cover"
-							loading="lazy"
-						/>
+						<img v-if="isImage(artifact)" :src="rawUrl(artifact.path)"
+							:alt="artifact.description ?? fileName(artifact.path)" class="h-full w-full object-cover"
+							loading="lazy" />
 						<Folder v-else-if="isDirectory(artifact)" class="size-6 text-muted-foreground/50" />
 						<FileText v-else class="size-6 text-muted-foreground/50" />
 					</div>
 					<div class="min-w-0 p-1.5">
-						<p class="truncate font-mono text-[10px] text-muted-foreground" :title="fileName(artifact.path)">
+						<p class="truncate font-mono text-[10px] text-muted-foreground"
+							:title="fileName(artifact.path)">
 							{{ fileName(artifact.path) }}
 						</p>
-						<p v-if="artifact.description" class="mt-0.5 line-clamp-2 text-[11px] leading-snug text-foreground">
+						<p v-if="artifact.description"
+							class="mt-0.5 line-clamp-2 text-[11px] leading-snug text-foreground">
 							{{ artifact.description }}
 						</p>
 					</div>
 				</article>
 			</div>
 
-			<EmptyHint
-				v-else-if="(data?.artifacts ?? []).length === 0"
-				:icon="ImageIcon"
+			<EmptyHint v-else-if="(data?.artifacts ?? []).length === 0" :icon="ImageIcon"
 				message="No evidence captured yet."
-				hint="Artifacts registered in evidence.json appear here; binaries stay on disk under evidence/."
-			/>
+				hint="Artifacts registered in evidence.json appear here; binaries stay on disk under evidence/." />
 			<p v-else class="px-2 py-2 text-xs text-muted-foreground">No artifacts match the filter.</p>
 		</div>
 	</DocumentShell>
