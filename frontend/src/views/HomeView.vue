@@ -1,5 +1,5 @@
 <template>
-	<div class="h-full w-full overflow-y-auto flex items-center justify-center p-6 select-none">
+	<div class="h-full w-full overflow-y-auto flex items-center justify-center p-6 select-none bg-card">
 		<div class="max-w-4xl w-full flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12 lg:gap-16">
 			<!-- ASCII Art (Left) -->
 			<div class="shrink-0 flex justify-center overflow-x-auto py-2">
