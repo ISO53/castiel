@@ -16,7 +16,7 @@
 			<MenubarContent>
 				<MenubarItem @click="docks.toggle('left')">Toggle left dock</MenubarItem>
 				<MenubarItem @click="docks.toggle('right')">Toggle right dock</MenubarItem>
-				<MenubarItem @click="docks.bottom = !docks.bottom">Toggle bottom dock</MenubarItem>
+				<MenubarItem @click="docks.toggle('bottom')">Toggle bottom dock</MenubarItem>
 			</MenubarContent>
 		</MenubarMenu>
 
@@ -64,17 +64,9 @@
 	</Menubar>
 </template>
 
-<script setup>
+<script>
 import { Check } from "@lucide/vue";
-import { onBeforeUnmount, ref, watch } from "vue";
-import {
-	Menubar,
-	MenubarContent,
-	MenubarItem,
-	MenubarMenu,
-	MenubarSeparator,
-	MenubarTrigger,
-} from "@/components/ui/menubar";
+import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarSeparator, MenubarTrigger } from "@/components/ui/menubar";
 import { ENGAGEMENT_PHASES, useEngagementStore } from "@/stores/engagement";
 import { useDocksStore } from "@/stores/docks";
 import { useTabsStore } from "@/stores/tabs";
@@ -82,97 +74,149 @@ import { useWorkspaceStore } from "@/stores/workspace";
 import AboutDialog from "@/components/AboutDialog.vue";
 import WorkspaceDialog from "@/components/WorkspaceDialog.vue";
 
-const tabs = useTabsStore();
-const engagement = useEngagementStore();
-const workspace = useWorkspaceStore();
-const docks = useDocksStore();
-
 const GITHUB_REPO = "https://github.com/iso53/castiel";
 
-const workspaceDialogOpen = ref(false);
-const workspaceMode = ref("open");
-const aboutOpen = ref(false);
-
-function newWorkspace() {
-	workspaceMode.value = "new";
-	workspaceDialogOpen.value = true;
-}
-
-function openWorkspace() {
-	workspaceMode.value = "open";
-	workspaceDialogOpen.value = true;
-}
-
-function showWelcome() {
-	tabs.openTab({ value: "home", label: "Home", component: "HomeView", closable: true });
-}
-
-function requestFeature() {
-	window.open(`${GITHUB_REPO}/issues/new?labels=enhancement`, "_blank", "noopener,noreferrer");
-}
-
-function fileIssue() {
-	window.open(`${GITHUB_REPO}/issues/new`, "_blank", "noopener,noreferrer");
-}
-
-let pollTimer = null;
-
-function stopPolling() {
-	if (pollTimer) {
-		clearInterval(pollTimer);
-		pollTimer = null;
-	}
-}
-
-// The agent edits engagement.json directly; light polling keeps the stepper in sync.
-watch(
-	() => workspace.cwd,
-	(cwd) => {
-		stopPolling();
-		if (!cwd) return;
-		engagement.fetch();
-		pollTimer = setInterval(() => engagement.fetch(), 15000);
+export default {
+	name: "AppMenu",
+	components: {
+		Check,
+		Menubar,
+		MenubarContent,
+		MenubarItem,
+		MenubarMenu,
+		MenubarSeparator,
+		MenubarTrigger,
+		AboutDialog,
+		WorkspaceDialog,
 	},
-	{ immediate: true },
-);
+	data() {
+		return {
+			ENGAGEMENT_PHASES,
+			tabs: useTabsStore(),
+			engagement: useEngagementStore(),
+			workspace: useWorkspaceStore(),
+			docks: useDocksStore(),
+			workspaceDialogOpen: false,
+			workspaceMode: "open",
+			aboutOpen: false,
+			pollTimer: null,
+		};
+	},
+	watch: {
+		"workspace.cwd": {
+			immediate: true,
+			handler(cwd) {
+				this.stopPolling();
 
-onBeforeUnmount(stopPolling);
+				if (!cwd) return;
 
-function isDone(item) {
-	return typeof engagement.phase === "number" && item.value < engagement.phase;
-}
+				this.engagement.fetch();
+				this.pollTimer = setInterval(() => {
+					this.engagement.fetch();
+				}, 15000);
+			},
+		},
+	},
+	beforeUnmount() {
+		this.stopPolling();
+	},
+	methods: {
+		newWorkspace() {
+			this.workspaceMode = "new";
+			this.workspaceDialogOpen = true;
+		},
+		openWorkspace() {
+			this.workspaceMode = "open";
+			this.workspaceDialogOpen = true;
+		},
+		showWelcome() {
+			this.tabs.openTab({
+				value: "home",
+				label: "Home",
+				component: "HomeView",
+				closable: true,
+			});
+		},
+		requestFeature() {
+			window.open(
+				`${GITHUB_REPO}/issues/new?labels=enhancement`,
+				"_blank",
+				"noopener,noreferrer",
+			);
+		},
+		fileIssue() {
+			window.open(
+				`${GITHUB_REPO}/issues/new`,
+				"_blank",
+				"noopener,noreferrer",
+			);
+		},
+		stopPolling() {
+			if (this.pollTimer) {
+				clearInterval(this.pollTimer);
+				this.pollTimer = null;
+			}
+		},
+		isDone(item) {
+			return (
+				typeof this.engagement.phase === "number" &&
+				item.value < this.engagement.phase
+			);
+		},
+		chipClasses(item) {
+			if (
+				!this.workspace.cwd ||
+				typeof this.engagement.phase !== "number"
+			) {
+				return "text-muted-foreground/50 hover:text-foreground";
+			}
 
-function chipClasses(item) {
-	if (!workspace.cwd || typeof engagement.phase !== "number") return "text-muted-foreground/50 hover:text-foreground";
-	if (engagement.phase === item.value) return "bg-primary text-primary-foreground";
-	return "text-muted-foreground hover:text-foreground";
-}
+			if (this.engagement.phase === item.value) {
+				return "bg-primary text-primary-foreground";
+			}
 
-function stepClasses(item) {
-	if (!workspace.cwd || typeof engagement.phase !== "number") return "border-current";
-	if (engagement.phase === item.value) return "border-current";
-	if (isDone(item)) return "border-muted-foreground text-muted-foreground";
-	return "border-muted-foreground/40";
-}
+			return "text-muted-foreground hover:text-foreground";
+		},
+		stepClasses(item) {
+			if (
+				!this.workspace.cwd ||
+				typeof this.engagement.phase !== "number"
+			) {
+				return "border-current";
+			}
 
-async function select(item) {
-	if (engagement.phase === item.value) return;
-	try {
-		await engagement.setPhase(item.value);
-	} catch (err) {
-		console.error(err.message);
-		engagement.error = err.message;
-	}
-}
+			if (this.engagement.phase === item.value) {
+				return "border-current";
+			}
 
-function openSettings() {
-	tabs.openTab({
-		value: "settings",
-		label: "Settings",
-		component: "SettingsView",
-		closable: true,
-	});
-}
+			if (this.isDone(item)) {
+				return "border-muted-foreground text-muted-foreground";
+			}
+
+			return "border-muted-foreground/40";
+		},
+		async select(item) {
+			if (this.engagement.phase === item.value) {
+				return;
+			}
+
+			try {
+				await this.engagement.setPhase(item.value);
+			} catch (err) {
+				console.error(err.message);
+				this.engagement.error = err.message;
+			}
+		},
+		openSettings() {
+			this.tabs.openTab({
+				value: "settings",
+				label: "Settings",
+				component: "SettingsView",
+				closable: true,
+			});
+		},
+	},
+};
 </script>
 
 <style scoped>

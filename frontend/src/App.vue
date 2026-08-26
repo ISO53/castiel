@@ -3,12 +3,12 @@
 		<MenuBar />
 
 		<ResizablePanelGroup direction="horizontal" class="flex-1 min-h-0">
-			<template v-if="docks.left">
-				<ResizablePanel collapsible :defaultSize="20" :minSize="3" :maxSize="45">
-					<FileTreeView />
-				</ResizablePanel>
-				<ResizableHandle />
-			</template>
+			<ResizablePanel collapsible :collapsed-size="0" :default-size="20" :min-size="3" :max-size="45"
+				ref="leftDock" @collapse="docks.left = false" @expand="docks.left = true">
+				<FileTreeView />
+			</ResizablePanel>
+
+			<ResizableHandle />
 
 			<ResizablePanel>
 				<ResizablePanelGroup direction="vertical">
@@ -16,34 +16,36 @@
 						<TabbedView />
 					</ResizablePanel>
 
-					<template v-if="docks.bottom">
-						<ResizableHandle />
+					<ResizableHandle />
 
-						<ResizablePanel collapsible :defaultSize="40" :minSize="8"></ResizablePanel>
-					</template>
+					<ResizablePanel collapsible :collapsed-size="0" :default-size="40" :min-size="8" ref="bottomDock"
+						@collapse="docks.bottom = false" @expand="docks.bottom = true">
+					</ResizablePanel>
 				</ResizablePanelGroup>
 			</ResizablePanel>
 
-			<template v-if="docks.right">
-				<ResizableHandle />
+			<ResizableHandle />
 
-				<ResizablePanel collapsible :defaultSize="chats.historyOpen ? 25 : 30" :minSize="15" :maxSize="50">
-					<ChatView />
-				</ResizablePanel>
-
-				<template v-if="chats.historyOpen">
-					<ResizableHandle />
-					<ResizablePanel collapsible :defaultSize="18" :minSize="10" :maxSize="35">
-						<ChatHistoryPanel />
-					</ResizablePanel>
-				</template>
-			</template>
+			<ResizablePanel collapsible :collapsed-size="0" :default-size="30" :min-size="15" :max-size="50"
+				ref="rightDock" @collapse="docks.right = false" @expand="docks.right = true">
+				<ChatView />
+			</ResizablePanel>
 		</ResizablePanelGroup>
+
+		<!-- Chat history opens in a dialog instead of a resizable panel -->
+		<Dialog :open="chats.historyOpen" @update:open="chats.historyOpen = $event">
+			<DialogContent class="h-[70vh] max-h-[85vh] max-w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0 sm:max-w-md"
+				:show-close-button="false">
+				<DialogTitle class="sr-only">Chat History</DialogTitle>
+				<ChatHistoryPanel />
+			</DialogContent>
+		</Dialog>
 	</div>
 </template>
 
-<script setup>
+<script>
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import ChatView from "@/views/ChatView.vue";
 import ChatHistoryPanel from "@/components/ChatHistoryPanel.vue";
 import FileTreeView from "@/components/FileTreeView.vue";
@@ -52,8 +54,52 @@ import TabbedView from "./views/TabbedView.vue";
 import { useChatsStore } from "@/stores/chats";
 import { useDocksStore } from "@/stores/docks";
 
-const chats = useChatsStore();
-const docks = useDocksStore();
+export default {
+	name: "App",
+	components: {
+		ResizablePanelGroup,
+		ResizablePanel,
+		ResizableHandle,
+		Dialog,
+		DialogContent,
+		DialogTitle,
+		ChatView,
+		ChatHistoryPanel,
+		FileTreeView,
+		MenuBar,
+		TabbedView,
+	},
+	setup() {
+		const docks = useDocksStore();
+		const chats = useChatsStore();
+		return { docks, chats };
+	},
+	watch: {
+		"docks.left"(isOpen) {
+			this.$nextTick(() => this.syncPanelState("leftDock", isOpen));
+		},
+		"docks.right"(isOpen) {
+			this.$nextTick(() => this.syncPanelState("rightDock", isOpen));
+		},
+		"docks.bottom"(isOpen) {
+			this.$nextTick(() => this.syncPanelState("bottomDock", isOpen));
+		},
+	},
+	methods: {
+		// ResizablePanel re-exposes the underlying SplitterPanel's API, so a ref
+		// on it gives us collapse/expand/isCollapsed.
+		syncPanelState(dockName, isOpen) {
+			const wrapper = this.$refs[dockName];
+			if (!wrapper) return;
+
+			if (isOpen) {
+				if (typeof wrapper.expand === "function" && wrapper.isCollapsed) wrapper.expand();
+			} else if (typeof wrapper.collapse === "function") {
+				wrapper.collapse();
+			}
+		},
+	},
+};
 </script>
 
 <style scoped>
