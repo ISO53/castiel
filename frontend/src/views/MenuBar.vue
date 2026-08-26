@@ -42,20 +42,20 @@
 				v-for="item in ENGAGEMENT_PHASES"
 				:key="item.value"
 				type="button"
-				class="pointer-events-auto flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs transition-colors disabled:cursor-default disabled:opacity-60"
+				class="pointer-events-auto flex h-6 items-center gap-1.5 rounded-md px-2 py-0 text-xs transition-colors disabled:cursor-default disabled:opacity-60"
 				:class="chipClasses(item)"
 				:title="workspace.cwd ? item.label : `${item.label} — open a workspace to engage`"
 				:disabled="!workspace.cwd || engagement.loading"
 				@click="select(item)"
 			>
 				<span
-					class="flex size-4 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold"
+					class="grid size-4 shrink-0 place-items-center rounded-full border text-[10px] leading-none font-semibold"
 					:class="stepClasses(item)"
 				>
 					<Check v-if="isDone(item)" class="size-3" />
 					<template v-else>{{ item.value }}</template>
 				</span>
-				<span class="whitespace-nowrap font-medium">{{ item.short }}</span>
+				<span class="whitespace-nowrap font-medium leading-none">{{ item.short }}</span>
 			</button>
 		</div>
 
