@@ -1,10 +1,7 @@
 <template>
-	<div :key="renderKey" class="flex h-full min-h-0 gap-2 overflow-x-auto pb-1">
-		<section
-			v-for="column in columnsWithItems"
-			:key="column.id"
-			class="flex h-full min-h-0 w-56 shrink-0 flex-col rounded-md border bg-background"
-		>
+	<div :key="renderKey" class="flex h-full min-h-0 overflow-x-auto pb-1">
+		<section v-for="column in columnsWithItems" :key="column.id"
+			class="flex h-full min-h-0 w-56 shrink-0 flex-col border-r bg-card">
 			<header class="flex h-8 shrink-0 items-center justify-between gap-2 border-b px-2.5">
 				<p class="truncate text-xs font-medium text-foreground">{{ column.label }}</p>
 				<span class="rounded bg-muted px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground">
@@ -12,12 +9,10 @@
 				</span>
 			</header>
 
-			<div :ref="(el) => registerColumn(column.id, el)" :data-column="column.id" class="kanban-items min-h-0 flex-1 space-y-1.5 overflow-y-auto p-1.5">
-				<article
-					v-for="item in column.items"
-					:key="String(keyOf(item))"
-					class="cursor-grab rounded border bg-muted/30 p-2 active:cursor-grabbing"
-				>
+			<div :ref="(el) => registerColumn(column.id, el)" :data-column="column.id"
+				class="kanban-items min-h-0 flex-1 space-y-1.5 overflow-y-auto p-1.5">
+				<article v-for="item in column.items" :key="String(keyOf(item))"
+					class="cursor-grab bg-muted p-2 active:cursor-grabbing">
 					<slot name="card" :item="item" />
 				</article>
 			</div>
