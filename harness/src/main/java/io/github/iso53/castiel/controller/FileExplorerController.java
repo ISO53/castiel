@@ -4,6 +4,9 @@ import io.github.iso53.castiel.model.DirectoryListing;
 import io.github.iso53.castiel.model.FileContent;
 import io.github.iso53.castiel.service.FileExplorerService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.InvalidMediaTypeException;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpHeaders;
 
 /**
  * Exposes the local directory explorer used to pick a workspace folder.
@@ -56,6 +60,28 @@ public class FileExplorerController {
 	public FileContent readFile(@RequestParam("path") String path) {
 		try {
 			return fileExplorerService.readFile(path);
+		} catch (IllegalArgumentException ex) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
+		}
+	}
+
+	/**
+	 * Serves a file's raw bytes with a guessed content type (evidence gallery, lightbox).
+	 */
+	@GetMapping("/raw")
+	public ResponseEntity<byte[]> readFileRaw(@RequestParam("path") String path) {
+		try {
+			FileExplorerService.RawFile file = fileExplorerService.readRaw(path);
+			MediaType mediaType;
+			try {
+				mediaType = MediaType.parseMediaType(file.contentType());
+			} catch (InvalidMediaTypeException ex) {
+				mediaType = MediaType.APPLICATION_OCTET_STREAM;
+			}
+			return ResponseEntity.ok()
+				.header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.name() + "\"")
+				.contentType(mediaType)
+				.body(file.bytes());
 		} catch (IllegalArgumentException ex) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
 		}

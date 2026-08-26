@@ -5,26 +5,70 @@
 				<FolderOpen v-if="cwd" class="size-3.5 shrink-0 text-muted-foreground" />
 				<p class="truncate text-xs font-medium text-foreground" :title="cwd ?? ''">{{ headerTitle }}</p>
 			</div>
-			<Button variant="ghost" size="icon-sm" :disabled="!cwd || loadingRoot" aria-label="Refresh file tree"
-				@click="reload">
-				<RotateCw :class="loadingRoot ? 'animate-spin' : ''" />
-			</Button>
+			<div class="flex shrink-0 items-center gap-0.5">
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					:class="mode === 'files' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'"
+					aria-label="Show file tree"
+					@click="mode = 'files'"
+				>
+					<FolderTree />
+				</Button>
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					:class="mode === 'views' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'"
+					aria-label="Show engagement views"
+					:disabled="!cwd"
+					@click="mode = 'views'"
+				>
+					<LayoutGrid />
+				</Button>
+				<Button variant="ghost" size="icon-sm" :disabled="!cwd || loadingRoot" aria-label="Refresh file tree"
+					@click="reload">
+					<RotateCw :class="loadingRoot ? 'animate-spin' : ''" />
+				</Button>
+			</div>
 		</header>
 
 		<div class="min-h-0 flex-1 overflow-y-auto p-2">
-			<p v-if="error" class="px-2 py-2 text-xs leading-relaxed text-destructive wrap-break-word">{{ error }}</p>
-			<div v-else-if="loadingRoot" class="flex items-center gap-2 px-2 py-2 text-xs text-muted-foreground">
-				<Spinner class="size-3 shrink-0" /> Loading workspace…
-			</div>
-			<p v-else-if="!root" class="max-w-44 px-2 py-2 text-xs leading-relaxed text-muted-foreground">
-				Open a workspace from the Home tab to browse its files.
-			</p>
-			<FileTree v-else class="border-none bg-transparent p-0 font-sans text-xs"
-				:selected-path="selectedPath" :expanded="expanded"
-				@update:selected-path="onSelect" @expanded-change="onExpandedChange">
-				<FileTreeEntry :entry="root" :nodes="nodes" :renaming-path="fileTreeUi.renamingPath"
-					:creating-in="fileTreeUi.creatingIn" />
-			</FileTree>
+			<template v-if="mode === 'files'">
+				<p v-if="error" class="px-2 py-2 text-xs leading-relaxed text-destructive wrap-break-word">{{ error }}</p>
+				<div v-else-if="loadingRoot" class="flex items-center gap-2 px-2 py-2 text-xs text-muted-foreground">
+					<Spinner class="size-3 shrink-0" /> Loading workspace…
+				</div>
+				<p v-else-if="!root" class="max-w-44 px-2 py-2 text-xs leading-relaxed text-muted-foreground">
+					Open a workspace from the Home tab to browse its files.
+				</p>
+				<FileTree v-else class="border-none bg-transparent p-0 font-sans text-xs"
+					:selected-path="selectedPath" :expanded="expanded"
+					@update:selected-path="onSelect" @expanded-change="onExpandedChange">
+					<FileTreeEntry :entry="root" :nodes="nodes" :renaming-path="fileTreeUi.renamingPath"
+						:creating-in="fileTreeUi.creatingIn" />
+				</FileTree>
+			</template>
+
+			<template v-else>
+				<div class="space-y-0.5">
+					<button
+						v-for="entry in ENGAGEMENT_DOCUMENTS"
+						:key="entry.id"
+						type="button"
+						class="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted/60"
+						:title="`${entry.description} — opens the ${entry.label} views`"
+						@click="openDocumentView(entry)"
+					>
+						<span class="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded border bg-muted/40 text-muted-foreground">
+							<component :is="DOC_ICONS[entry.id]" class="size-3.5" />
+						</span>
+						<span class="min-w-0">
+							<span class="block truncate text-xs font-medium text-foreground">{{ entry.label }}</span>
+							<span class="block truncate font-mono text-[10px] text-muted-foreground">{{ entry.file }}</span>
+						</span>
+					</button>
+				</div>
+			</template>
 		</div>
 	</section>
 </template>
@@ -35,11 +79,34 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import FileTreeEntry from "@/components/FileTreeEntry.vue";
 import { fileTreeActions, fileTreeUi } from "@/components/file-tree-ui";
-import { FolderOpen, RotateCw } from "@lucide/vue";
+import {
+	Bug,
+	FolderOpen,
+	FolderTree,
+	Globe,
+	Image as ImageIcon,
+	KeyRound,
+	LayoutGrid,
+	ListChecks,
+	Network,
+	RotateCw,
+	Users,
+} from "@lucide/vue";
+import { ENGAGEMENT_DOCUMENTS } from "@/lib/documents";
 import { useTabsStore } from "@/stores/tabs";
 import { useWorkspaceStore } from "@/stores/workspace";
 
 const FILES_API = "http://localhost:8081/api/files";
+
+const DOC_ICONS = {
+	network: Network,
+	web: Globe,
+	findings: Bug,
+	credentials: KeyRound,
+	identity: Users,
+	evidence: ImageIcon,
+	tasks: ListChecks,
+};
 
 /** Extracts the harness error message from a failed response. */
 async function readErrorBody(response) {
@@ -85,6 +152,8 @@ export default {
 		FileTree,
 		FileTreeEntry,
 		FolderOpen,
+		FolderTree,
+		LayoutGrid,
 		RotateCw,
 		Spinner,
 	},
@@ -100,6 +169,9 @@ export default {
 			loadingRoot: false,
 			error: "",
 			fileTreeUi,
+			mode: "files",
+			documents: ENGAGEMENT_DOCUMENTS,
+			docIcons: DOC_ICONS,
 		};
 	},
 	computed: {
@@ -210,6 +282,14 @@ export default {
 				label: entry.name,
 				component: "FileEditorView",
 				path,
+			});
+		},
+
+		openDocumentView(entry) {
+			useTabsStore().openTab({
+				value: `doc:${entry.file}`,
+				label: entry.label,
+				component: entry.component,
 			});
 		},
 

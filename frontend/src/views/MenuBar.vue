@@ -1,5 +1,5 @@
 <template>
-	<Menubar>
+	<Menubar class="relative">
 		<h1 class="app-name">Castiel</h1>
 		<MenubarMenu>
 			<MenubarTrigger>File</MenubarTrigger>
@@ -19,10 +19,37 @@
 				<MenubarItem>Report Issue</MenubarItem>
 			</MenubarContent>
 		</MenubarMenu>
+
+		<!-- Engagement phase stepper, centered in the menu bar -->
+		<div
+			class="pointer-events-none absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-0.5"
+		>
+			<button
+				v-for="item in ENGAGEMENT_PHASES"
+				:key="item.value"
+				type="button"
+				class="pointer-events-auto flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs transition-colors disabled:cursor-default disabled:opacity-60"
+				:class="chipClasses(item)"
+				:title="workspace.cwd ? item.label : `${item.label} — open a workspace to engage`"
+				:disabled="!workspace.cwd || engagement.loading"
+				@click="select(item)"
+			>
+				<span
+					class="flex size-4 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold"
+					:class="stepClasses(item)"
+				>
+					<Check v-if="isDone(item)" class="size-3" />
+					<template v-else>{{ item.value }}</template>
+				</span>
+				<span class="whitespace-nowrap font-medium">{{ item.short }}</span>
+			</button>
+		</div>
 	</Menubar>
 </template>
 
 <script setup>
+import { Check } from "@lucide/vue";
+import { onBeforeUnmount, watch } from "vue";
 import {
 	Menubar,
 	MenubarContent,
@@ -31,9 +58,63 @@ import {
 	MenubarSeparator,
 	MenubarTrigger,
 } from "@/components/ui/menubar";
+import { ENGAGEMENT_PHASES, useEngagementStore } from "@/stores/engagement";
 import { useTabsStore } from "@/stores/tabs";
+import { useWorkspaceStore } from "@/stores/workspace";
 
 const tabs = useTabsStore();
+const engagement = useEngagementStore();
+const workspace = useWorkspaceStore();
+
+let pollTimer = null;
+
+function stopPolling() {
+	if (pollTimer) {
+		clearInterval(pollTimer);
+		pollTimer = null;
+	}
+}
+
+// The agent edits engagement.json directly; light polling keeps the stepper in sync.
+watch(
+	() => workspace.cwd,
+	(cwd) => {
+		stopPolling();
+		if (!cwd) return;
+		engagement.fetch();
+		pollTimer = setInterval(() => engagement.fetch(), 15000);
+	},
+	{ immediate: true },
+);
+
+onBeforeUnmount(stopPolling);
+
+function isDone(item) {
+	return typeof engagement.phase === "number" && item.value < engagement.phase;
+}
+
+function chipClasses(item) {
+	if (!workspace.cwd || typeof engagement.phase !== "number") return "text-muted-foreground/50 hover:text-foreground";
+	if (engagement.phase === item.value) return "bg-primary text-primary-foreground";
+	return "text-muted-foreground hover:text-foreground";
+}
+
+function stepClasses(item) {
+	if (!workspace.cwd || typeof engagement.phase !== "number") return "border-current";
+	if (engagement.phase === item.value) return "border-current";
+	if (isDone(item)) return "border-muted-foreground text-muted-foreground";
+	return "border-muted-foreground/40";
+}
+
+async function select(item) {
+	if (engagement.phase === item.value) return;
+	try {
+		await engagement.setPhase(item.value);
+	} catch (err) {
+		console.error(err.message);
+		engagement.error = err.message;
+	}
+}
 
 function openSettings() {
 	tabs.openTab({

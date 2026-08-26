@@ -1,6 +1,8 @@
 package io.github.iso53.castiel.service;
 
 import io.github.iso53.castiel.model.WorkspaceState;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -24,7 +26,15 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class WorkspaceSession {
 
+	private static final Logger LOG = LoggerFactory.getLogger(WorkspaceSession.class);
+
+	private final WorkspaceScaffoldService scaffolds;
+
 	private volatile WorkspaceState state = new WorkspaceState(null);
+
+	public WorkspaceSession(WorkspaceScaffoldService scaffolds) {
+		this.scaffolds = scaffolds;
+	}
 
 	/**
 	 * Files the model has seen or written during this harness run. Used by the file tools to
@@ -102,7 +112,24 @@ public class WorkspaceSession {
 	public synchronized WorkspaceState open(String cwd) {
 		Path path = requireExistingDirectory(cwd);
 		state = new WorkspaceState(path.toString());
+		backfillScaffolds(path, false);
 		return state;
+	}
+
+	/**
+	 * Creates any missing engagement documents in the given workspace root. Required
+	 * failures abort the caller; optional failures are logged and swallowed so an
+	 * existing workspace can always be opened.
+	 */
+	private void backfillScaffolds(Path root, boolean required) {
+		try {
+			scaffolds.ensureScaffolds(root);
+		} catch (IOException ex) {
+			if (required) {
+				throw new IllegalArgumentException("Could not create engagement documents in " + root, ex);
+			}
+			LOG.warn("Could not backfill engagement documents in {}", root, ex);
+		}
 	}
 
 	/**
@@ -135,6 +162,8 @@ public class WorkspaceSession {
 		} catch (IOException ex) {
 			throw new IllegalArgumentException("Could not create workspace folder: " + target, ex);
 		}
+
+		backfillScaffolds(target.toAbsolutePath().normalize(), true);
 
 		state = new WorkspaceState(target.toAbsolutePath().normalize().toString());
 		return state;

@@ -123,6 +123,13 @@ public class FileExplorerService {
 	public static final int MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024;
 	private static final String MAX_SIZE_LABEL = "2 MB";
 
+	/** Hard cap for serving raw files to the evidence gallery. */
+	public static final int MAX_RAW_FILE_SIZE_BYTES = 50 * 1024 * 1024;
+	private static final String MAX_RAW_SIZE_LABEL = "50 MB";
+
+	/** A file served verbatim: raw bytes plus a guessed content type. */
+	public record RawFile(String name, String contentType, long size, byte[] bytes) {}
+
 	/**
 	 * Reads a text file for the editor.
 	 *
@@ -170,6 +177,42 @@ public class FileExplorerService {
 			throw new IllegalArgumentException("Could not write file: " + target, ex);
 		}
 		return new FileContent(target.toString(), nameOf(target), fileSize(target), content == null ? "" : content);
+	}
+
+	/**
+	 * Reads a file verbatim for endpoints that serve bytes (evidence gallery, lightbox).
+	 *
+	 * @param path Absolute file path.
+	 * @return The file's name, guessed content type, and raw bytes.
+	 * @throws IllegalArgumentException If the path is not a readable regular file or exceeds the cap.
+	 */
+	public RawFile readRaw(String path) {
+		Path target = resolveFile(path);
+		long size = fileSize(target);
+		if (size > MAX_RAW_FILE_SIZE_BYTES) {
+			throw new IllegalArgumentException(
+				"File is too large to serve (" + formatSize(size) + "); the limit is " + MAX_RAW_SIZE_LABEL + "."
+			);
+		}
+
+		byte[] bytes;
+		try {
+			bytes = Files.readAllBytes(target);
+		} catch (IOException ex) {
+			throw new IllegalArgumentException("Could not read file: " + target, ex);
+		}
+
+		String contentType;
+		try {
+			contentType = Files.probeContentType(target);
+		} catch (IOException ex) {
+			contentType = null;
+		}
+		if (contentType == null || contentType.isBlank()) {
+			contentType = "application/octet-stream";
+		}
+
+		return new RawFile(nameOf(target), contentType, size, bytes);
 	}
 
 	private Path resolveFile(String path) {

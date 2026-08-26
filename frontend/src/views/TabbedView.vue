@@ -14,6 +14,13 @@
 				<HomeView v-if="tab.component === 'HomeView'" />
 				<SettingsView v-else-if="tab.component === 'SettingsView'" />
 				<FileEditorView v-else-if="tab.component === 'FileEditorView'" :path="tab.path" />
+				<NetworkView v-else-if="tab.component === 'NetworkView'" />
+				<WebAppView v-else-if="tab.component === 'WebAppView'" />
+				<FindingsView v-else-if="tab.component === 'FindingsView'" />
+				<CredentialsView v-else-if="tab.component === 'CredentialsView'" />
+				<IdentityView v-else-if="tab.component === 'IdentityView'" />
+				<EvidenceView v-else-if="tab.component === 'EvidenceView'" />
+				<TasksView v-else-if="tab.component === 'TasksView'" />
 			</TabsContent>
 		</Tabs>
 	</div>
@@ -27,6 +34,14 @@ import { defineAsyncComponent } from "vue";
 
 // The editor (CodeMirror core + language chunks) only loads when a file tab opens.
 const FileEditorView = defineAsyncComponent(() => import("@/views/FileEditorView.vue"));
+// Engagement document views pull their charting/graphing libraries, so keep them chunked too.
+const NetworkView = defineAsyncComponent(() => import("@/views/NetworkView.vue"));
+const WebAppView = defineAsyncComponent(() => import("@/views/WebAppView.vue"));
+const FindingsView = defineAsyncComponent(() => import("@/views/FindingsView.vue"));
+const CredentialsView = defineAsyncComponent(() => import("@/views/CredentialsView.vue"));
+const IdentityView = defineAsyncComponent(() => import("@/views/IdentityView.vue"));
+const EvidenceView = defineAsyncComponent(() => import("@/views/EvidenceView.vue"));
+const TasksView = defineAsyncComponent(() => import("@/views/TasksView.vue"));
 import { useTabsStore } from "@/stores/tabs";
 
 const tabsStore = useTabsStore();

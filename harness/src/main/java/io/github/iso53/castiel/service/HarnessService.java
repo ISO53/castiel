@@ -368,7 +368,7 @@ public class HarnessService {
 
 	private List<ChatMessage> buildMessages(List<ChatTurn> turns) {
 		List<ChatMessage> messages = new ArrayList<>();
-		String systemPrompt = systemPrompt();
+		String systemPrompt = readSystemPrompt();
 		if (!systemPrompt.isBlank()) {
 			messages.add(SystemMessage.from(systemPrompt));
 		}
@@ -426,29 +426,5 @@ public class HarnessService {
 		} catch (IOException | RuntimeException ex) {
 			return "";
 		}
-	}
-
-	/**
-	 * The system prompt from the classpath plus runtime facts the model cannot infer
-	 * (host OS, which shell the bash tool uses), so it stops guessing about its platform.
-	 * Add more build-specific facts here as needed.
-	 */
-	private static String systemPrompt() {
-		String prompt = readSystemPrompt();
-		if (prompt.isBlank()) {
-			return "";
-		}
-		return prompt.stripTrailing() + "\n\n## Environment\n" + environmentContext();
-	}
-
-	private static String environmentContext() {
-		// Some info about the OS that will help the agent understand its environment
-		String info = "Here is some information about the users OS that will be useful for you.\n";
-		List<String> OSFacts = List.of(
-			"Operating System: " + System.getProperty("os.name", "unknown OS"),
-			"File Separator: " + System.getProperty("file.separator", "unknown file separator"),
-			"Architecture: " + System.getProperty("os.arch", "unknown architecture")
-		);
-		return info + String.join("\n", OSFacts);
 	}
 }
