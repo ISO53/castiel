@@ -1,11 +1,11 @@
 <template>
 	<DocumentShell doc-id="findings" v-slot="{ data, persist, refresh }">
 		<Tabs default-value="board" class="flex h-full min-h-0 flex-col gap-0">
-			<TabsList class="h-7 shrink-0 justify-start gap-0 rounded-none border-b bg-transparent p-0">
-				<TabsTrigger value="board" class="rounded-none border-b border-transparent px-3 py-1 text-xs data-[state=active]:border-foreground">
+			<TabsList class="h-8 w-full items-center justify-start gap-0 rounded-none px-0">
+				<TabsTrigger value="board" class="h-8 min-w-fit px-5">
 					Board
 				</TabsTrigger>
-				<TabsTrigger value="severity" class="rounded-none border-b border-transparent px-3 py-1 text-xs data-[state=active]:border-foreground">
+				<TabsTrigger value="severity" class="h-8 min-w-fit px-5">
 					Severity
 				</TabsTrigger>
 			</TabsList>

@@ -1,14 +1,14 @@
 <template>
 	<DocumentShell doc-id="web" v-slot="{ data }">
 		<Tabs default-value="sitemap" class="flex h-full min-h-0 flex-col gap-0">
-			<TabsList class="h-7 shrink-0 justify-start gap-0 rounded-none border-b bg-transparent p-0">
-				<TabsTrigger value="sitemap" class="rounded-none border-b border-transparent px-3 py-1 text-xs data-[state=active]:border-foreground">
+			<TabsList class="h-8 w-full items-center justify-start gap-0 rounded-none px-0">
+				<TabsTrigger value="sitemap" class="h-8 min-w-fit px-5">
 					Site Map
 				</TabsTrigger>
-				<TabsTrigger value="tech" class="rounded-none border-b border-transparent px-3 py-1 text-xs data-[state=active]:border-foreground">
+				<TabsTrigger value="tech" class="h-8 min-w-fit px-5">
 					Tech Stack
 				</TabsTrigger>
-				<TabsTrigger value="headers" class="rounded-none border-b border-transparent px-3 py-1 text-xs data-[state=active]:border-foreground">
+				<TabsTrigger value="headers" class="h-8 min-w-fit px-5">
 					Security Headers
 				</TabsTrigger>
 			</TabsList>

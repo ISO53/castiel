@@ -1,14 +1,14 @@
 <template>
 	<DocumentShell doc-id="network" v-slot="{ data }">
 		<Tabs default-value="topology" class="flex h-full min-h-0 flex-col gap-0">
-			<TabsList class="h-7 shrink-0 justify-start gap-0 rounded-none border-b bg-transparent p-0">
-				<TabsTrigger value="topology" class="rounded-none border-b border-transparent px-3 py-1 text-xs data-[state=active]:border-foreground">
+			<TabsList class="h-8 w-full items-center justify-start gap-0 rounded-none px-0">
+				<TabsTrigger value="topology" class="h-8 min-w-fit px-5">
 					Topology
 				</TabsTrigger>
-				<TabsTrigger value="services" class="rounded-none border-b border-transparent px-3 py-1 text-xs data-[state=active]:border-foreground">
-					Ports &amp; Services
+				<TabsTrigger value="services" class="h-8 min-w-fit px-5">
+					Ports & Services
 				</TabsTrigger>
-				<TabsTrigger value="dns" class="rounded-none border-b border-transparent px-3 py-1 text-xs data-[state=active]:border-foreground">
+				<TabsTrigger value="dns" class="h-8 min-w-fit px-5">
 					DNS
 				</TabsTrigger>
 			</TabsList>
