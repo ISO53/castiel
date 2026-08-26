@@ -1,39 +1,45 @@
 <template>
 	<EmptyHint
-		v-if="layers.length === 0"
+		v-if="sections.length === 0"
 		:icon="Boxes"
 		message="No technologies fingerprinted yet."
 		hint="The service stack will assemble here — frontend on top, infrastructure below."
 	/>
-	<div v-else class="flex h-full min-h-0 flex-col items-center gap-0 overflow-y-auto py-2">
-		<p class="mb-1 shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">Frontend ↑ · ↓ Infrastructure</p>
-		<div
-			v-for="(layer, index) in layers"
-			:key="layer.name"
-			class="w-full max-w-xl"
-			:class="index > 0 ? '-mt-5' : ''"
-		>
-			<svg viewBox="0 0 440 110" class="w-full">
-				<polygon
-					:points="'220,6 430,55 220,104 10,55'"
-					:fill="layer.fill"
-					:stroke="layer.border"
-					stroke-width="1.5"
-					class="drop-shadow-md"
+	<div v-else class="h-full min-h-0 overflow-y-auto p-3">
+		<h2 class="mb-3 text-sm font-bold uppercase tracking-widest text-foreground">Tech Stack</h2>
+
+		<section v-for="section in sections" :key="section.name" class="mb-5">
+			<div class="mb-2 border-b border-border/60 pb-1">
+				<h3 class="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{{ section.name }}</h3>
+			</div>
+
+			<div class="min-w-fit">
+				<div
+					v-for="(tech, index) in section.techs"
+					:key="tech.name"
+					class="relative h-10"
+					:class="index > 0 ? '-mt-5' : ''"
 				>
-					<title>{{ layer.techs.join(" · ") }}</title>
-				</polygon>
-				<text x="220" y="42" text-anchor="middle" class="fill-zinc-100" font-size="12" font-weight="600">
-					{{ layer.name }}
-				</text>
-				<text x="220" y="62" text-anchor="middle" class="fill-zinc-400" font-size="10">
-					{{ layer.summary }}
-				</text>
-				<text x="220" y="80" text-anchor="middle" class="fill-zinc-500" font-size="9">
-					{{ layer.overflow }}
-				</text>
-			</svg>
-		</div>
+					<svg class="absolute left-14 top-0 h-10 w-36" viewBox="0 0 160 64">
+						<polygon
+							points="80,2 156,32 80,62 4,32"
+							:fill="section.color"
+							:fill-opacity="diamondOpacity(index)"
+							:stroke="section.color"
+							stroke-width="1"
+						>
+							<title>{{ [tech.desc, tech.evidence].filter(Boolean).join(" — ") || tech.name }}</title>
+						</polygon>
+					</svg>
+					<div class="absolute left-52 top-1 w-72 min-w-0">
+						<p class="truncate text-xs font-semibold text-foreground" :title="tech.name">{{ tech.name }}</p>
+						<p v-if="tech.desc" class="truncate text-[10px] leading-tight text-muted-foreground" :title="tech.desc">
+							{{ tech.desc }}
+						</p>
+					</div>
+				</div>
+			</div>
+		</section>
 	</div>
 </template>
 
@@ -44,31 +50,27 @@ import EmptyHint from "@/components/views/EmptyHint.vue";
 
 const props = defineProps({ data: { type: Object, default: null } });
 
-/** Ordered top → bottom; first keyword hit wins. Unknown techs land in Application. */
-const LAYER_DEFS = [
+/** Ordered top → bottom; first keyword hit wins. Unknown techs land in Backend. */
+const SECTION_DEFS = [
 	{
-		name: "Frontend & UI",
+		name: "Frontend",
 		keywords: ["next", "vue", "react", "nuxt", "svelte", "angular", "tailwind", "css", "frontend", "spa", "ssr"],
-		fill: "#172554",
-		border: "#38bdf8",
+		color: "#ef4444",
 	},
 	{
-		name: "Application / API",
+		name: "Backend",
 		keywords: ["api", "express", "node", "rest", "backend", "server", "auth", "oauth", "application", "service"],
-		fill: "#2e1065",
-		border: "#a78bfa",
+		color: "#a78bfa",
 	},
 	{
 		name: "Edge / CDN / Proxy",
 		keywords: ["cloudflare", "cdn", "proxy", "waf", "edge", "cache", "nginx", "apache", "load balancer"],
-		fill: "#451a03",
-		border: "#f59e0b",
+		color: "#f59e0b",
 	},
 	{
 		name: "Network / DNS / Hosting",
 		keywords: ["dns", "hostinger", "mx", "spf", "dmarc", "dkim", "registrar", "rdap", "mail", "hosting"],
-		fill: "#052e16",
-		border: "#4ade80",
+		color: "#4ade80",
 	},
 ];
 
@@ -78,8 +80,8 @@ function techName(entry) {
 	return entry?.name ?? entry?.technology ?? null;
 }
 
-const layers = computed(() => {
-	const byName = new Map(); // name -> meta (evidence/category/version)
+const sections = computed(() => {
+	const byName = new Map(); // name -> meta (evidence / category / version)
 	for (const entry of props.data?.technologies ?? []) {
 		const name = techName(entry);
 		if (name && !byName.has(name)) byName.set(name, typeof entry === "object" ? entry : {});
@@ -91,19 +93,22 @@ const layers = computed(() => {
 		}
 	}
 
-	const buckets = LAYER_DEFS.map((def) => ({ ...def, techs: [] }));
+	const buckets = SECTION_DEFS.map((def) => ({ ...def, techs: [] }));
 	for (const [name, meta] of byName) {
 		const lowered = name.toLowerCase();
-		const layer = buckets.find(({ keywords }) => keywords.some((keyword) => lowered.includes(keyword)));
-		const target = layer ?? buckets[1];
-		target.techs.push(meta.evidence || meta.version ? `${name} (${meta.version ?? meta.category ?? ""})`.trim() : name);
+		const section = buckets.find(({ keywords }) => keywords.some((keyword) => lowered.includes(keyword)));
+		const target = section ?? buckets[1];
+		target.techs.push({
+			name,
+			desc: meta.category ?? meta.version ?? "",
+			evidence: meta.evidence ?? "",
+		});
 	}
-	return buckets
-		.filter((layer) => layer.techs.length > 0)
-		.map((layer) => ({
-			...layer,
-			summary: layer.techs.slice(0, 3).join(" · "),
-			overflow: layer.techs.length > 3 ? `+${layer.techs.length - 3} more` : "",
-		}));
+	return buckets.filter((section) => section.techs.length > 0);
 });
+
+/** Overlapping diamonds get progressively more opaque, like the reference art. */
+function diamondOpacity(index) {
+	return Math.min(0.4 + index * 0.15, 0.95);
+}
 </script>
