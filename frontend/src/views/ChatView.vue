@@ -413,6 +413,8 @@ export default {
 			messages: [],
 			generationId: null,
 			abortController: null,
+			wakeSource: null,
+			wakeAssistant: null,
 			lastUsage: null,
 			reasoningEffort: null,
 			modelSelectorOpen: false,
@@ -495,6 +497,7 @@ export default {
 	},
 	async mounted() {
 		window.addEventListener("keydown", this.handleWindowKeydown);
+		if (this.currentChatId) this.connectWakeChannel();
 		if (this.cwd) {
 			this.chats.fetchList().catch(() => {});
 		}
@@ -508,8 +511,13 @@ export default {
 	},
 	beforeUnmount() {
 		window.removeEventListener("keydown", this.handleWindowKeydown);
+		this.disconnectWakeChannel();
 	},
 	watch: {
+		currentChatId(id) {
+			if (id) this.connectWakeChannel();
+			else this.disconnectWakeChannel();
+		},
 		// Reset the search so reopening starts from the full (capped) list.
 		modelSelectorOpen(open) {
 			if (!open) this.modelSearch = "";
@@ -894,6 +902,7 @@ export default {
 						providerId: this.providerId,
 						modelName: this.modelName,
 						reasoningEffort: this.reasoningEffort,
+						chatId: this.currentChatId ?? null,
 						messages: this.messages
 							.slice(0, -1)
 							.map((message) => ({
@@ -1083,6 +1092,127 @@ export default {
 		selectModel(name) {
 			this.modelName = name;
 			this.modelSelectorOpen = false;
+		},
+		// ---- Harness-initiated (wake-up) generation stream ----------------------------
+		connectWakeChannel() {
+			if (this.wakeSource || !this.currentChatId) return;
+			const source = new EventSource(
+				`${CHAT_BASE}/${encodeURIComponent(this.currentChatId)}/wakeup-stream`,
+			);
+			this.wakeSource = source;
+			source.addEventListener("harness_turn", (event) => {
+				const payload = JSON.parse(event.data);
+				const lastUser = [...this.messages].reverse().find((m) => m.role === "user");
+				const lastText = lastUser ? this.messageText(lastUser) : null;
+				if (lastText !== payload.content) {
+					this.messages.push(this.createMessage("user", payload.content));
+					this.messages.push(this.createMessage("assistant", ""));
+					this.wakeAssistant = this.messages[this.messages.length - 1];
+					this.streaming = true;
+					this.generationId = null;
+				}
+			});
+			source.addEventListener("start", (event) => {
+				if (!this.wakeAssistant) return;
+				try {
+					this.generationId = JSON.parse(event.data).id ?? null;
+				} catch {
+					this.generationId = null;
+				}
+			});
+			source.addEventListener("usage", (event) => {
+				if (!this.wakeAssistant) return;
+				try {
+					this.applyUsage(JSON.parse(event.data));
+				} catch {
+					// Malformed usage; ignore.
+				}
+			});
+			source.addEventListener("tool_call", (event) => {
+				const message = this.wakeAssistant;
+				if (!message) return;
+				let call;
+				try {
+					call = JSON.parse(event.data);
+				} catch {
+					return;
+				}
+				message.isThinking = false;
+				message.parts.push({
+					type: "tool",
+					id: call.id,
+					name: call.name,
+					arguments: call.arguments ?? "",
+					result: null,
+					open: true,
+				});
+			});
+			source.addEventListener("tool_result", (event) => {
+				const message = this.wakeAssistant;
+				if (!message) return;
+				let payload;
+				try {
+					payload = JSON.parse(event.data);
+				} catch {
+					return;
+				}
+				const part = message.parts.find(
+					(candidate) => candidate.type === "tool" && candidate.id === payload.id,
+				);
+				if (part) {
+					part.result = payload.result ?? "";
+					part.open = false;
+				} else {
+					message.parts.push({
+						type: "tool",
+						id: payload.id,
+						name: payload.name ?? "",
+						arguments: "",
+						result: payload.result ?? "",
+						open: false,
+					});
+				}
+			});
+			source.addEventListener("error", (event) => {
+				// Server-sent error event, not a connection drop.
+				if (event.data) this.error = this.messageFor(event.data, "The harness reported an error.");
+			});
+			source.addEventListener("harness_done", () => {
+				this.finalizeWakeTurn();
+			});
+			source.onmessage = (event) => {
+				// Default (unnamed) events are raw assistant tokens / <think> blocks.
+				if (!this.wakeAssistant) return;
+				this.appendStreamChunk(this.wakeAssistant, event.data);
+			};
+			source.onerror = () => {
+				// Connection-level failure: EventSource retries automatically while the
+				// endpoint exists. If the chat id is gone the server 404s and we give up
+				// after close — handled by disconnectWakeChannel on tab/chat switch.
+			};
+		},
+		finalizeWakeTurn() {
+			const message = this.wakeAssistant;
+			if (message) {
+				this.flushStreamBuffer(message);
+				message.isThinking = false;
+				for (const part of message.parts) {
+					if (part.type === "tool" && part.result === null) part.open = false;
+				}
+			}
+			this.wakeAssistant = null;
+			this.generationId = null;
+			this.streaming = false;
+			this.persistCurrentChat().catch(() => {});
+		},
+		disconnectWakeChannel() {
+			if (this.wakeSource) {
+				this.wakeSource.close();
+				this.wakeSource = null;
+			}
+			if (this.wakeAssistant) {
+				this.finalizeWakeTurn();
+			}
 		},
 		async readEventStream(stream, onEvent) {
 			const reader = stream.getReader();

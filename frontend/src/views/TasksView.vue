@@ -3,8 +3,7 @@
 		<KanbanBoard v-if="normalizeTasks(data).length > 0" :columns="columnsFor(data)" :items="normalizeTasks(data)"
 			status-field="status" @change="(task, newStatus) => onMove(data, persist, refresh, task, newStatus)">
 			<template #card="{ item }">
-				<p class="text-xs font-medium wrap-break-word text-foreground">{{ item.title ?? item.name ?? "Untitled
-					task" }}</p>
+				<p class="text-xs font-medium wrap-break-word text-foreground">{{ item.title ?? item.name ?? "Untitled task" }}</p>
 				<p v-if="item.notes" class="mt-1 line-clamp-2 text-[10px] leading-snug text-muted-foreground">{{
 					item.notes }}</p>
 			</template>

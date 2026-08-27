@@ -7,7 +7,7 @@ export const useDocksStore = defineStore("docks", {
 	state: () => ({
 		left: true,
 		right: true,
-		bottom: false,
+		bottom: true,
 	}),
 	actions: {
 		toggle(dock) {

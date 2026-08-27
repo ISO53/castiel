@@ -32,6 +32,8 @@ public class BashTool implements ToolProvider {
 			"Uses PowerShell on Windows and bash elsewhere.",
 			"Prefer read_file/write_file/edit_file for reading and writing files.",
 			"The command is killed when the timeout elapses.",
+			"For commands that run longer than about a minute or need interactive stdin",
+			"(nmap scans, metasploit console), use the bg_* background tools instead.",
 		}
 	)
 	public String runCommand(
@@ -45,8 +47,9 @@ public class BashTool implements ToolProvider {
 			timeoutMs == null ? DEFAULT_TIMEOUT_MS : Math.clamp(timeoutMs.longValue(), 1_000L, MAX_TIMEOUT_MS);
 
 		boolean windows = System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
+		// Encoded on Windows so embedded double quotes survive the quoting chain.
 		ProcessBuilder builder = windows
-			? new ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-Command", command)
+			? io.github.iso53.castiel.tool.process.ProcessManager.shellCommand(command)
 			: new ProcessBuilder("bash", "-c", command);
 		builder.directory(workspace.root().map(Path::toFile).orElse(null));
 

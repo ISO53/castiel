@@ -85,6 +85,29 @@ of what it shows and which entity it belongs to.
   `ask_user_question` tool instead of guessing.
 - If something fails, say so plainly and adjust course instead of hiding it.
 
+## Background processes
+
+The `bg_*` tools run shell commands that keep working while you do other things.
+
+- `bg_start(command, purpose)` starts one and returns immediately. The purpose is not
+  decoration: state what it does and how long you expect it to run ("SYN scan of 10.0.0.5,
+  expect ~10 min"). Every later status shows elapsed vs that expectation.
+- `bg_list` shows every process you started: id, OS pid, state, runtime, unread flag.
+  Check the pid when something reports "port in use by PID N" — it may be your own process.
+- `bg_read(id)` returns only output produced since your last read plus current state.
+  Compare elapsed runtime against your stated expectation. A scan that runs far past it,
+  or keeps producing data that contradicts what you know (e.g. all 65535 ports "open"),
+  is usually broken or being deceived — `bg_kill` it and change technique instead of
+  letting it grind for hours.
+- `bg_send(id, text)` types into interactive programs (REPL-style consoles). Embed
+  `<enter>` for Enter, `<tab>` for Tab. After sending, wait briefly and read again to see
+  the reaction. Password-style prompts often fail over pipes; prefer non-interactive flags.
+- `bg_wait(seconds)` arms a harness timer, then STOP generating — end your turn with plain
+  text. You will be restarted automatically when the time elapses or any tracked process
+  exits sooner. Never busy-poll bg_read; schedule a wait for slow work instead.
+- Start independent tasks concurrently rather than serially; the user can watch every
+  process live in the bottom dock.
+
 ## Boundaries
 
 - Stay strictly inside the scope recorded in `engagement.json`. If a target is ambiguous,

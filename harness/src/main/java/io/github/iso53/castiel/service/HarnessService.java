@@ -13,13 +13,18 @@ import dev.langchain4j.model.openai.OpenAiTokenUsage;
 import dev.langchain4j.model.output.TokenUsage;
 import dev.langchain4j.service.tool.DefaultToolExecutor;
 import dev.langchain4j.service.tool.ToolExecutor;
+import io.github.iso53.castiel.model.ChatMessagePart;
+import io.github.iso53.castiel.model.ChatSession;
 import io.github.iso53.castiel.model.ChatStreamRequest;
 import io.github.iso53.castiel.model.ChatTurn;
 import io.github.iso53.castiel.model.LlmProviderConfig;
+import io.github.iso53.castiel.model.ToolCallPayload;
 import io.github.iso53.castiel.provider.GenerationOptions;
 import io.github.iso53.castiel.provider.LlmProvider;
+import io.github.iso53.castiel.tool.BackgroundShellTool;
 import io.github.iso53.castiel.tool.ToolProvider;
 import io.github.iso53.castiel.tool.UserQuestionTool;
+import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -27,6 +32,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
@@ -44,17 +51,35 @@ import reactor.core.publisher.FluxSink;
 @Service
 public class HarnessService {
 
+	private static final Logger log = LoggerFactory.getLogger(HarnessService.class);
+
 	private static final String SYSTEM_PROMPT_PATH = "prompts/SYSTEM_PROMPT.md";
 	private static final int MAX_TOOL_ROUNDS = 64;
+
+	/**
+	 * Safety valve against runaway autonomy: consecutive harness-initiated generations
+	 * without a real user message are capped; a genuine user turn resets the counter.
+	 */
+	private static final int MAX_CONSECUTIVE_WAKEUPS = 15;
 
 	private static final ObjectMapper JSON = new ObjectMapper();
 
 	private final LlmClientFactory llmClientFactory;
 	private final UserSettingsService userSettingsService;
 	private final UserQuestionTool userQuestionTool;
+	private final BackgroundShellTool backgroundShellTool;
+	private final ChatPersistenceService chatPersistence;
+	private final NudgeScheduler nudgeScheduler;
+	private final WakeupBus wakeupBus;
 	private final List<ToolSpecification> toolSpecifications;
 	private final Map<String, ToolExecutor> toolExecutors;
 	private final ConcurrentMap<String, GenerationState> generations = new ConcurrentHashMap<>();
+
+	/** Chat ids with a generation (user- or harness-initiated) currently streaming. */
+	private final ConcurrentMap<String, Boolean> busyChats = new ConcurrentHashMap<>();
+
+	/** Consecutive harness-initiated generations per chat, reset by user turns. */
+	private final ConcurrentMap<String, Integer> wakeupCounts = new ConcurrentHashMap<>();
 
 	/**
 	 * Bookkeeping for one in-flight chat stream: the LangChain4j {@link StreamingHandle}
@@ -70,17 +95,27 @@ public class HarnessService {
 	public HarnessService(
 		LlmClientFactory llmClientFactory,
 		UserSettingsService userSettingsService,
+		ChatPersistenceService chatPersistence,
+		NudgeScheduler nudgeScheduler,
+		WakeupBus wakeupBus,
 		List<ToolProvider> toolProviders
 	) {
 		this.llmClientFactory = llmClientFactory;
 		this.userSettingsService = userSettingsService;
+		this.chatPersistence = chatPersistence;
+		this.nudgeScheduler = nudgeScheduler;
+		this.wakeupBus = wakeupBus;
 
 		UserQuestionTool questionTool = null;
+		BackgroundShellTool shellTool = null;
 		this.toolSpecifications = new ArrayList<>();
 		Map<String, ToolExecutor> executors = new LinkedHashMap<>();
 		for (ToolProvider provider : toolProviders) {
 			if (provider instanceof UserQuestionTool userTool) {
 				questionTool = userTool;
+			}
+			if (provider instanceof BackgroundShellTool backgroundTool) {
+				shellTool = backgroundTool;
 			}
 			for (Method method : provider.getClass().getMethods()) {
 				if (method.isAnnotationPresent(Tool.class)) {
@@ -93,8 +128,24 @@ public class HarnessService {
 		if (questionTool == null) {
 			throw new IllegalStateException(UserQuestionTool.class.getSimpleName() + " bean is missing");
 		}
+		if (shellTool == null) {
+			throw new IllegalStateException(BackgroundShellTool.class.getSimpleName() + " bean is missing");
+		}
 		this.userQuestionTool = questionTool;
+		this.backgroundShellTool = shellTool;
 		this.toolExecutors = executors;
+	}
+
+	/** Wires the nudge scheduler to this service once both beans exist. */
+	@PostConstruct
+	void wireWakeUps() {
+		nudgeScheduler.setWakeHandler(token -> {
+			int split = token.indexOf('\u0000');
+			triggerWakeup(
+				split < 0 ? token : token.substring(0, split),
+				split < 0 ? "the requested check-in time elapsed" : token.substring(split + 1)
+			);
+		});
 	}
 
 	/**
@@ -136,6 +187,33 @@ public class HarnessService {
 		List<ChatMessage> messages = buildMessages(request.messages());
 		GenerationOptions options = new GenerationOptions(request.reasoningEffort());
 
+		boolean sessionAware = request.chatId() != null && !request.chatId().isBlank();
+		String chatId = sessionAware ? request.chatId().trim() : null;
+		if (sessionAware) {
+			wakeupCounts.remove(chatId); // Real user activity resets the autonomy guard.
+			if (busyChats.putIfAbsent(chatId, Boolean.TRUE) != null) {
+				return Flux.error(new IllegalStateException("Another generation is still streaming for this chat"));
+			}
+			backgroundShellTool.setActiveChatId(chatId);
+		}
+
+		Flux<ServerSentEvent<String>> generation = openGeneration(provider, modelName, options, messages);
+		if (!sessionAware) {
+			return generation;
+		}
+		return generation.doFinally(signal -> {
+			busyChats.remove(chatId);
+			backgroundShellTool.setActiveChatId(null);
+		});
+	}
+
+	/** Spawns a full model generation with its own cancellable id and streaming state. */
+	private Flux<ServerSentEvent<String>> openGeneration(
+		LlmProvider provider,
+		String modelName,
+		GenerationOptions options,
+		List<ChatMessage> messages
+	) {
 		String generationId = UUID.randomUUID().toString();
 		GenerationState state = new GenerationState();
 		generations.put(generationId, state);
@@ -145,6 +223,65 @@ public class HarnessService {
 			sink.next(event("start", json(Map.of("id", generationId))));
 			streamRound(provider, modelName, options, messages, sink, state, 0);
 		});
+	}
+
+	/**
+	 * Starts a harness-initiated generation: replays the persisted chat thread, injects a
+	 * {@code [harness]} instruction turn explaining why the agent was woken, streams the
+	 * result into the chat's wake-up channel, and emits a {@code harness_turn} event so the
+	 * frontend can persist that instruction as part of the conversation.
+	 *
+	 * <p>Ownership of {@code busyChats} is acquired here and released in the generation's
+	 * {@code doFinally}; all synchronous failure paths release it before returning.
+	 */
+	public void triggerWakeup(String chatId, String reason) {
+		if (chatId == null || chatId.isBlank()) {
+			return;
+		}
+		if (busyChats.putIfAbsent(chatId, Boolean.TRUE) != null) {
+			log.info("Skipping wake-up for {}: a generation is already streaming", chatId);
+			return;
+		}
+		try {
+			int used = wakeupCounts.merge(chatId, 1, Integer::sum);
+			if (used > MAX_CONSECUTIVE_WAKEUPS) {
+				log.warn("Wake-up budget exhausted for {}; waiting for human input", chatId);
+				busyChats.remove(chatId);
+				return;
+			}
+
+			ChatSession session = chatPersistence.loadChat(chatId);
+			LlmProviderConfig config = userSettingsService.get().requireProvider(session.providerId());
+			List<ChatMessage> messages = buildMessages(toTurns(session.messages()));
+			String harnessText =
+				"[harness] Automated check: " +
+				reason +
+				". Review your background processes with bg_list/bg_read and continue working.";
+			messages.add(UserMessage.from(harnessText));
+
+			LlmProvider provider = llmClientFactory.create(config);
+			backgroundShellTool.setActiveChatId(chatId);
+
+			wakeupBus.emit(chatId, event("harness_turn", json(Map.of("role", "user", "content", harnessText))));
+
+			openGeneration(provider, session.modelName(), new GenerationOptions(session.reasoningEffort()), messages)
+				.doFinally(signal -> {
+					// Finalize marker for the frontend regardless of how the turn ended,
+					// then release the session slot.
+					wakeupBus.emit(chatId, event("harness_done", "{}"));
+					busyChats.remove(chatId);
+					backgroundShellTool.setActiveChatId(null);
+				})
+				.subscribe(
+					sse -> wakeupBus.emit(chatId, sse),
+					error -> log.error("Wake-up generation failed for {}", chatId, error)
+				);
+			log.info("Wake-up generation started for {} ({})", chatId, reason);
+		} catch (Exception ex) {
+			busyChats.remove(chatId);
+			backgroundShellTool.setActiveChatId(null);
+			log.error("Could not start wake-up generation for {}: {}", chatId, ex.getMessage());
+		}
 	}
 
 	/**
@@ -364,6 +501,44 @@ public class HarnessService {
 		} catch (IOException ex) {
 			return "{}";
 		}
+	}
+
+	/**
+	 * Converts persisted messages (parts-based) into the flat turn shape the streaming
+	 * pipeline consumes. Text parts are joined; tool parts become tool calls, mirroring
+	 * how the frontend reconstructs turns from history.
+	 */
+	private static List<ChatTurn> toTurns(List<io.github.iso53.castiel.model.ChatMessage> persisted) {
+		if (persisted == null || persisted.isEmpty()) {
+			return List.of();
+		}
+		List<ChatTurn> turns = new ArrayList<>(persisted.size());
+		for (io.github.iso53.castiel.model.ChatMessage message : persisted) {
+			if (message == null) {
+				continue;
+			}
+			StringBuilder content = new StringBuilder();
+			List<ToolCallPayload> toolCalls = new ArrayList<>();
+			for (ChatMessagePart part : message.parts()) {
+				switch (part.type() == null ? "" : part.type()) {
+					case "text" -> {
+						if (part.text() != null) {
+							content.append(part.text());
+						}
+					}
+					case "tool" -> {
+						if (part.id() != null && part.name() != null) {
+							toolCalls.add(new ToolCallPayload(part.id(), part.name(), part.arguments(), part.result()));
+						}
+					}
+					default -> {
+						// thinking/questionnaire parts carry no generation-relevant replay data
+					}
+				}
+			}
+			turns.add(new ChatTurn(message.role(), content.toString(), toolCalls));
+		}
+		return turns;
 	}
 
 	private List<ChatMessage> buildMessages(List<ChatTurn> turns) {

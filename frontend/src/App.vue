@@ -20,6 +20,7 @@
 
 					<ResizablePanel collapsible :collapsed-size="0" :default-size="40" :min-size="8" ref="bottomDock"
 						@collapse="docks.bottom = false" @expand="docks.bottom = true">
+						<ProcessesView />
 					</ResizablePanel>
 				</ResizablePanelGroup>
 			</ResizablePanel>
@@ -50,6 +51,7 @@ import ChatView from "@/views/ChatView.vue";
 import ChatHistoryPanel from "@/components/ChatHistoryPanel.vue";
 import FileTreeView from "@/components/FileTreeView.vue";
 import MenuBar from "@/views/MenuBar.vue";
+import ProcessesView from "@/views/ProcessesView.vue";
 import TabbedView from "./views/TabbedView.vue";
 import { useChatsStore } from "@/stores/chats";
 import { useDocksStore } from "@/stores/docks";
@@ -67,6 +69,7 @@ export default {
 		ChatHistoryPanel,
 		FileTreeView,
 		MenuBar,
+		ProcessesView,
 		TabbedView,
 	},
 	setup() {
