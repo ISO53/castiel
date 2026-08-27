@@ -29,6 +29,10 @@
 					@click="reload">
 					<RotateCw :class="loadingRoot ? 'animate-spin' : ''" />
 				</Button>
+				<Button variant="ghost" size="icon-sm" class="text-muted-foreground hover:text-foreground"
+					aria-label="Hide the file tree dock" title="Hide dock" @click="docks.toggle('left')">
+					<PanelLeftClose />
+				</Button>
 			</div>
 		</header>
 
@@ -88,9 +92,11 @@ import {
 	LayoutGrid,
 	ListChecks,
 	Network,
+	PanelLeftClose,
 	RotateCw,
 } from "@lucide/vue";
 import { ENGAGEMENT_DOCUMENTS } from "@/lib/documents";
+import { useDocksStore } from "@/stores/docks";
 import { useTabsStore } from "@/stores/tabs";
 import { useWorkspaceStore } from "@/stores/workspace";
 
@@ -150,6 +156,7 @@ export default {
 		FolderOpen,
 		FolderTree,
 		LayoutGrid,
+		PanelLeftClose,
 		RotateCw,
 		Spinner,
 	},
@@ -157,6 +164,7 @@ export default {
 	data() {
 		return {
 			workspace: useWorkspaceStore(),
+			docks: useDocksStore(),
 			root: null,
 			nodes: {},
 			entryIndex: {},

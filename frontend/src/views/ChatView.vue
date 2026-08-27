@@ -36,6 +36,11 @@
 						<DropdownMenuItem v-if="!providers.length" disabled>No providers configured</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
+
+				<Button variant="ghost" size="icon-sm" class="text-muted-foreground hover:text-foreground"
+					aria-label="Hide the chat dock" title="Hide dock" @click="docks.toggle('right')">
+					<PanelRightClose class="size-3.5" />
+				</Button>
 			</div>
 		</header>
 
@@ -262,7 +267,7 @@ import {
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "@/components/ai-elements/sources";
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "@/components/ai-elements/tool";
-import { Brain, Check, ChevronDown, FolderOpen, History, Plus, Trash2, X } from "@lucide/vue";
+import { Brain, Check, ChevronDown, FolderOpen, History, PanelRightClose, Plus, Trash2, X } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -290,6 +295,7 @@ import {
 import { useSettingsStore } from "@/stores/settings";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useChatsStore } from "@/stores/chats";
+import { useDocksStore } from "@/stores/docks";
 import { providerLogo } from "@/lib/provider-logos";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
@@ -396,6 +402,7 @@ export default {
 		ToolOutput,
 		Trash2,
 		X,
+		PanelRightClose,
 	},
 
 	data() {
@@ -403,6 +410,7 @@ export default {
 			settings: useSettingsStore(),
 			workspace: useWorkspaceStore(),
 			chats: useChatsStore(),
+			docks: useDocksStore(),
 			historyOpen: false,
 			currentChatId: null,
 			chatTitle: "",
