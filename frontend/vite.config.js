@@ -13,4 +13,10 @@ export default defineConfig({
 			"@": fileURLToPath(new URL("./src", import.meta.url)),
 		},
 	},
+	server: {
+		// Forward API calls to the backend running via `mvn spring-boot:run`.
+		proxy: {
+			"/api": "http://localhost:8081",
+		},
+	},
 });

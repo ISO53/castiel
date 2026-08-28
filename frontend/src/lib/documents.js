@@ -1,4 +1,4 @@
-const FILES_API = "http://localhost:8081/api/files";
+const FILES_API = `${window.location.origin}/api/files`;
 
 /**
  * The engagement documents backing the pentest views. Each document is one JSON file in

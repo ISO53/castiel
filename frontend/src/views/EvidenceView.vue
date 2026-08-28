@@ -51,7 +51,7 @@ import { joinWorkspacePath } from "@/lib/documents";
 import { useTabsStore } from "@/stores/tabs";
 import { useWorkspaceStore } from "@/stores/workspace";
 
-const FILES_API = "http://localhost:8081/api/files";
+const FILES_API = `${window.location.origin}/api/files`;
 
 const tabs = useTabsStore();
 const workspace = useWorkspaceStore();

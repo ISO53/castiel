@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 
-const API_BASE_URL = "http://localhost:8081/api/workspace";
+const API_BASE_URL = `${window.location.origin}/api/workspace`;
 
 async function readError(response) {
 	const body = await response.text();

@@ -300,9 +300,9 @@ import { providerLogo } from "@/lib/provider-logos";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 
-const SETTINGS_API = "http://localhost:8081/api/settings";
-const CHAT_API = "http://localhost:8081/api/chat/stream";
-const CHAT_BASE = "http://localhost:8081/api/chat";
+const SETTINGS_API = `${window.location.origin}/api/settings`;
+const CHAT_API = `${window.location.origin}/api/chat/stream`;
+const CHAT_BASE = `${window.location.origin}/api/chat`;
 
 // The harness normalizes provider-side thinking to <think> tags, but some models emit
 // raw <think>/<thinking> tags inline in the content stream — accept every spelling.

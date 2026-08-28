@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 
-const API = "http://localhost:8081/api/processes";
+const API = `${window.location.origin}/api/processes`;
 const POLL_INTERVAL_MS = 1200;
 
 /**

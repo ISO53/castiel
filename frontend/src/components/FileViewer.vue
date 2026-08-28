@@ -82,7 +82,7 @@ import { ArrowUp, File, Folder, Home, LoaderCircle } from "@lucide/vue";
 import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
 
-const API_BASE_URL = "http://localhost:8081/api/files";
+const API_BASE_URL = `${window.location.origin}/api/files`;
 
 export default {
 	name: "FileViewer",

@@ -38,7 +38,7 @@ import { loadLanguageExtension, languageLabel } from "@/lib/editor-languages";
 import { leanEditorExtensions } from "@/lib/editor-theme";
 import { useTabsStore } from "@/stores/tabs";
 
-const FILES_API = "http://localhost:8081/api/files";
+const FILES_API = `${window.location.origin}/api/files`;
 
 export default {
 	name: "FileEditorView",

@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 
-const API_BASE_URL = "http://localhost:8081/api/engagement";
+const API_BASE_URL = `${window.location.origin}/api/engagement`;
 
 /** Display metadata for the five engagement phases, in order. */
 export const ENGAGEMENT_PHASES = [

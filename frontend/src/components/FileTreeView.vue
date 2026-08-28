@@ -100,7 +100,7 @@ import { useDocksStore } from "@/stores/docks";
 import { useTabsStore } from "@/stores/tabs";
 import { useWorkspaceStore } from "@/stores/workspace";
 
-const FILES_API = "http://localhost:8081/api/files";
+const FILES_API = `${window.location.origin}/api/files`;
 
 const DOC_ICONS = {
 	network: Network,

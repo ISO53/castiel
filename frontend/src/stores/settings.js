@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 
-const API_BASE_URL = "http://localhost:8081/api/settings";
+const API_BASE_URL = `${window.location.origin}/api/settings`;
 
 const LLAMA_CPP_ID = "llama.cpp";
 const OLLAMA_ID = "ollama";

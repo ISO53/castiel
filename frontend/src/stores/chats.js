@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 
-const API_BASE_URL = "http://localhost:8081/api/chats";
+const API_BASE_URL = `${window.location.origin}/api/chats`;
 
 async function readError(response) {
 	const body = await response.text();
