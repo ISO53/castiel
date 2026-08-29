@@ -100,6 +100,7 @@ export const useProcessesStore = defineStore("processes", {
 			this.selectedId = null;
 			this.texts = {};
 			this.cursors = {};
+			this.startPolling();
 		},
 	},
 });
