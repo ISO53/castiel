@@ -3,18 +3,23 @@ package io.github.iso53.castiel.controller;
 import io.github.iso53.castiel.tool.process.BoundedOutputBuffer.Page;
 import io.github.iso53.castiel.tool.process.ManagedProcess;
 import io.github.iso53.castiel.tool.process.ProcessManager;
+import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 /** Read side of the process registry for the bottom-dock UI. */
@@ -35,23 +40,50 @@ public class ProcessController {
 	/** All tracked processes, oldest first; drives the dock's table rows. */
 	@GetMapping
 	public Mono<List<Map<String, Object>>> list() {
-		List<Map<String, Object>> rows = manager
-			.list()
-			.stream()
-			.map(entry -> {
-				Map<String, Object> row = new LinkedHashMap<>();
-				row.put("id", entry.id());
-				row.put("pid", entry.osPid());
-				row.put("command", entry.command());
-				row.put("purpose", entry.purpose());
-				row.put("state", entry.state().name());
-				row.put("exitCode", entry.exitCode());
-				row.put("runtimeSeconds", entry.runtime().toSeconds());
-				row.put("unread", !entry.isRunning() && !entry.isSeenByAgent());
-				return row;
-			})
-			.toList();
+		List<Map<String, Object>> rows = manager.list().stream().map(ProcessController::toRow).toList();
 		return Mono.just(rows);
+	}
+
+	/**
+	 * Starts a background process on the user's behalf from the bottom-dock dialog.
+	 * The command runs like any agent-started process — same tracking, output, stdin
+	 * and wake-up rules; the purpose is silently prefixed so the agent can tell who
+	 * started it.
+	 */
+	@PostMapping
+	public Mono<Map<String, Object>> start(@RequestBody StartProcessRequest request) {
+		if (request == null || request.command() == null || request.command().isBlank()) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "command is required");
+		}
+		String description = request.description() == null || request.description().isBlank()
+				? "No description provided"
+				: request.description().strip();
+		try {
+			ManagedProcess entry = manager.start(
+					request.command().strip(),
+					ProcessManager.USER_START_PREFIX + description);
+			return Mono.just(toRow(entry));
+		} catch (IOException ex) {
+			return Mono.error(new ResponseStatusException(
+					HttpStatus.INTERNAL_SERVER_ERROR, "could not start the command: " + ex.getMessage()));
+		}
+	}
+
+	/** Request body for {@link #start}; the description is optional. */
+	public record StartProcessRequest(String command, String description) {}
+
+	/** Wire shape of one registry row; shared by {@link #list()} and {@link #start}. */
+	private static Map<String, Object> toRow(ManagedProcess entry) {
+		Map<String, Object> row = new LinkedHashMap<>();
+		row.put("id", entry.id());
+		row.put("pid", entry.osPid());
+		row.put("command", entry.command());
+		row.put("purpose", entry.purpose());
+		row.put("state", entry.state().name());
+		row.put("exitCode", entry.exitCode());
+		row.put("runtimeSeconds", entry.runtime().toSeconds());
+		row.put("unread", !entry.isRunning() && !entry.isSeenByAgent());
+		return row;
 	}
 
 	/**
@@ -103,5 +135,12 @@ public class ProcessController {
 	@ResponseStatus(HttpStatus.CONFLICT)
 	public Map<String, String> conflict(IllegalStateException ex) {
 		return Map.of("error", ex.getMessage());
+	}
+
+	/** Preserves the status of {@link ResponseStatusException} while exposing its reason as JSON. */
+	@ExceptionHandler(ResponseStatusException.class)
+	public ResponseEntity<Map<String, String>> statusError(ResponseStatusException ex) {
+		String reason = ex.getReason() != null ? ex.getReason() : ex.getStatusCode().toString();
+		return ResponseEntity.status(ex.getStatusCode()).body(Map.of("error", reason));
 	}
 }

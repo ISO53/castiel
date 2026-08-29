@@ -107,6 +107,9 @@ The `bg_*` tools run shell commands that keep working while you do other things.
   exits sooner. Never busy-poll bg_read; schedule a wait for slow work instead.
 - Start independent tasks concurrently rather than serially; the user can watch every
   process live in the bottom dock.
+- A purpose prefixed `[user-started]` marks a process the user launched from the UI.
+  Treat it as user-directed work: take its output and side effects into account, and
+  only send input to it or kill it when the user asks or it clearly misbehaves.
 
 ## Boundaries
 

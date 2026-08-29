@@ -1,8 +1,12 @@
 <script setup>
-import { computed, onMounted, onUnmounted, watch } from "vue";
-import { ChevronDown, PanelBottomClose, Trash2 } from "@lucide/vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { ChevronDown, PanelBottomClose, Terminal as TerminalIcon, Trash2 } from "@lucide/vue";
 import { Terminal } from "@/components/ai-elements/terminal";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useDocksStore } from "@/stores/docks";
 import { useProcessesStore } from "@/stores/processes";
 import { useWorkspaceStore } from "@/stores/workspace";
@@ -22,6 +26,36 @@ watch(
 // When a process is selected the table collapses to just that row,
 // handing the rest of the dock to the terminal pane.
 const displayRows = computed(() => (store.selected ? [store.selected] : store.rows));
+
+// "Start a background process" dialog state.
+const startDialogOpen = ref(false);
+const startCommand = ref("");
+const startDescription = ref("");
+const startError = ref("");
+const starting = ref(false);
+
+const canStart = computed(() => startCommand.value.trim().length > 0 && !starting.value);
+
+function openStartDialog() {
+	startCommand.value = "";
+	startDescription.value = "";
+	startError.value = "";
+	startDialogOpen.value = true;
+}
+
+async function startUserProcess() {
+	if (!canStart.value) return;
+	starting.value = true;
+	startError.value = "";
+	try {
+		await store.startProcess(startCommand.value.trim(), startDescription.value.trim());
+		startDialogOpen.value = false;
+	} catch (error) {
+		startError.value = error?.message ?? "Could not start the process.";
+	} finally {
+		starting.value = false;
+	}
+}
 
 function stateDotClass(state) {
 	switch (state) {
@@ -67,14 +101,21 @@ function shortCommand(command) {
 				</span>
 				<span v-else class="text-xs text-zinc-500">none active</span>
 			</div>
-			<Button size="icon" variant="ghost" class="size-6 text-muted-foreground hover:text-foreground"
-				title="Hide dock" @click="docks.toggle('bottom')">
-				<PanelBottomClose :size="14" />
-			</Button>
+			<div class="flex items-center gap-1">
+				<Button size="icon" variant="ghost" class="size-6 text-muted-foreground hover:text-foreground"
+					aria-label="Start a background process" title="Start a background process"
+					@click="openStartDialog">
+					<TerminalIcon :size="14" />
+				</Button>
+				<Button size="icon" variant="ghost" class="size-6 text-muted-foreground hover:text-foreground"
+					title="Hide dock" @click="docks.toggle('bottom')">
+					<PanelBottomClose :size="14" />
+				</Button>
+			</div>
 		</div>
 
 		<div v-if="!store.rows.length" class="flex flex-1 items-center justify-center text-sm text-zinc-600">
-			Background processes started by the agent appear here.
+			Background processes started by you or the agent appear here.
 		</div>
 
 		<template v-else>
@@ -135,5 +176,40 @@ function shortCommand(command) {
 					:is-streaming="store.selected.state === 'RUNNING'" @clear="store.clearView" />
 			</div>
 		</template>
+
+		<Dialog :open="startDialogOpen" @update:open="startDialogOpen = $event">
+			<DialogContent class="sm:max-w-md">
+				<DialogHeader>
+					<DialogTitle>Start a background process</DialogTitle>
+					<DialogDescription>
+						Runs in the workspace like any agent-started process: the agent sees it, can read
+						its output, and manages it from there.
+					</DialogDescription>
+				</DialogHeader>
+				<form class="flex flex-col gap-3" @submit.prevent="startUserProcess">
+					<div class="flex flex-col gap-1.5">
+						<Label for="process-command">Command</Label>
+						<Input id="process-command" v-model="startCommand" class="font-mono" autocomplete="off"
+							spellcheck="false" placeholder="nmap -sS 10.0.0.5" />
+					</div>
+					<div class="flex flex-col gap-1.5">
+						<Label for="process-description">
+							Explanation <span class="font-normal text-zinc-500">(optional)</span>
+						</Label>
+						<Textarea id="process-description" v-model="startDescription" :rows="3"
+							placeholder="Why you started it — the agent will read this." />
+					</div>
+					<p v-if="startError" class="text-xs text-red-400">{{ startError }}</p>
+					<DialogFooter>
+						<Button type="button" variant="ghost" size="sm" @click="startDialogOpen = false">
+							Cancel
+						</Button>
+						<Button type="submit" size="sm" :disabled="!canStart">
+							{{ starting ? "Starting..." : "Start" }}
+						</Button>
+					</DialogFooter>
+				</form>
+			</DialogContent>
+		</Dialog>
 	</div>
 </template>

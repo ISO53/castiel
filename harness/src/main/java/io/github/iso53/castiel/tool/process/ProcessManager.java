@@ -38,6 +38,10 @@ public class ProcessManager {
 	/** Per-process output retention; older output is evicted from the front. */
 	static final int OUTPUT_CAPACITY_CHARS = 256 * 1024;
 
+
+	// A prefix that let's agent know the process is started by the user.
+	public static final String USER_START_PREFIX = "[user-started] ";
+
 	private final WorkspaceSession workspace;
 	private final NudgeScheduler nudgeScheduler;
 

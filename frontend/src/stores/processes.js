@@ -89,6 +89,34 @@ export const useProcessesStore = defineStore("processes", {
 				this.selectedId = null;
 			}
 		},
+		/**
+		 * Starts a process on the user's behalf from the bottom-dock dialog; the
+		 * description is optional. Resolves with the new row and auto-selects it so
+		 * the terminal pane opens on it; rejects with a user-facing error message.
+		 */
+		async startProcess(command, description) {
+			const response = await fetch(API, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ command, description }),
+			}).catch(() => {
+				throw new Error("Harness is unreachable; try again shortly.");
+			});
+			if (!response.ok) {
+				let message = `Could not start the process (HTTP ${response.status}).`;
+				try {
+					const body = await response.json();
+					if (body?.error) message = body.error;
+				} catch {
+					// Non-JSON error body; keep the generic message.
+				}
+				throw new Error(message);
+			}
+			const row = await response.json();
+			await this.fetchList();
+			if (this.rows.some((r) => r.id === row.id)) this.select(row.id);
+			return row;
+		},
 		clearView() {
 			if (!this.selectedId) return;
 			this.texts[this.selectedId] = "";
