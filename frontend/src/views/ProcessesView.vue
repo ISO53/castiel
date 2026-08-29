@@ -96,7 +96,7 @@ function shortCommand(command) {
 								<span class="inline-block size-1.5 rounded-full" :class="stateDotClass(row.state)"
 									:title="row.state.toLowerCase()" />
 							</td>
-							<td class="px-3 py-1.5 font-mono">{{ row.id }}</td>
+							<td class="max-w-[16ch] truncate px-3 py-1.5 font-mono" :title="row.id">{{ row.id }}</td>
 							<td class="px-3 py-1.5 font-mono text-zinc-400">{{ row.pid }}</td>
 							<td class="whitespace-nowrap px-3 py-1.5 tabular-nums text-zinc-300">{{
 								formatRuntime(row.runtimeSeconds) }}</td>

@@ -7,15 +7,16 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Base64;
+import java.util.HexFormat;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,9 +41,11 @@ public class ProcessManager {
 	private final WorkspaceSession workspace;
 	private final NudgeScheduler nudgeScheduler;
 
+	/** Random suffix source for registry ids. */
+	private static final SecureRandom ID_RANDOM = new SecureRandom();
+
 	/** id -> entry. */
 	private final Map<String, ManagedProcess> processes = new ConcurrentHashMap<>();
-	private final AtomicLong sequence = new AtomicLong();
 
 	public ProcessManager(WorkspaceSession workspace, NudgeScheduler nudgeScheduler) {
 		this.workspace = workspace;
@@ -63,7 +66,7 @@ public class ProcessManager {
 		builder.directory(workspace.root().map(Path::toFile).orElse(null));
 
 		Process process = builder.start();
-		String id = "p_" + sequence.incrementAndGet();
+		String id = newId();
 		ManagedProcess entry = new ManagedProcess(id, process, command, purpose.strip());
 		processes.put(id, entry);
 
@@ -74,6 +77,13 @@ public class ProcessManager {
 
 		LOG.info("Started background process {} (pid {}): {}", id, process.pid(), purpose);
 		return entry;
+	}
+
+	/** Timestamp plus a random suffix, so ids never repeat across app restarts. */
+	private static String newId() {
+		byte[] suffix = new byte[2];
+		ID_RANDOM.nextBytes(suffix);
+		return "p_" + System.currentTimeMillis() + "_" + HexFormat.of().formatHex(suffix);
 	}
 
 	/** Registry snapshot ordered oldest first. */
