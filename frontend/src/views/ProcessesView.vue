@@ -45,6 +45,11 @@ function formatRuntime(seconds) {
 	return `${s}s`;
 }
 
+function shortId(id) {
+	const text = id ?? "";
+	return text.length > 16 ? text.slice(0, 9) + "…" + text.slice(-5) : text;
+}
+
 function shortCommand(command) {
 	const line = (command ?? "").replace(/\s+/g, " ").trim();
 	return line.length > 70 ? line.slice(0, 67) + "..." : line;
@@ -96,7 +101,9 @@ function shortCommand(command) {
 								<span class="inline-block size-1.5 rounded-full" :class="stateDotClass(row.state)"
 									:title="row.state.toLowerCase()" />
 							</td>
-							<td class="max-w-[16ch] truncate px-3 py-1.5 font-mono" :title="row.id">{{ row.id }}</td>
+							<td class="px-3 py-1.5 font-mono">
+								<span class="block max-w-[16ch] truncate" :title="row.id">{{ shortId(row.id) }}</span>
+							</td>
 							<td class="px-3 py-1.5 font-mono text-zinc-400">{{ row.pid }}</td>
 							<td class="whitespace-nowrap px-3 py-1.5 tabular-nums text-zinc-300">{{
 								formatRuntime(row.runtimeSeconds) }}</td>
