@@ -45,35 +45,6 @@ public class ChatHistoryController {
 	}
 
 	/**
-	 * Saves or updates a chat session in the current workspace.
-	 */
-	@PutMapping("/{id}")
-	public ChatSession saveChat(@PathVariable("id") String id, @RequestBody ChatSession body) {
-		if (body == null) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is required");
-		}
-		// Use path id if body id is missing or ensure they match
-		String sessionId = body.id() != null && !body.id().isBlank() ? body.id() : id;
-		ChatSession sessionWithId = new ChatSession(
-			sessionId,
-			body.title(),
-			body.providerId(),
-			body.modelName(),
-			body.reasoningEffort(),
-			body.createdAt(),
-			body.updatedAt(),
-			body.messages()
-		);
-		try {
-			return chatPersistenceService.saveChat(sessionWithId);
-		} catch (IllegalArgumentException ex) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
-		} catch (IllegalStateException ex) {
-			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), ex);
-		}
-	}
-
-	/**
 	 * Deletes a chat session from the current workspace.
 	 */
 	@DeleteMapping("/{id}")

@@ -414,7 +414,6 @@ export default {
 			historyOpen: false,
 			currentChatId: null,
 			chatTitle: "",
-			chatCreatedAt: null,
 			providerId: null,
 			modelName: null,
 			models: [],
@@ -554,7 +553,6 @@ export default {
 			if (this.streaming) return;
 			this.currentChatId = session.id;
 			this.chatTitle = session.title;
-			this.chatCreatedAt = session.createdAt;
 			this.providerId = session.providerId;
 			this.modelName = session.modelName;
 			this.reasoningEffort = session.reasoningEffort ?? null;
@@ -607,7 +605,6 @@ export default {
 				const session = await this.chats.loadChat(chatId);
 				this.currentChatId = session.id;
 				this.chatTitle = session.title;
-				this.chatCreatedAt = session.createdAt;
 				this.providerId = session.providerId;
 				this.modelName = session.modelName;
 				this.reasoningEffort = session.reasoningEffort ?? null;
@@ -656,46 +653,6 @@ export default {
 				}
 			} catch (err) {
 				this.error = this.messageFor(err, "Could not delete chat.");
-			}
-		},
-		async persistCurrentChat() {
-			if (!this.cwd || !this.currentChatId || !this.messages.length) return;
-			try {
-				const serializableMessages = this.messages
-					.filter((m) => this.hasRenderableContent(m) || m.role === "user")
-					.map((m) => ({
-						id: m.id,
-						role: m.role,
-						parts: (m.parts || []).map((part) => {
-							const clean = { type: part.type };
-							if (part.text !== undefined) clean.text = part.text;
-							if (part.id !== undefined) clean.id = part.id;
-							if (part.name !== undefined) clean.name = part.name;
-							if (part.arguments !== undefined) clean.arguments = part.arguments;
-							if (part.result !== undefined) clean.result = part.result;
-							if (part.question !== undefined) clean.question = part.question;
-							if (part.options !== undefined) clean.options = part.options;
-							if (part.multiSelect !== undefined) clean.multiSelect = part.multiSelect;
-							return clean;
-						}),
-					}));
-
-				const firstUserMsg = this.messages.find((m) => m.role === "user");
-				const title = this.chatTitle || (firstUserMsg ? this.messageText(firstUserMsg).slice(0, 80).trim() : "New Chat");
-				this.chatTitle = title;
-
-				await this.chats.saveChat({
-					id: this.currentChatId,
-					title: this.chatTitle,
-					providerId: this.providerId,
-					modelName: this.modelName,
-					reasoningEffort: this.reasoningEffort,
-					createdAt: this.chatCreatedAt || new Date().toISOString(),
-					updatedAt: new Date().toISOString(),
-					messages: serializableMessages,
-				});
-			} catch (err) {
-				console.error("Failed to persist chat:", err);
 			}
 		},
 		handleWindowKeydown(event) {
@@ -855,7 +812,6 @@ export default {
 			if (!this.cwd || this.streaming) return;
 			this.currentChatId = crypto.randomUUID();
 			this.chatTitle = "";
-			this.chatCreatedAt = new Date().toISOString();
 			this.providerId = nextProviderId;
 			this.modelName = null;
 			this.models = [];
@@ -883,9 +839,6 @@ export default {
 
 			if (!this.currentChatId) {
 				this.currentChatId = crypto.randomUUID();
-			}
-			if (!this.chatCreatedAt) {
-				this.chatCreatedAt = new Date().toISOString();
 			}
 			if (!this.chatTitle) {
 				this.chatTitle = text.slice(0, 80);
@@ -1008,7 +961,6 @@ export default {
 				for (const part of assistantMessage.parts) {
 					if (part.type === "tool" && part.result === null) part.open = false;
 				}
-				await this.persistCurrentChat();
 			}
 		},
 		async submitAnswer(event, call) {
@@ -1211,7 +1163,6 @@ export default {
 			this.wakeAssistant = null;
 			this.generationId = null;
 			this.streaming = false;
-			this.persistCurrentChat().catch(() => {});
 		},
 		disconnectWakeChannel() {
 			if (this.wakeSource) {
