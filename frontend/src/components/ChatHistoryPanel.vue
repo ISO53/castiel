@@ -1,5 +1,5 @@
 <template>
-	<aside class="flex h-full min-h-0 w-full flex-col bg-background">
+	<aside class="flex h-full min-h-0 w-full min-w-0 flex-col bg-background">
 		<header class="flex h-8 shrink-0 items-center justify-between gap-2 border-b px-3">
 			<div class="flex items-center gap-1.5 min-w-0">
 				<History class="size-3.5 shrink-0 text-muted-foreground" />
@@ -34,8 +34,8 @@
 					:class="{ 'bg-accent text-accent-foreground font-medium': chats.activeChatId === chat.id }"
 					@click="onSelectChat(chat.id)"
 				>
-					<div class="flex items-center justify-between gap-1">
-						<span class="truncate font-medium flex-1 text-foreground" :title="chat.title">{{ chat.title || 'Untitled chat' }}</span>
+					<div class="flex min-w-0 items-center justify-between gap-1">
+						<span class="min-w-0 flex-1 truncate font-medium text-foreground" :title="chat.title">{{ chat.title || 'Untitled chat' }}</span>
 						<Button
 							variant="ghost"
 							size="icon-xs"
@@ -47,8 +47,8 @@
 						</Button>
 					</div>
 
-					<div class="flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
-						<div class="flex items-center gap-1 truncate">
+					<div class="flex min-w-0 items-center justify-between gap-2 text-[10px] text-muted-foreground">
+						<div class="flex min-w-0 items-center gap-1 truncate">
 							<img
 								v-if="providerLogo(chat.providerId)"
 								:src="providerLogo(chat.providerId)"

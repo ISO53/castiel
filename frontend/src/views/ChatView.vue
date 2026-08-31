@@ -173,8 +173,8 @@
 				<PromptInputTextarea :disabled="!ready || streaming" :placeholder="composerPlaceholder"
 					class="min-h-16" />
 				<PromptInputFooter class="mt-2 items-center justify-between gap-2 border-none">
-					<PromptInputTools>
-						<div class="flex items-center gap-2">
+					<PromptInputTools class="min-w-0 flex-1">
+						<div class="flex min-w-0 items-center gap-2">
 							<Context v-if="lastUsage" :used-tokens="lastUsage.totalTokens ?? 0" :max-tokens="contextWindow"
 								:usage="lastUsage">
 								<ContextTrigger />
@@ -212,11 +212,11 @@
 
 							<ModelSelector v-model:open="modelSelectorOpen">
 								<ModelSelectorTrigger as-child>
-									<Button variant="outline" size="sm"
+									<Button variant="outline" size="sm" class="min-w-0 shrink"
 										:disabled="!providerId || loadingModels || !models.length || streaming">
 										<img v-if="providerLogo(providerId)" :src="providerLogo(providerId)"
 											class="size-3.5 shrink-0" alt="" aria-hidden="true" />
-										<span class="max-w-56 truncate">{{ selectedModel?.name ?? "Select model" }}</span>
+										<span class="min-w-0 max-w-56 truncate">{{ selectedModel?.name ?? "Select model" }}</span>
 									</Button>
 								</ModelSelectorTrigger>
 								<ModelSelectorContent title="Select model" class="sm:max-w-xl">
