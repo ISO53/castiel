@@ -1,13 +1,12 @@
 import { defineStore } from "pinia";
 
 const API = `${window.location.origin}/api/processes`;
-const POLL_INTERVAL_MS = 1200;
 
 /**
  * Live view of the harness process registry for the bottom dock.
  *
- * Polls list + delta output of the selected row; cursors per id let the
- * appended view continue seamlessly across polls.
+ * The list refreshes on server-sent change pings from /api/processes/events;
+ * the selected row's output stays cursor-based via delta reads.
  */
 export const useProcessesStore = defineStore("processes", {
 	state: () => ({
@@ -15,7 +14,7 @@ export const useProcessesStore = defineStore("processes", {
 		selectedId: null,
 		texts: {},
 		cursors: {},
-		timer: null,
+		source: null,
 	}),
 	getters: {
 		selected() {
@@ -41,17 +40,19 @@ export const useProcessesStore = defineStore("processes", {
 				// Harness unreachable; keep last known rows.
 			}
 		},
+		/** Listens to the harness SSE feed; each change ping refetches the list. */
 		startPolling() {
-			if (this.timer) return;
+			if (this.source) return;
 			this.fetchList();
-			this.timer = setInterval(() => {
+			this.source = new EventSource(`${API}/events`);
+			this.source.onmessage = () => {
 				this.fetchList();
 				if (this.selectedId) this.pollOutput();
-			}, POLL_INTERVAL_MS);
+			};
 		},
 		stopPolling() {
-			clearInterval(this.timer);
-			this.timer = null;
+			this.source?.close();
+			this.source = null;
 		},
 		/**
 		 * Toggles row selection: clicking the selected row again closes the

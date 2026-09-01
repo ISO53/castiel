@@ -8,7 +8,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /** Read side of the process registry for the bottom-dock UI. */
@@ -42,6 +45,12 @@ public class ProcessController {
 	public Mono<List<Map<String, Object>>> list() {
 		List<Map<String, Object>> rows = manager.list().stream().map(ProcessController::toRow).toList();
 		return Mono.just(rows);
+	}
+
+	/** SSE change feed; each ping tells the dock to refetch the process list. */
+	@GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+	public Flux<ServerSentEvent<String>> events() {
+		return manager.events();
 	}
 
 	/**

@@ -20,7 +20,10 @@ import java.util.concurrent.TimeUnit;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Sinks;
 
 /**
  * Spawns shell commands as managed background processes and tracks them until they die.
@@ -51,6 +54,9 @@ public class ProcessManager {
 	/** id -> entry. */
 	private final Map<String, ManagedProcess> processes = new ConcurrentHashMap<>();
 
+	/** Fan-out of registry change pings for the UI's SSE feed. */
+	private final Sinks.Many<String> changes = Sinks.many().replay().latest();
+
 	public ProcessManager(WorkspaceSession workspace, NudgeScheduler nudgeScheduler) {
 		this.workspace = workspace;
 		this.nudgeScheduler = nudgeScheduler;
@@ -80,6 +86,7 @@ public class ProcessManager {
 		process.onExit().thenRun(() -> complete(entry));
 
 		LOG.info("Started background process {} (pid {}): {}", id, process.pid(), purpose);
+		notifyChange();
 		return entry;
 	}
 
@@ -102,6 +109,22 @@ public class ProcessManager {
 		return processes.get(id);
 	}
 
+	/** Live change feed for the UI dock: a ping fires whenever the registry changes. */
+	public Flux<ServerSentEvent<String>> events() {
+		return changes.asFlux().map(tick -> ServerSentEvent.builder(tick).build());
+	}
+
+	/** Notifies UI subscribers that the registry changed; a dropped ping is harmless. */
+	private void notifyChange() {
+		changes.tryEmitNext("changed");
+	}
+
+	/** Marks an entry as read by the agent, refreshing the UI's unread flag. */
+	public void markSeen(String id) {
+		require(id).markSeenByAgent();
+		notifyChange();
+	}
+
 	/** Queues text for the process stdin; returns false when the process has exited. */
 	public boolean sendInput(String id, String text) {
 		return require(id).sendInput(text);
@@ -113,7 +136,11 @@ public class ProcessManager {
 		if (entry == null || entry.isRunning()) {
 			return false;
 		}
-		return processes.remove(id, entry);
+		boolean removed = processes.remove(id, entry);
+		if (removed) {
+			notifyChange();
+		}
+		return removed;
 	}
 
 	/**
@@ -169,6 +196,7 @@ public class ProcessManager {
 		}
 		LOG.info("Background process {} exited with code {}: {}", entry.id(), code, summary(entry.purpose()));
 		nudgeScheduler.notifyProcessEvent();
+		notifyChange();
 	}
 
 	/** Reads decoded output chunks and appends them to the shared bounded buffer. */

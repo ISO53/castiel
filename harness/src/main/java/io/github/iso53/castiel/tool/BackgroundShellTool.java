@@ -135,7 +135,7 @@ public class BackgroundShellTool implements ToolProvider {
 		ManagedProcess entry = require(processId);
 		int requested = maxChars == null ? DEFAULT_READ_CHARS : maxChars;
 		int cap = (int) Math.clamp((long) requested, 100L, (long) MAX_READ_CHARS);
-		entry.markSeenByAgent();
+		manager.markSeen(entry.id());
 		BoundedOutputBuffer.Page page = entry.output().read(cursorFor(entry), cap);
 		// The harness keeps one shared cursor per entry for agent reads:
 		// next call resumes exactly where this one stopped.
