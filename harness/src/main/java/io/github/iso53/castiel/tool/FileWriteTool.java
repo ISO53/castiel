@@ -25,6 +25,7 @@ public class FileWriteTool implements ToolProvider {
 			"Writes a text file, creating it or fully overwriting an existing one.",
 			"Relative paths are resolved against the current workspace directory.",
 			"Overwriting an existing file requires reading it with read_file first.",
+			"If the purpose is editing something in the file, edit_file tool should be used instead."
 		}
 	)
 	public String writeFile(
