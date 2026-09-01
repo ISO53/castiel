@@ -571,6 +571,12 @@ public class HarnessService {
 						return;
 					}
 					ToolExecutionRequest request = completeToolCall.toolExecutionRequest();
+
+					// Skip tool calls that came with null id/name. Fucks up the backend
+					if (request.id() == null && request.name() == null) {
+						log.debug("Skipping tool call with no id and no name", completeToolCall.index());
+						return;
+					}
 					sink.next(
 						event(
 							"tool_call",
@@ -579,7 +585,7 @@ public class HarnessService {
 									"id",
 									toolCallId(request, completeToolCall.index()),
 									"name",
-									request.name(),
+									request.name() == null ? "" : request.name(),
 									"arguments",
 									request.arguments() == null ? "" : request.arguments()
 								)
@@ -617,7 +623,16 @@ public class HarnessService {
 						sink.next(
 							event(
 								"tool_result",
-								json(Map.of("id", toolCallId(request, index), "name", request.name(), "result", result))
+								json(
+									Map.of(
+										"id",
+										toolCallId(request, index),
+										"name",
+										request.name() == null ? "" : request.name(),
+										"result",
+										result
+									)
+								)
 							)
 						);
 						nextMessages.add(ToolExecutionResultMessage.from(request, result));
