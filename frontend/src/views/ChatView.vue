@@ -46,11 +46,10 @@
 
 			<Conversation class="min-h-0 flex-1" aria-label="Chat messages">
 				<ConversationContent class="gap-4 px-3 py-4">
-					<div v-if="!cwd"
-						class="m-auto flex max-w-64 flex-col items-center gap-2.5 text-center text-xs leading-relaxed text-muted-foreground">
-						<FolderOpen class="size-6 text-muted-foreground/60" />
-						<span>Please open or create a workspace from the Home tab or File menu to start chatting.</span>
-					</div>
+					<EmptyState v-if="!cwd"
+						text="Please open or create a workspace from the Home tab or File menu to start chatting.">
+						<MessageSquare />
+					</EmptyState>
 					<div v-else-if="!providerId"
 						class="m-auto max-w-56 text-center text-xs leading-relaxed text-muted-foreground">
 						Start a new chat and choose one of your configured providers.
@@ -267,8 +266,9 @@ import {
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "@/components/ai-elements/sources";
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "@/components/ai-elements/tool";
-import { Brain, Check, ChevronDown, FolderOpen, History, PanelRightClose, Plus, Trash2, X } from "@lucide/vue";
+import { Brain, Check, ChevronDown, MessageSquare, History, PanelRightClose, Plus, Trash2, X } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
+import EmptyState from "@/components/EmptyState.vue";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -331,6 +331,7 @@ export default {
 		Button,
 		Check,
 		ChevronDown,
+		EmptyState,
 		CodeBlock,
 		CodeBlockActions,
 		CodeBlockCopyButton,
@@ -356,7 +357,7 @@ export default {
 		DropdownMenuLabel,
 		DropdownMenuSeparator,
 		DropdownMenuTrigger,
-		FolderOpen,
+		MessageSquare,
 		History,
 		Loader,
 		Message,

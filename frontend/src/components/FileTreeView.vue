@@ -42,9 +42,9 @@
 				<div v-else-if="loadingRoot" class="flex items-center gap-2 px-2 py-2 text-xs text-muted-foreground">
 					<Spinner class="size-3 shrink-0" /> Loading workspace…
 				</div>
-				<p v-else-if="!root" class="max-w-44 px-2 py-2 text-xs leading-relaxed text-muted-foreground">
-					Open a workspace from the Home tab to browse its files.
-				</p>
+				<EmptyState v-else-if="!root" text="Open a workspace from the Home tab to browse its files.">
+					<FolderOpen />
+				</EmptyState>
 				<FileTree v-else class="border-none bg-transparent p-0 font-sans text-xs"
 					:selected-path="selectedPath" :expanded="expanded"
 					@update:selected-path="onSelect" @expanded-change="onExpandedChange">
@@ -81,6 +81,7 @@
 import { FileTree } from "@/components/ai-elements/file-tree";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import EmptyState from "@/components/EmptyState.vue";
 import FileTreeEntry from "@/components/FileTreeEntry.vue";
 import { fileTreeActions, fileTreeUi } from "@/components/file-tree-ui";
 import {
@@ -151,6 +152,7 @@ export default {
 	name: "FileTreeView",
 	components: {
 		Button,
+		EmptyState,
 		FileTree,
 		FileTreeEntry,
 		FolderOpen,

@@ -16,6 +16,9 @@
 		     contents stack and zero-size canvases). Panes stay mounted so editors
 		     and graphs keep their state across switches. -->
 		<div class="min-h-0 flex-1 overflow-hidden">
+			<EmptyState v-if="!tabsStore.tabs.length" text="Whoa! It is empty here. Open something from the File or Menu.">
+				<AppWindow />
+			</EmptyState>
 			<div
 				v-for="tab in tabsStore.tabs"
 				:key="tab.value"
@@ -38,6 +41,8 @@
 
 <script setup>
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AppWindow } from "@lucide/vue";
+import EmptyState from "@/components/EmptyState.vue";
 import HomeView from "@/views/HomeView.vue";
 import OnboardingView from "@/views/OnboardingView.vue";
 import SettingsView from "@/views/SettingsView.vue";

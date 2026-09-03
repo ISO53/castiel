@@ -28,21 +28,22 @@
 					<span class="shrink-0 font-mono text-[10px] text-muted-foreground">{{ server.tools.length }}</span>
 				</li>
 			</ul>
-			<p v-else class="px-2 py-1.5 text-xs leading-relaxed text-muted-foreground">
-				No MCP servers registered. Add them in Settings.
-			</p>
+			<EmptyState v-else text="No MCP servers registered. Add them in Settings.">
+				<Plug />
+			</EmptyState>
 		</div>
 	</section>
 </template>
 
 <script>
 import { Plug } from "@lucide/vue";
+import EmptyState from "@/components/EmptyState.vue";
 import { useMcpStore } from "@/stores/mcp";
 
 // Read-only display of registered MCP servers; changes happen in the settings view.
 export default {
 	name: "McpPanel",
-	components: { Plug },
+	components: { EmptyState, Plug },
 	data() {
 		return { mcp: useMcpStore() };
 	},

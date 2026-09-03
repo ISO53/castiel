@@ -4,6 +4,7 @@ import { ChevronDown, PanelBottomClose, Terminal as TerminalIcon, Trash2 } from 
 import { Terminal } from "@/components/ai-elements/terminal";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import EmptyState from "@/components/EmptyState.vue";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -114,9 +115,9 @@ function shortCommand(command) {
 			</div>
 		</div>
 
-		<div v-if="!store.rows.length" class="flex flex-1 items-center justify-center text-sm text-zinc-600">
-			Background processes started by you or the agent appear here.
-		</div>
+		<EmptyState v-if="!store.rows.length" text="Background processes started by you or the agent appear here.">
+			<TerminalIcon />
+		</EmptyState>
 
 		<template v-else>
 			<div :class="store.selected ? 'shrink-0 border-b border-zinc-800' : 'min-h-[35%] flex-1 overflow-auto'"
