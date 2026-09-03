@@ -15,7 +15,7 @@
 						Castiel
 					</h1>
 					<p class="text-sm font-medium text-muted-foreground">
-						AI powered penetration testing suite
+						AI powered penetration testing harness
 					</p>
 				</div>
 
