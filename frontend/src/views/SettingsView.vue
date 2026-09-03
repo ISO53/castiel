@@ -264,7 +264,7 @@ export default {
 	},
 	data() {
 		return {
-			llamaOpen: true,
+			llamaOpen: false,
 			connecting: false,
 			error: "",
 			health: null,
