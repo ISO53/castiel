@@ -14,6 +14,7 @@ import dev.langchain4j.model.openai.OpenAiTokenUsage;
 import dev.langchain4j.model.output.TokenUsage;
 import dev.langchain4j.service.tool.DefaultToolExecutor;
 import dev.langchain4j.service.tool.ToolExecutor;
+import io.github.iso53.castiel.mcp.McpManager;
 import io.github.iso53.castiel.model.ChatMessagePart;
 import io.github.iso53.castiel.model.ChatSession;
 import io.github.iso53.castiel.model.ChatStreamRequest;
@@ -72,6 +73,7 @@ public class HarnessService {
 	private final ChatPersistenceService chatPersistence;
 	private final NudgeScheduler nudgeScheduler;
 	private final WakeupBus wakeupBus;
+	private final McpManager mcpManager;
 	private final List<ToolSpecification> toolSpecifications;
 	private final Map<String, ToolExecutor> toolExecutors;
 	private final ConcurrentMap<String, GenerationState> generations = new ConcurrentHashMap<>();
@@ -286,6 +288,7 @@ public class HarnessService {
 		ChatPersistenceService chatPersistence,
 		NudgeScheduler nudgeScheduler,
 		WakeupBus wakeupBus,
+		McpManager mcpManager,
 		List<ToolProvider> toolProviders
 	) {
 		this.llmClientFactory = llmClientFactory;
@@ -293,6 +296,7 @@ public class HarnessService {
 		this.chatPersistence = chatPersistence;
 		this.nudgeScheduler = nudgeScheduler;
 		this.wakeupBus = wakeupBus;
+		this.mcpManager = mcpManager;
 
 		UserQuestionTool questionTool = null;
 		BackgroundShellTool shellTool = null;
@@ -539,7 +543,7 @@ public class HarnessService {
 		StreamingChatModel model = provider.chatModel(modelName, options);
 
 		model.chat(
-			ChatRequest.builder().messages(messages).toolSpecifications(toolSpecifications).build(),
+			ChatRequest.builder().messages(messages).toolSpecifications(availableTools()).build(),
 			new StreamingChatResponseHandler() {
 				@Override
 				public void onPartialThinking(PartialThinking partialThinking, PartialThinkingContext context) {
@@ -689,6 +693,26 @@ public class HarnessService {
 		}
 	}
 
+	/**
+	 * Local tools first, then MCP tools; MCP tools whose name collides with an
+	 * already listed tool are skipped.
+	 */
+	private List<ToolSpecification> availableTools() {
+		Set<String> names = new HashSet<>();
+		List<ToolSpecification> combined = new ArrayList<>();
+		for (ToolSpecification specification : toolSpecifications) {
+			if (names.add(specification.name())) {
+				combined.add(specification);
+			}
+		}
+		for (ToolSpecification specification : mcpManager.toolSpecifications()) {
+			if (names.add(specification.name())) {
+				combined.add(specification);
+			}
+		}
+		return combined;
+	}
+
 	private String executeTool(ToolExecutionRequest request, int index) {
 		if (UserQuestionTool.NAME.equals(request.name())) {
 			// Interactive tool: block this round until the frontend answers via
@@ -696,9 +720,11 @@ public class HarnessService {
 			return userQuestionTool.awaitUserAnswer(toolCallId(request, index));
 		}
 
+
 		ToolExecutor executor = toolExecutors.get(request.name());
 		if (executor == null) {
-			return "Error: unknown tool \"" + request.name() + "\"";
+			// Not a local tool; the MCP manager answers unknown tools the same way.
+			return mcpManager.executeTool(request);
 		}
 		try {
 			return executor.execute(request, null);

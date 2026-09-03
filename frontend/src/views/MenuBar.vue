@@ -25,6 +25,7 @@
 			<MenubarContent>
 				<MenubarItem @click="openSettings">Settings</MenubarItem>
 				<MenubarSeparator />
+				<MenubarItem @click="showOnboarding">Show Onboarding</MenubarItem>
 				<MenubarItem @click="showWelcome">Show Welcome</MenubarItem>
 				<MenubarSeparator />
 				<MenubarItem @click="requestFeature">Request Feature</MenubarItem>
@@ -128,6 +129,14 @@ export default {
 		openWorkspace() {
 			this.workspaceMode = "open";
 			this.workspaceDialogOpen = true;
+		},
+		showOnboarding() {
+			this.tabs.openTab({
+				value: "onboarding",
+				label: "Onboarding",
+				component: "OnboardingView",
+				closable: true,
+			});
 		},
 		showWelcome() {
 			this.tabs.openTab({

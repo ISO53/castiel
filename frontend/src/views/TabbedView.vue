@@ -23,6 +23,7 @@
 				class="h-full w-full overflow-hidden"
 			>
 				<HomeView v-if="tab.component === 'HomeView'" />
+				<OnboardingView v-else-if="tab.component === 'OnboardingView'" />
 				<SettingsView v-else-if="tab.component === 'SettingsView'" />
 				<FileEditorView v-else-if="tab.component === 'FileEditorView'" :path="tab.path" />
 				<NetworkView v-else-if="tab.component === 'NetworkView'" />
@@ -38,6 +39,7 @@
 <script setup>
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import HomeView from "@/views/HomeView.vue";
+import OnboardingView from "@/views/OnboardingView.vue";
 import SettingsView from "@/views/SettingsView.vue";
 import { defineAsyncComponent } from "vue";
 
