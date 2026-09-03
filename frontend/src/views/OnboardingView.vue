@@ -26,20 +26,13 @@
 					/>
 					<div class="flex flex-col items-center">
 						<StepperTitle class="text-xs">{{ item.title }}</StepperTitle>
-						<StepperDescription class="hidden text-[10px] sm:block">
-							{{ item.description }}
-						</StepperDescription>
 					</div>
 				</StepperItem>
 			</Stepper>
 
 			<div class="space-y-3 rounded-lg border border-border p-5">
 				<div class="space-y-1">
-					<h2 class="flex items-center gap-2 text-base font-semibold text-foreground">
-						<component :is="current.icon" class="size-4 text-muted-foreground" />
-						{{ current.title }}
-					</h2>
-					<p class="text-xs text-muted-foreground">{{ current.description }}</p>
+					<h2 class="text-base font-semibold text-foreground">{{ current.title }}</h2>
 				</div>
 				<p class="text-xs leading-relaxed text-muted-foreground">{{ current.body }}</p>
 				<Button v-if="current.action" size="sm" variant="outline" @click="runAction(current)">
@@ -65,7 +58,6 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
 	Stepper,
-	StepperDescription,
 	StepperIndicator,
 	StepperItem,
 	StepperSeparator,
@@ -82,7 +74,6 @@ export default {
 		Button,
 		ScrollArea,
 		Stepper,
-		StepperDescription,
 		StepperIndicator,
 		StepperItem,
 		StepperSeparator,
@@ -95,30 +86,26 @@ export default {
 			steps: [
 				{
 					step: 1,
-					title: "Welcome",
-					description: "Meet Castiel",
+					title: "Welcome p3ntester",
 					icon: Sparkles,
 					body:
-						"Castiel is an AI-powered pentesting harness. It gives an agent safe access to your " +
-						"machine, files and terminal so it can work engagement phases with you. This tour " +
-						"covers the setup steps before your first session.",
+						"Castiel is an AI-powered pentesting harness built to give AI agents a powerful set of " +
+						"tools. It helps uncover vulnerabilities, investigate targets, and automate the tedious " +
+						"parts of pentesting. Fast, capable, and built to go where other tools stop."
 				},
 				{
 					step: 2,
 					title: "LLM Provider",
-					description: "Connect a model",
 					icon: Bot,
 					action: "Open Settings",
 					tab: "settings",
 					body:
 						"Castiel needs a language model to talk to. Open the settings view and connect one of " +
-						"the supported providers under LLM Providers — a local llama.cpp or Ollama server, or " +
-						"a cloud endpoint through OpenRouter.",
+						"the supported providers under LLM Providers."
 				},
 				{
 					step: 3,
 					title: "MCP Servers",
-					description: "Add tool servers",
 					icon: Plug,
 					action: "Open Settings",
 					tab: "settings",
@@ -131,22 +118,22 @@ export default {
 				{
 					step: 4,
 					title: "Workspace",
-					description: "Open a workspace",
 					icon: FolderOpen,
 					body:
-						"The agent works inside a workspace — a folder that holds the files, notes and " +
+						"The agent works inside a workspace. A folder that holds the files, notes and " +
 						"evidence of an engagement. Open or create one from the File menu before chatting " +
 						"with the agent.",
 				},
 				{
 					step: 5,
 					title: "All Set",
-					description: "Start working",
 					icon: Rocket,
 					body:
-						"You are ready to go. Use the right dock to talk to your agent, watch it run tools " +
-						"in the bottom dock, and track the engagement phase from the menu bar. You can " +
-						"reopen this tour anytime from Help → Show Onboarding.",
+						"You are ready to go. Talk to your agent in the right dock, and browse your workspace " +
+						"files in the left dock's file tree. The menu bar lets you track and select the " +
+						"current engagement phase, and the tabbed area hosts the different views of your " +
+						"engagement. Long-running commands and background processes show up in the bottom dock. " +
+						"You can reopen this tour anytime from Help > Show Onboarding.",
 				},
 			],
 		};
