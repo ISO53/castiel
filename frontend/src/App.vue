@@ -23,7 +23,7 @@
 
 					<ResizableHandle />
 
-					<ResizablePanel collapsible :collapsed-size="0" :default-size="40" :min-size="8" ref="bottomDock"
+					<ResizablePanel collapsible :collapsed-size="0" :default-size="20" :min-size="8" ref="bottomDock"
 						@collapse="docks.bottom = false" @expand="docks.bottom = true">
 						<ProcessesView />
 					</ResizablePanel>
