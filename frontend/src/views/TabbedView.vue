@@ -11,10 +11,6 @@
 			</TabsList>
 		</Tabs>
 
-		<!-- Panes are managed manually: v-show guarantees exactly the active tab is
-		     visible (reka's TabsContent force-mounts every pane here, which made
-		     contents stack and zero-size canvases). Panes stay mounted so editors
-		     and graphs keep their state across switches. -->
 		<div class="min-h-0 flex-1 overflow-hidden">
 			<EmptyState v-if="!tabsStore.tabs.length" text="Whoa! It is empty here. Open something from the File or Menu.">
 				<AppWindow />
