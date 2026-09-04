@@ -267,6 +267,17 @@
 							<Button
 								variant="ghost"
 								size="icon-sm"
+								class="text-muted-foreground hover:text-foreground"
+								:aria-label="`Reconnect to MCP server ${server.name}`"
+								:title="`Reconnect to ${server.name}`"
+								:disabled="mcpReconnecting[server.id]"
+								@click="reconnectServer(server)"
+							>
+								<RefreshCw :class="mcpReconnecting[server.id] ? 'animate-spin' : ''" />
+							</Button>
+							<Button
+								variant="ghost"
+								size="icon-sm"
 								class="text-muted-foreground hover:text-destructive"
 								aria-label="Remove MCP server"
 								@click="removeServer(server)"
@@ -277,6 +288,7 @@
 					</div>
 				</div>
 				<p v-else class="text-xs text-muted-foreground">No MCP servers registered yet.</p>
+				<p v-if="mcpError" class="text-xs text-destructive wrap-break-word">{{ mcpError }}</p>
 
 				<Collapsible v-model:open="mcpAddOpen" class="rounded-lg border border-border">
 					<CollapsibleTrigger
@@ -385,7 +397,6 @@
 								class="break-all font-mono text-[11px] text-muted-foreground">
 								{{ mcpProbeResult.tools.join(", ") }}
 							</p>
-							<p v-if="mcpError" class="text-xs text-destructive wrap-break-word">{{ mcpError }}</p>
 						</div>
 					</CollapsibleContent>
 				</Collapsible>
@@ -409,7 +420,7 @@ import { Separator } from "@/components/ui/separator";
 import { useSettingsStore } from "@/stores/settings";
 import { useMcpStore } from "@/stores/mcp";
 import { providerLogo } from "@/lib/provider-logos";
-import { ChevronDown, Plug, Trash2 } from "@lucide/vue";
+import { ChevronDown, Plug, RefreshCw, Trash2 } from "@lucide/vue";
 
 export default {
 	name: "SettingsView",
@@ -429,6 +440,7 @@ export default {
 		Separator,
 		ChevronDown,
 		Plug,
+		RefreshCw,
 		Trash2,
 	},
 	data() {
@@ -463,6 +475,7 @@ export default {
 			mcpAdding: false,
 			mcpError: "",
 			mcpProbeResult: null,
+			mcpReconnecting: {},
 			mcpForm: {
 				name: "",
 				transport: "HTTP",
@@ -571,6 +584,21 @@ export default {
 				await this.mcp.remove(server.id);
 			} catch (err) {
 				this.mcpError = err instanceof Error ? err.message : String(err);
+			}
+		},
+		// Retries the handshake with a registered server, e.g. after it was started late.
+		async reconnectServer(server) {
+			this.mcpError = "";
+			this.mcpReconnecting[server.id] = true;
+			try {
+				const status = await this.mcp.reconnect(server.id);
+				if (!status.connected) {
+					this.mcpError = `Could not reach MCP server '${server.name}'. Make sure it is running, then try again.`;
+				}
+			} catch (err) {
+				this.mcpError = err instanceof Error ? err.message : String(err);
+			} finally {
+				this.mcpReconnecting[server.id] = false;
 			}
 		},
 		// Collects the form into the config payload the harness expects.

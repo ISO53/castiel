@@ -113,12 +113,33 @@ public class McpManager {
 	public List<McpServerStatus> statuses() {
 		List<McpServerStatus> statuses = new ArrayList<>();
 		for (McpServerConfig config : userSettingsService.get().mcpServers().values()) {
-			McpConnection connection = connections.get(config.id());
-			boolean connected = connection != null && connection.checkHealth();
-			List<String> tools = connection == null ? List.of() : names(connection.tools());
-			statuses.add(new McpServerStatus(config.id(), config.displayName(), config.type(), config.target(), connected, tools));
+			statuses.add(status(config));
 		}
 		return statuses;
+	}
+
+	/** Builds the status report for one registered server from its live connection. */
+	private McpServerStatus status(McpServerConfig config) {
+		McpConnection connection = connections.get(config.id());
+		boolean connected = connection != null && connection.checkHealth();
+		List<String> tools = connection == null ? List.of() : names(connection.tools());
+		return new McpServerStatus(config.id(), config.displayName(), config.type(), config.target(), connected, tools);
+	}
+
+	/**
+	 * Attempts to reconnect to a registered server, e.g. after it was started
+	 * later than Castiel. Returns the server's state after the attempt; when it
+	 * is still unreachable it simply reports as disconnected.
+	 *
+	 * @throws IllegalArgumentException when no server with the id is registered
+	 */
+	public McpServerStatus reconnect(String id) {
+		McpServerConfig config = userSettingsService.get().mcpServers().get(id);
+		if (config == null) {
+			throw new IllegalArgumentException("No MCP server registered with id '" + id + "'");
+		}
+		connect(config);
+		return status(config);
 	}
 
 	/** Tool specifications from every connected server; MCP-internal duplicates are skipped. */

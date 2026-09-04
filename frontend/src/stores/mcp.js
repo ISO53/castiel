@@ -85,5 +85,24 @@ export const useMcpStore = defineStore("mcp", {
 			}
 			await this.fetch();
 		},
+		/**
+		 * Retries the handshake with a registered server and updates its entry
+		 * in place with the reported state.
+		 * @returns {{ id: string, name: string, connected: boolean, tools: string[] }}
+		 */
+		async reconnect(id) {
+			const response = await fetch(`${API_BASE_URL}/servers/${encodeURIComponent(id)}/reconnect`, {
+				method: "POST",
+			});
+			if (!response.ok) {
+				throw new Error(await readError(response));
+			}
+			const status = await response.json();
+			const index = this.servers.findIndex((server) => server.id === id);
+			if (index !== -1) {
+				this.servers[index] = status;
+			}
+			return status;
+		},
 	},
 });

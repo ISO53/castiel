@@ -40,6 +40,16 @@ public class McpController {
 		return mcpManager.statuses();
 	}
 
+	/** Retries the handshake with a registered server, e.g. after it was started late. */
+	@PostMapping("/servers/{id}/reconnect")
+	public McpServerStatus reconnect(@PathVariable("id") String id) {
+		try {
+			return mcpManager.reconnect(id);
+		} catch (IllegalArgumentException ex) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage(), ex);
+		}
+	}
+
 	@PostMapping("/servers")
 	public UserSettings add(@RequestBody McpServerConfig body) {
 		if (body == null) {
