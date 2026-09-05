@@ -3,6 +3,7 @@ package io.github.iso53.castiel.provider;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import io.github.iso53.castiel.model.HealthStatus;
 import io.github.iso53.castiel.model.ModelInfo;
+
 import java.util.List;
 
 /**

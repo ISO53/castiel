@@ -3,11 +3,12 @@ package io.github.iso53.castiel.controller;
 import io.github.iso53.castiel.model.ChatSession;
 import io.github.iso53.castiel.model.ChatSummary;
 import io.github.iso53.castiel.service.ChatPersistenceService;
-import java.util.List;
-import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * Endpoints for managing persisted chat sessions in the active workspace.

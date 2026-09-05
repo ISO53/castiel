@@ -7,6 +7,7 @@ import dev.langchain4j.model.openai.OpenAiChatRequestParameters;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import io.github.iso53.castiel.model.LlmProviderConfig;
 import io.github.iso53.castiel.model.ModelInfo;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;

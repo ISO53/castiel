@@ -1,6 +1,7 @@
 package io.github.iso53.castiel.model;
 
 import io.github.iso53.castiel.config.McpServerConfig;
+
 import java.util.List;
 
 /**

@@ -4,10 +4,11 @@ import dev.langchain4j.agent.tool.Tool;
 import io.github.iso53.castiel.model.EngagementPhase;
 import io.github.iso53.castiel.service.EngagementService;
 import io.github.iso53.castiel.service.WorkspaceSession;
+import org.springframework.stereotype.Service;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import org.springframework.stereotype.Service;
 
 /**
  * Tells the model about its runtime environment and the state of the engagement:

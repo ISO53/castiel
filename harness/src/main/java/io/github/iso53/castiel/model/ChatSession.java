@@ -1,6 +1,7 @@
 package io.github.iso53.castiel.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import java.time.Instant;
 import java.util.List;
 

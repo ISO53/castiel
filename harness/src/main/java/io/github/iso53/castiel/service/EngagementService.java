@@ -4,12 +4,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.iso53.castiel.model.EngagementPhase;
+import org.springframework.stereotype.Service;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.stereotype.Service;
 /**
  * Reads and updates {@code engagement.json}, the document holding the engagement's
  * scope, rules of engagement, and current phase.

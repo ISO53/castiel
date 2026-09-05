@@ -6,6 +6,7 @@ import dev.langchain4j.model.ollama.OllamaModels;
 import dev.langchain4j.model.ollama.OllamaStreamingChatModel;
 import io.github.iso53.castiel.model.LlmProviderConfig;
 import io.github.iso53.castiel.model.ModelInfo;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;

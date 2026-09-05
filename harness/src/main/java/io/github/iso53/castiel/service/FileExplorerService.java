@@ -3,6 +3,8 @@ package io.github.iso53.castiel.service;
 import io.github.iso53.castiel.model.DirectoryListing;
 import io.github.iso53.castiel.model.FileContent;
 import io.github.iso53.castiel.model.FileEntry;
+import org.springframework.stereotype.Service;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -11,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
-import org.springframework.stereotype.Service;
 
 /**
  * Resolves and lists local directories for the workspace file explorer.

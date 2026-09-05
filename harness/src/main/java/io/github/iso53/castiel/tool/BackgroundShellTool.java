@@ -6,11 +6,12 @@ import io.github.iso53.castiel.service.NudgeScheduler;
 import io.github.iso53.castiel.tool.process.BoundedOutputBuffer;
 import io.github.iso53.castiel.tool.process.ManagedProcess;
 import io.github.iso53.castiel.tool.process.ProcessManager;
+import org.springframework.stereotype.Service;
+
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.stereotype.Service;
 
 /**
  * Long-running and interactive shell commands as tracked background processes.
