@@ -193,7 +193,7 @@
 										To use your own upstream provider keys (BYOK), add them in the
 										<a class="underline underline-offset-2 hover:text-foreground"
 											href="https://openrouter.ai/settings/byok" target="_blank"
-											rel="noreferrer">OpenRouter BYOK settings</a> â€”
+											rel="noreferrer">OpenRouter BYOK settings</a>
 										Castiel only ever needs the single OpenRouter key.
 									</li>
 									<li>Click Connect below to start using OpenRouter in Castiel</li>
@@ -235,7 +235,7 @@
 				<div class="space-y-1">
 					<h2 class="text-sm font-semibold text-foreground">MCP Servers</h2>
 					<p class="text-xs text-muted-foreground">
-						MCP servers are configured in the mcp.json settings file. Edit and save it â€”
+						MCP servers are configured in the mcp.json settings file. Edit and save it.
 						Castiel reloads the servers automatically.
 					</p>
 				</div>
