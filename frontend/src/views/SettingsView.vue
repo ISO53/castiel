@@ -1,4 +1,4 @@
-<template>
+﻿<template>
 	<ScrollArea class="h-full">
 		<div class="mx-auto flex max-w-2xl flex-col gap-8 p-6">
 			<div class="space-y-1">
@@ -193,7 +193,7 @@
 										To use your own upstream provider keys (BYOK), add them in the
 										<a class="underline underline-offset-2 hover:text-foreground"
 											href="https://openrouter.ai/settings/byok" target="_blank"
-											rel="noreferrer">OpenRouter BYOK settings</a> —
+											rel="noreferrer">OpenRouter BYOK settings</a> â€”
 										Castiel only ever needs the single OpenRouter key.
 									</li>
 									<li>Click Connect below to start using OpenRouter in Castiel</li>
@@ -235,171 +235,22 @@
 				<div class="space-y-1">
 					<h2 class="text-sm font-semibold text-foreground">MCP Servers</h2>
 					<p class="text-xs text-muted-foreground">
-						Register Model Context Protocol servers to give the agent extra tools.
+						MCP servers are configured in the mcp.json settings file. Edit and save it â€”
+						Castiel reloads the servers automatically.
 					</p>
 				</div>
 				<Separator />
 
-				<div v-if="mcp.servers.length" class="space-y-2">
-					<div
-						v-for="server in mcp.servers"
-						:key="server.id"
-						class="flex items-center justify-between gap-3 rounded-lg border border-border px-4 py-2.5"
-					>
-						<div class="min-w-0">
-							<p class="truncate text-sm font-medium text-foreground">{{ server.name }}</p>
-							<p class="truncate font-mono text-[11px] text-muted-foreground">
-								{{ server.target }} · {{ server.tools.length }} tool(s)
-							</p>
-						</div>
-						<div class="flex shrink-0 items-center gap-3">
-							<span
-								class="flex items-center gap-1.5 text-xs"
-								:class="server.connected ? 'text-muted-foreground' : 'text-destructive'"
-							>
-								<span
-									class="size-2 rounded-full"
-									:class="server.connected ? 'bg-emerald-500' : 'bg-destructive'"
-									aria-hidden="true"
-								/>
-								{{ server.connected ? "Running" : "Down" }}
-							</span>
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								class="text-muted-foreground hover:text-foreground"
-								:aria-label="`Reconnect to MCP server ${server.name}`"
-								:title="`Reconnect to ${server.name}`"
-								:disabled="mcpReconnecting[server.id]"
-								@click="reconnectServer(server)"
-							>
-								<RefreshCw :class="mcpReconnecting[server.id] ? 'animate-spin' : ''" />
-							</Button>
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								class="text-muted-foreground hover:text-destructive"
-								aria-label="Remove MCP server"
-								@click="removeServer(server)"
-							>
-								<Trash2 />
-							</Button>
-						</div>
-					</div>
+				<div class="flex flex-wrap items-center gap-3">
+					<Button size="sm" @click="openConfigFile">Open settings file</Button>
+					<p v-if="mcpConfig" class="min-w-0 truncate font-mono text-[11px] text-muted-foreground">
+						{{ mcpConfig.path }}
+					</p>
 				</div>
-				<p v-else class="text-xs text-muted-foreground">No MCP servers registered yet.</p>
-				<p v-if="mcpError" class="text-xs text-destructive wrap-break-word">{{ mcpError }}</p>
-
-				<Collapsible v-model:open="mcpAddOpen" class="rounded-lg border border-border">
-					<CollapsibleTrigger
-						class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/40">
-						<span class="flex items-center gap-2 text-sm font-medium text-foreground">
-							<Plug class="size-4 shrink-0" />
-							Add MCP Server
-						</span>
-						<ChevronDown class="size-4 shrink-0 text-muted-foreground transition-transform duration-200"
-							:class="mcpAddOpen ? 'rotate-180' : ''" />
-					</CollapsibleTrigger>
-
-					<CollapsibleContent class="border-t border-border px-4 py-4">
-						<div class="flex flex-col gap-4">
-							<div class="space-y-2 text-xs text-muted-foreground leading-relaxed">
-								<p>
-									Start the MCP server yourself, then connect Castiel to it. Castiel does not
-									install or run servers for you.
-								</p>
-							</div>
-
-							<div class="grid grid-cols-2 gap-3">
-								<div class="flex flex-col gap-1.5">
-									<Label for="mcp_name">Display name</Label>
-									<Input id="mcp_name" v-model="mcpForm.name" placeholder="My browser server"
-										autocomplete="off" spellcheck="false" />
-								</div>
-								<div class="flex flex-col gap-1.5">
-									<Label for="mcp_transport">Transport</Label>
-									<Select v-model="mcpForm.transport">
-										<SelectTrigger id="mcp_transport">
-											<SelectValue placeholder="Choose transport" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="HTTP">HTTP</SelectItem>
-											<SelectItem value="STDIO">STDIO (subprocess)</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-							</div>
-
-							<template v-if="mcpForm.transport === 'HTTP'">
-								<div class="grid grid-cols-3 gap-3">
-									<div class="col-span-2 flex flex-col gap-1.5">
-										<Label for="mcp_host">Host</Label>
-										<Input id="mcp_host" v-model="mcpForm.host" placeholder="127.0.0.1"
-											autocomplete="off" spellcheck="false" />
-									</div>
-									<div class="flex flex-col gap-1.5">
-										<Label for="mcp_port">Port</Label>
-										<Input id="mcp_port" v-model.number="mcpForm.port" type="number" min="1"
-											max="65535" placeholder="3000" />
-									</div>
-								</div>
-								<div class="flex flex-col gap-1.5">
-									<Label for="mcp_path">Endpoint path</Label>
-									<Input id="mcp_path" v-model="mcpForm.path" placeholder="mcp"
-										autocomplete="off" spellcheck="false" />
-									<p class="text-[11px] text-muted-foreground">Default: mcp</p>
-								</div>
-							</template>
-
-							<template v-else>
-								<div class="flex flex-col gap-1.5">
-									<Label for="mcp_command">Command</Label>
-									<Input id="mcp_command" v-model="mcpForm.command" placeholder="caido-mcp-server.exe"
-										autocomplete="off" spellcheck="false" />
-								</div>
-								<div class="flex flex-col gap-1.5">
-									<Label for="mcp_args">Arguments</Label>
-									<Input id="mcp_args" v-model="mcpForm.args" placeholder="serve"
-										autocomplete="off" spellcheck="false" />
-									<p class="text-[11px] text-muted-foreground">
-										Space-separated arguments passed to the command.
-									</p>
-								</div>
-								<div class="flex flex-col gap-1.5">
-									<Label for="mcp_env">Environment variables</Label>
-									<Input id="mcp_env" v-model="mcpForm.env" placeholder="CAIDO_URL=http://127.0.0.1:8080"
-										autocomplete="off" spellcheck="false" />
-									<p class="text-[11px] text-muted-foreground">
-										Optional. KEY=value pairs separated by spaces.
-									</p>
-								</div>
-							</template>
-
-							<div class="flex items-center gap-3 pt-1">
-								<Button size="sm" :disabled="mcpProbing" @click="probeServer">
-									{{ mcpProbing ? "Testing..." : "Test connection" }}
-								</Button>
-								<Button v-if="mcpProbeResult" size="sm" :disabled="mcpAdding" @click="addServer">
-									{{ mcpAdding ? "Adding..." : "Add" }}
-								</Button>
-								<div v-if="mcpProbeResult" class="flex min-w-0 items-center gap-2 text-xs">
-									<span
-										class="size-2 shrink-0 rounded-full"
-										:class="mcpProbeResult.connected ? 'bg-emerald-500' : 'bg-destructive'"
-										aria-hidden="true"
-									/>
-									<span class="truncate text-muted-foreground">
-										{{ mcpProbeResult.tools.length }} tool(s) offered by the server
-									</span>
-								</div>
-							</div>
-							<p v-if="mcpProbeResult && mcpProbeResult.tools.length"
-								class="break-all font-mono text-[11px] text-muted-foreground">
-								{{ mcpProbeResult.tools.join(", ") }}
-							</p>
-						</div>
-					</CollapsibleContent>
-				</Collapsible>
+				<p v-if="mcpFileError" class="text-xs text-destructive wrap-break-word">{{ mcpFileError }}</p>
+				<p v-if="mcpConfig && mcpConfig.error" class="text-xs text-destructive wrap-break-word">
+					Invalid mcp.json: {{ mcpConfig.error }}
+				</p>
 			</section>
 		</div>
 	</ScrollArea>
@@ -415,12 +266,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useSettingsStore } from "@/stores/settings";
 import { useMcpStore } from "@/stores/mcp";
+import { useTabsStore } from "@/stores/tabs";
 import { providerLogo } from "@/lib/provider-logos";
-import { ChevronDown, Plug, RefreshCw, Trash2 } from "@lucide/vue";
+import { ChevronDown } from "@lucide/vue";
 
 export default {
 	name: "SettingsView",
@@ -432,16 +283,8 @@ export default {
 		Input,
 		Label,
 		ScrollArea,
-		Select,
-		SelectContent,
-		SelectItem,
-		SelectTrigger,
-		SelectValue,
 		Separator,
 		ChevronDown,
-		Plug,
-		RefreshCw,
-		Trash2,
 	},
 	data() {
 		return {
@@ -470,25 +313,13 @@ export default {
 				apiKey: "",
 			},
 			mcp: useMcpStore(),
-			mcpAddOpen: false,
-			mcpProbing: false,
-			mcpAdding: false,
-			mcpError: "",
-			mcpProbeResult: null,
-			mcpReconnecting: {},
-			mcpForm: {
-				name: "",
-				transport: "HTTP",
-				host: "127.0.0.1",
-				port: 3000,
-				path: "mcp",
-				command: "",
-				args: "",
-				env: "",
-			},
+			mcpConfig: null,
+			mcpFileError: "",
 		};
 	},
 	async mounted() {
+		this.mcp.startFeed();
+		this.fetchMcpConfig();
 		const settings = useSettingsStore();
 		try {
 			await settings.fetch();
@@ -553,87 +384,30 @@ export default {
 				this.connectingOpenRouter = false;
 			}
 		},
-		async probeServer() {
-			this.mcpProbing = true;
-			this.mcpError = "";
-			this.mcpProbeResult = null;
+		// Opens mcp.json in the built-in file editor; saving it triggers a live reload.
+		async openConfigFile() {
+			this.mcpFileError = "";
 			try {
-				this.mcpProbeResult = await this.mcp.probe(this.mcpPayload());
-			} catch (err) {
-				this.mcpError = err instanceof Error ? err.message : String(err);
-			} finally {
-				this.mcpProbing = false;
-			}
-		},
-		async addServer() {
-			this.mcpAdding = true;
-			this.mcpError = "";
-			try {
-				await this.mcp.add(this.mcpPayload());
-				this.mcpProbeResult = null;
-				this.mcpAddOpen = false;
-			} catch (err) {
-				this.mcpError = err instanceof Error ? err.message : String(err);
-			} finally {
-				this.mcpAdding = false;
-			}
-		},
-		async removeServer(server) {
-			this.mcpError = "";
-			try {
-				await this.mcp.remove(server.id);
-			} catch (err) {
-				this.mcpError = err instanceof Error ? err.message : String(err);
-			}
-		},
-		// Retries the handshake with a registered server, e.g. after it was started late.
-		async reconnectServer(server) {
-			this.mcpError = "";
-			this.mcpReconnecting[server.id] = true;
-			try {
-				const status = await this.mcp.reconnect(server.id);
-				if (!status.connected) {
-					this.mcpError = `Could not reach MCP server '${server.name}'. Make sure it is running, then try again.`;
+				if (!this.mcpConfig) {
+					this.mcpConfig = await this.mcp.fetchConfig();
 				}
+				useTabsStore().openTab({
+					value: `file:${this.mcpConfig.path}`,
+					label: "mcp.json",
+					component: "FileEditorView",
+					path: this.mcpConfig.path,
+				});
 			} catch (err) {
-				this.mcpError = err instanceof Error ? err.message : String(err);
-			} finally {
-				this.mcpReconnecting[server.id] = false;
+				this.mcpFileError = err instanceof Error ? err.message : String(err);
 			}
 		},
-		// Collects the form into the config payload the harness expects.
-		mcpPayload() {
-			const trimmedName = (this.mcpForm.name ?? "").trim();
-			const payload = {
-				id: trimmedName
-					? trimmedName.toLowerCase().replace(/\s+/g, "-")
-					: `mcp-server-${Date.now()}`,
-				name: trimmedName,
-				type: this.mcpForm.transport,
-			};
-			if (this.mcpForm.transport === "HTTP") {
-				payload.host = (this.mcpForm.host ?? "").trim();
-				payload.port = Number(this.mcpForm.port);
-				payload.path = (this.mcpForm.path ?? "").trim() || "mcp";
-			} else {
-				payload.command = (this.mcpForm.command ?? "").trim();
-				payload.args = (this.mcpForm.args ?? "").trim() ? this.mcpForm.args.trim().split(/\s+/) : [];
-				payload.env = parseEnvPairs(this.mcpForm.env);
+		async fetchMcpConfig() {
+			try {
+				this.mcpConfig = await this.mcp.fetchConfig();
+			} catch {
+				// Surfaced when the user clicks the open button.
 			}
-			return payload;
 		},
 	},
 };
-
-// Parses "KEY=value" pairs separated by whitespace into an object.
-function parseEnvPairs(text) {
-	const env = {};
-	for (const pair of (text ?? "").split(/\s+/)) {
-		const separator = pair.indexOf("=");
-		if (separator > 0) {
-			env[pair.slice(0, separator)] = pair.slice(separator + 1);
-		}
-	}
-	return env;
-}
 </script>

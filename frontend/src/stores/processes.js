@@ -41,16 +41,16 @@ export const useProcessesStore = defineStore("processes", {
 			}
 		},
 		/** Listens to the harness SSE feed; each change ping refetches the list. */
-		startPolling() {
+		startFeed() {
 			if (this.source) return;
 			this.fetchList();
 			this.source = new EventSource(`${API}/events`);
 			this.source.onmessage = () => {
 				this.fetchList();
-				if (this.selectedId) this.pollOutput();
+				if (this.selectedId) this.fetchOutputDelta();
 			};
 		},
-		stopPolling() {
+		stopFeed() {
 			this.source?.close();
 			this.source = null;
 		},
@@ -65,9 +65,10 @@ export const useProcessesStore = defineStore("processes", {
 			}
 			this.selectedId = id;
 			if (!(id in this.texts)) this.texts[id] = "";
-			this.pollOutput();
+			this.fetchOutputDelta();
 		},
-		async pollOutput() {
+		/** Pulls new process output since the last read using a cursor-based delta. */
+		async fetchOutputDelta() {
 			const id = this.selectedId;
 			if (!id) return;
 			try {
@@ -124,12 +125,12 @@ export const useProcessesStore = defineStore("processes", {
 			this.cursors[this.selectedId] = 0;
 		},
 		reset() {
-			this.stopPolling();
+			this.stopFeed();
 			this.rows = [];
 			this.selectedId = null;
 			this.texts = {};
 			this.cursors = {};
-			this.startPolling();
+			this.startFeed();
 		},
 	},
 });

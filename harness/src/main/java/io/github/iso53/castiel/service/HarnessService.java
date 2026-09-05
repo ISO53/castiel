@@ -24,12 +24,16 @@ import io.github.iso53.castiel.model.ToolCallPayload;
 import io.github.iso53.castiel.provider.GenerationOptions;
 import io.github.iso53.castiel.provider.LlmProvider;
 import io.github.iso53.castiel.tool.BackgroundShellTool;
+import io.github.iso53.castiel.tool.BashTool;
+import io.github.iso53.castiel.tool.FileEditTool;
+import io.github.iso53.castiel.tool.FileWriteTool;
 import io.github.iso53.castiel.tool.ToolProvider;
 import io.github.iso53.castiel.tool.UserQuestionTool;
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -74,6 +78,7 @@ public class HarnessService {
 	private final NudgeScheduler nudgeScheduler;
 	private final WakeupBus wakeupBus;
 	private final McpManager mcpManager;
+	private final WorkspaceEventBus workspaceEvents;
 	private final List<ToolSpecification> toolSpecifications;
 	private final Map<String, ToolExecutor> toolExecutors;
 	private final ConcurrentMap<String, GenerationState> generations = new ConcurrentHashMap<>();
@@ -289,6 +294,7 @@ public class HarnessService {
 		NudgeScheduler nudgeScheduler,
 		WakeupBus wakeupBus,
 		McpManager mcpManager,
+		WorkspaceEventBus workspaceEvents,
 		List<ToolProvider> toolProviders
 	) {
 		this.llmClientFactory = llmClientFactory;
@@ -297,6 +303,7 @@ public class HarnessService {
 		this.nudgeScheduler = nudgeScheduler;
 		this.wakeupBus = wakeupBus;
 		this.mcpManager = mcpManager;
+		this.workspaceEvents = workspaceEvents;
 
 		UserQuestionTool questionTool = null;
 		BackgroundShellTool shellTool = null;
@@ -313,7 +320,7 @@ public class HarnessService {
 				if (method.isAnnotationPresent(Tool.class)) {
 					ToolSpecification specification = ToolSpecifications.toolSpecificationFrom(method);
 					this.toolSpecifications.add(specification);
-					executors.put(specification.name(), new DefaultToolExecutor(provider, method));
+					executors.put(specification.name(), decorate(provider, new DefaultToolExecutor(provider, method)));
 				}
 			}
 		}
@@ -326,6 +333,55 @@ public class HarnessService {
 		this.userQuestionTool = questionTool;
 		this.backgroundShellTool = shellTool;
 		this.toolExecutors = executors;
+	}
+
+	/** Wraps file-mutating tools so their execution pings the UI's workspace feed. */
+	private ToolExecutor decorate(ToolProvider provider, ToolExecutor delegate) {
+		if (!(provider instanceof FileWriteTool || provider instanceof FileEditTool
+				|| provider instanceof BashTool || provider instanceof BackgroundShellTool)) {
+			return delegate;
+		}
+		boolean reportsPath = provider instanceof FileWriteTool || provider instanceof FileEditTool;
+		return new NotifyingExecutor(delegate, workspaceEvents, reportsPath);
+	}
+
+	/** Tool executor that publishes a workspace change ping after every run. */
+	private static final class NotifyingExecutor implements ToolExecutor {
+
+		private final ToolExecutor delegate;
+		private final WorkspaceEventBus workspaceEvents;
+		private final boolean reportsPath;
+
+		NotifyingExecutor(ToolExecutor delegate, WorkspaceEventBus workspaceEvents, boolean reportsPath) {
+			this.delegate = delegate;
+			this.workspaceEvents = workspaceEvents;
+			this.reportsPath = reportsPath;
+		}
+
+		@Override
+		public String execute(ToolExecutionRequest request, Object memoryId) {
+			try {
+				return delegate.execute(request, memoryId);
+			} finally {
+				workspaceEvents.publish(changedFile(request));
+			}
+		}
+
+		private String changedFile(ToolExecutionRequest request) {
+			if (!reportsPath) {
+				return "*";
+			}
+			try {
+				JsonNode path = JSON.readTree(request.arguments()).get("path");
+				if (path != null && path.isTextual() && !path.asText().isBlank()) {
+					Path file = Path.of(path.asText());
+					return file.getFileName() != null ? file.getFileName().toString() : "*";
+				}
+			} catch (Exception ignored) {
+				// Unknown path falls back to the wildcard ping.
+			}
+			return "*";
+		}
 	}
 
 	/** Wires the nudge scheduler to this service once both beans exist. */

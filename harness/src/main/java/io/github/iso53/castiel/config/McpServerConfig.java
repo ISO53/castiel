@@ -1,12 +1,18 @@
 package io.github.iso53.castiel.config;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.URI;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Persisted configuration for one MCP server. Two transport types are supported:
- * HTTP servers are reached through a host and port, stdio servers are started as
+ * Configuration for one MCP server, parsed from the standard {@code mcp.json}
+ * format (see {@link #fromFileJson}). Two transport types are supported:
+ * HTTP servers are reached through a URL, stdio servers are started as
  * local subprocesses via a command.
  *
  * @param id      Unique id of the server entry.
@@ -41,25 +47,6 @@ public record McpServerConfig(
 		env = env == null ? Map.of() : Map.copyOf(env);
 	}
 
-	/** Checks that the fields required by the configured transport are present. */
-	public void validate() {
-		switch (type == null ? Type.HTTP : type) {
-			case HTTP -> {
-				if (host == null || host.isBlank()) {
-					throw new IllegalArgumentException("host is required for HTTP MCP servers");
-				}
-				if (port == null || port < 1 || port > 65535) {
-					throw new IllegalArgumentException("port must be between 1 and 65535 for HTTP MCP servers");
-				}
-			}
-			case STDIO -> {
-				if (command == null || command.isBlank()) {
-					throw new IllegalArgumentException("command is required for stdio MCP servers");
-				}
-			}
-		}
-	}
-
 	/** Display name shown in the UI; falls back to the id. */
 	public String displayName() {
 		return name == null || name.isBlank() ? id : name;
@@ -84,5 +71,93 @@ public record McpServerConfig(
 		}
 		line.addAll(args);
 		return line;
+	}
+
+	/**
+	 * Parses the standard config file shape ({@code {"mcpServers": {...}}}) into
+	 * servers keyed by their id. Blank ids and invalid entries fail the whole file
+	 * so the UI can surface one clear error instead of a half-applied config.
+	 */
+	public static Map<String, McpServerConfig> fromFileJson(JsonNode root) {
+		if (root == null || !root.isObject()) {
+			throw new IllegalArgumentException("the config file must contain a JSON object");
+		}
+		JsonNode servers = root.get("mcpServers");
+		if (servers == null) {
+			return Map.of();
+		}
+		if (!servers.isObject()) {
+			throw new IllegalArgumentException("\"mcpServers\" must be an object");
+		}
+		Map<String, McpServerConfig> result = new LinkedHashMap<>();
+		for (Iterator<Map.Entry<String, JsonNode>> it = servers.fields(); it.hasNext(); ) {
+			Map.Entry<String, JsonNode> entry = it.next();
+			String id = entry.getKey() == null ? "" : entry.getKey().trim();
+			if (id.isBlank()) {
+				throw new IllegalArgumentException("MCP server ids must not be blank");
+			}
+			try {
+				result.put(id, fromFileEntry(id, entry.getValue()));
+			} catch (IllegalArgumentException ex) {
+				throw new IllegalArgumentException("MCP server '" + id + "': " + ex.getMessage(), ex);
+			}
+		}
+		return result;
+	}
+
+	/** Parses one entry: {@code command} means stdio, {@code url} means streamable HTTP. */
+	public static McpServerConfig fromFileEntry(String id, JsonNode node) {
+		if (node == null || !node.isObject()) {
+			throw new IllegalArgumentException("each server entry must be an object");
+		}
+		String name = text(node, "name");
+		String command = text(node, "command");
+		if (command != null) {
+			List<String> fileArgs = new ArrayList<>();
+			JsonNode argsNode = node.get("args");
+			if (argsNode != null) {
+				if (!argsNode.isArray()) {
+					throw new IllegalArgumentException("\"args\" must be an array of strings");
+				}
+				argsNode.forEach(arg -> fileArgs.add(arg.asText()));
+			}
+			Map<String, String> env = new LinkedHashMap<>();
+			JsonNode envNode = node.get("env");
+			if (envNode != null) {
+				if (!envNode.isObject()) {
+					throw new IllegalArgumentException("\"env\" must be an object");
+				}
+				for (Iterator<Map.Entry<String, JsonNode>> it = envNode.fields(); it.hasNext(); ) {
+					Map.Entry<String, JsonNode> var = it.next();
+					env.put(var.getKey(), var.getValue().asText());
+				}
+			}
+			return new McpServerConfig(id, name, Type.STDIO, null, null, null, command, fileArgs, env);
+		}
+		String url = text(node, "url");
+		if (url != null) {
+			URI uri;
+			try {
+				uri = URI.create(url);
+			} catch (IllegalArgumentException ex) {
+				throw new IllegalArgumentException("\"url\" is not a valid URI: " + url, ex);
+			}
+			String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase();
+			if (!scheme.equals("http")) {
+				throw new IllegalArgumentException("\"url\" must be an http:// endpoint (https is not supported yet)");
+			}
+			if (uri.getHost() == null || uri.getHost().isBlank()) {
+				throw new IllegalArgumentException("\"url\" is missing a host: " + url);
+			}
+			int port = uri.getPort() > 0 ? uri.getPort() : 80;
+			String path = uri.getPath() == null ? "" : uri.getPath();
+			return new McpServerConfig(id, name, Type.HTTP, uri.getHost(), port, path, null, List.of(), Map.of());
+		}
+		throw new IllegalArgumentException("either \"command\" or \"url\" is required");
+	}
+
+	private static String text(JsonNode node, String field) {
+		JsonNode value = node.get(field);
+		return value != null && value.isTextual() && !value.asText().isBlank() ? value.asText().trim() : null;
 	}
 }

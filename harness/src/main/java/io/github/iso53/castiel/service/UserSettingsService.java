@@ -3,7 +3,6 @@ package io.github.iso53.castiel.service;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import io.github.iso53.castiel.config.McpServerConfig;
 import io.github.iso53.castiel.model.LlmProviderConfig;
 import io.github.iso53.castiel.model.UserSettings;
 import io.github.iso53.castiel.util.AppPaths;
@@ -54,27 +53,6 @@ public class UserSettingsService {
 			throw new IllegalArgumentException("providerId is required");
 		}
 		settings = settings.withProvider(providerId.trim(), config, true);
-		writeToDisk(settings);
-		return settings;
-	}
-
-	/**
-	 * Upserts one MCP server entry and writes settings to disk.
-	 */
-	public synchronized UserSettings upsertMcpServer(McpServerConfig config) {
-		if (config == null || config.id() == null || config.id().isBlank()) {
-			throw new IllegalArgumentException("MCP server id is required");
-		}
-		settings = settings.withMcpServer(config);
-		writeToDisk(settings);
-		return settings;
-	}
-
-	/**
-	 * Removes the MCP server entry with the given id and writes settings to disk.
-	 */
-	public synchronized UserSettings removeMcpServer(String id) {
-		settings = settings.withoutMcpServer(id);
 		writeToDisk(settings);
 		return settings;
 	}

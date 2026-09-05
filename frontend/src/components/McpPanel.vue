@@ -9,6 +9,17 @@
 			>
 				{{ mcp.servers.filter((server) => server.connected).length }}/{{ mcp.servers.length }}
 			</span>
+			<Button
+				variant="ghost"
+				size="icon-sm"
+				class="size-5 text-muted-foreground hover:text-foreground"
+				aria-label="Reconnect disconnected MCP servers"
+				title="Reconnect disconnected servers"
+				:disabled="reconnecting || !mcp.servers.length"
+				@click="reconnectDisconnected"
+			>
+				<RefreshCw :class="reconnecting ? 'animate-spin' : ''" />
+			</Button>
 		</header>
 
 		<div class="min-h-0 flex-1 overflow-y-auto p-2">
@@ -36,22 +47,32 @@
 </template>
 
 <script>
-import { Plug } from "@lucide/vue";
+import { Plug, RefreshCw } from "@lucide/vue";
+import { Button } from "@/components/ui/button";
 import EmptyState from "@/components/EmptyState.vue";
 import { useMcpStore } from "@/stores/mcp";
 
-// Read-only display of registered MCP servers; changes happen in the settings view.
+// Live view of the MCP servers declared in mcp.json; the refresh button retries the down ones.
 export default {
 	name: "McpPanel",
-	components: { EmptyState, Plug },
+	components: { Button, EmptyState, Plug, RefreshCw },
 	data() {
-		return { mcp: useMcpStore() };
+		return { mcp: useMcpStore(), reconnecting: false };
 	},
 	mounted() {
-		this.mcp.startPolling();
+		this.mcp.startFeed();
 	},
-	beforeUnmount() {
-		this.mcp.stopPolling();
+	methods: {
+		async reconnectDisconnected() {
+			this.reconnecting = true;
+			try {
+				await this.mcp.reconnectDisconnected();
+			} catch {
+				// Statuses keep their last known values; the SSE feed refreshes on changes.
+			} finally {
+				this.reconnecting = false;
+			}
+		},
 	},
 };
 </script>

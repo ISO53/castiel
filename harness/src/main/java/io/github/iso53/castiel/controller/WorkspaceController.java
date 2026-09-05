@@ -3,10 +3,14 @@ package io.github.iso53.castiel.controller;
 import io.github.iso53.castiel.model.CreateWorkspaceRequest;
 import io.github.iso53.castiel.model.OpenWorkspaceRequest;
 import io.github.iso53.castiel.model.WorkspaceState;
+import io.github.iso53.castiel.service.WorkspaceEventBus;
 import io.github.iso53.castiel.service.WorkspaceSession;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Flux;
 
 /**
  * Exposes the active workspace session to the frontend.
@@ -16,9 +20,11 @@ import org.springframework.web.server.ResponseStatusException;
 public class WorkspaceController {
 
 	private final WorkspaceSession workspaceSession;
+	private final WorkspaceEventBus workspaceEvents;
 
-	public WorkspaceController(WorkspaceSession workspaceSession) {
+	public WorkspaceController(WorkspaceSession workspaceSession, WorkspaceEventBus workspaceEvents) {
 		this.workspaceSession = workspaceSession;
+		this.workspaceEvents = workspaceEvents;
 	}
 
 	/**
@@ -27,6 +33,12 @@ public class WorkspaceController {
 	@GetMapping
 	public WorkspaceState get() {
 		return workspaceSession.get();
+	}
+
+	/** SSE feed of workspace file changes; the payload is the changed file's name or "*". */
+	@GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+	public Flux<ServerSentEvent<String>> events() {
+		return workspaceEvents.events();
 	}
 
 	/**

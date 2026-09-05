@@ -1,16 +1,19 @@
 package io.github.iso53.castiel.controller;
 
-import io.github.iso53.castiel.config.McpServerConfig;
 import io.github.iso53.castiel.mcp.McpManager;
 import io.github.iso53.castiel.model.McpServerStatus;
-import io.github.iso53.castiel.model.UserSettings;
 import java.util.List;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Flux;
 
 /**
- * REST endpoints for registering and inspecting MCP servers.
+ * REST endpoints for the MCP servers declared in the mcp.json config file.
  */
 @RestController
 @RequestMapping("/api/mcp")
@@ -22,17 +25,10 @@ public class McpController {
 		this.mcpManager = mcpManager;
 	}
 
-	/** Handshakes with a not-yet-registered server so the UI can confirm it before adding. */
-	@PostMapping("/probe")
-	public McpServerStatus probe(@RequestBody McpServerConfig body) {
-		if (body == null) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is required");
-		}
-		try {
-			return mcpManager.probe(body);
-		} catch (IllegalArgumentException ex) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
-		}
+	/** Config file path and last parse error, for the settings UI. */
+	@GetMapping("/config")
+	public McpManager.ConfigInfo config() {
+		return mcpManager.configInfo();
 	}
 
 	@GetMapping("/servers")
@@ -40,30 +36,15 @@ public class McpController {
 		return mcpManager.statuses();
 	}
 
-	/** Retries the handshake with a registered server, e.g. after it was started late. */
-	@PostMapping("/servers/{id}/reconnect")
-	public McpServerStatus reconnect(@PathVariable("id") String id) {
-		try {
-			return mcpManager.reconnect(id);
-		} catch (IllegalArgumentException ex) {
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage(), ex);
-		}
+	/** SSE feed of reachability changes; each ping names the server that changed. */
+	@GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+	public Flux<ServerSentEvent<String>> events() {
+		return mcpManager.events();
 	}
 
-	@PostMapping("/servers")
-	public UserSettings add(@RequestBody McpServerConfig body) {
-		if (body == null) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is required");
-		}
-		try {
-			return mcpManager.add(body);
-		} catch (IllegalArgumentException ex) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
-		}
-	}
-
-	@DeleteMapping("/servers/{id}")
-	public UserSettings remove(@PathVariable("id") String id) {
-		return mcpManager.remove(id);
+	/** Reconnects every currently unreachable server and returns the refreshed statuses. */
+	@PostMapping("/servers/reconnect")
+	public List<McpServerStatus> reconnect() {
+		return mcpManager.reconnectDisconnected();
 	}
 }

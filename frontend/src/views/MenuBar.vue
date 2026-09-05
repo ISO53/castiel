@@ -100,26 +100,16 @@ export default {
 			workspaceDialogOpen: false,
 			workspaceMode: "open",
 			aboutOpen: false,
-			pollTimer: null,
 		};
 	},
 	watch: {
 		"workspace.cwd": {
 			immediate: true,
 			handler(cwd) {
-				this.stopPolling();
-
 				if (!cwd) return;
-
 				this.engagement.fetch();
-				this.pollTimer = setInterval(() => {
-					this.engagement.fetch();
-				}, 15000);
 			},
 		},
-	},
-	beforeUnmount() {
-		this.stopPolling();
 	},
 	methods: {
 		newWorkspace() {
@@ -159,12 +149,6 @@ export default {
 				"_blank",
 				"noopener,noreferrer",
 			);
-		},
-		stopPolling() {
-			if (this.pollTimer) {
-				clearInterval(this.pollTimer);
-				this.pollTimer = null;
-			}
 		},
 		isDone(item) {
 			return (

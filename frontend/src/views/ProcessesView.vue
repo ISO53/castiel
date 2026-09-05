@@ -16,8 +16,8 @@ const store = useProcessesStore();
 const docks = useDocksStore();
 const workspace = useWorkspaceStore();
 
-onMounted(() => store.startPolling());
-onUnmounted(() => store.stopPolling());
+onMounted(() => store.startFeed());
+onUnmounted(() => store.stopFeed());
 
 watch(
 	() => workspace.cwd,

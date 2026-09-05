@@ -3,6 +3,7 @@ package io.github.iso53.castiel.controller;
 import io.github.iso53.castiel.model.DirectoryListing;
 import io.github.iso53.castiel.model.FileContent;
 import io.github.iso53.castiel.service.FileExplorerService;
+import io.github.iso53.castiel.service.WorkspaceEventBus;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
@@ -19,6 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpHeaders;
 
+import java.nio.file.Path;
+
 /**
  * Exposes the local directory explorer used to pick a workspace folder.
  */
@@ -27,9 +30,11 @@ import org.springframework.http.HttpHeaders;
 public class FileExplorerController {
 
 	private final FileExplorerService fileExplorerService;
+	private final WorkspaceEventBus workspaceEvents;
 
-	public FileExplorerController(FileExplorerService fileExplorerService) {
+	public FileExplorerController(FileExplorerService fileExplorerService, WorkspaceEventBus workspaceEvents) {
 		this.fileExplorerService = fileExplorerService;
+		this.workspaceEvents = workspaceEvents;
 	}
 
 	/**
@@ -96,7 +101,9 @@ public class FileExplorerController {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "path is required");
 		}
 		try {
-			return fileExplorerService.writeFile(request.path(), request.content());
+			FileContent content = fileExplorerService.writeFile(request.path(), request.content());
+			workspaceEvents.publish(fileName(request.path()));
+			return content;
 		} catch (IllegalArgumentException ex) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
 		}
@@ -149,6 +156,16 @@ public class FileExplorerController {
 
 	private static boolean isBlank(String value) {
 		return value == null || value.isBlank();
+	}
+
+	/** Best-effort file name for the change ping; "*" when it cannot be determined. */
+	private static String fileName(String path) {
+		try {
+			Path file = Path.of(path);
+			return file.getFileName() != null ? file.getFileName().toString() : "*";
+		} catch (Exception ex) {
+			return "*";
+		}
 	}
 
 	/** Request body for {@link #writeFile}. */
