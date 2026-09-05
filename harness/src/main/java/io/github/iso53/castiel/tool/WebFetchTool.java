@@ -103,7 +103,8 @@ public class WebFetchTool implements ToolProvider {
 				markdown =
 					markdown.substring(0, MAX_FETCH_CHARS) + "\n... [truncated at " + MAX_FETCH_CHARS + " characters]";
 			}
-			String title = document.title() == null || document.title().isBlank() ? "(untitled)" : document.title();
+            document.title();
+            String title = document.title().isBlank() ? "(untitled)" : document.title();
 			return "# " + title + "\nURL: " + cleanedUrl + "\n\n" + markdown;
 		} catch (IllegalArgumentException ex) {
 			return "Error: invalid URL: " + cleanedUrl;

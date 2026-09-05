@@ -55,7 +55,7 @@ public class WebSearchTool implements ToolProvider {
 		if (query == null || query.isBlank()) {
 			return "Error: query is required";
 		}
-		int limit = maxResults == null ? DEFAULT_RESULTS : Math.clamp(maxResults.intValue(), 1, MAX_RESULTS);
+		int limit = maxResults == null ? DEFAULT_RESULTS : Math.clamp(maxResults, 1, MAX_RESULTS);
 
 		// DuckDuckGo's endpoint intermittently rate-limits automation (HTTP 429/202). Retry a
 		// couple of times with a fresh user agent before giving up.

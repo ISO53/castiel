@@ -39,11 +39,6 @@ public final class BoundedOutputBuffer {
 		}
 	}
 
-	/** Total characters ever appended. */
-	synchronized long length() {
-		return startOffset + data.length();
-	}
-
 	/**
 	 * Returns everything appended after {@code cursor}, capped at {@code maxChars}.
 	 *
@@ -53,7 +48,7 @@ public final class BoundedOutputBuffer {
 	public synchronized Page read(long cursor, int maxChars) {
 		long end = startOffset + data.length();
 		if (cursor >= end) {
-			return new Page(Math.max(cursor, end), "", 0);
+			return new Page(cursor, "", 0);
 		}
 		if (cursor < startOffset) {
 			long discarded = startOffset - Math.max(cursor, 0);

@@ -203,7 +203,7 @@ public class HarnessService {
 			if (openPart == null) {
 				return;
 			}
-			if (openPart.length() > 0) {
+			if (!openPart.isEmpty()) {
 				parts.add("thinking".equals(openPartType)
 						? ChatMessagePart.thinking(openPart.toString())
 						: ChatMessagePart.text(openPart.toString()));
@@ -438,7 +438,7 @@ public class HarnessService {
 			backgroundShellTool.setActiveChatId(chatId);
 			// The last turn is the message the user just sent — record it before streaming.
 			recorder = new TurnRecorder(chatId);
-			ChatTurn lastTurn = request.messages().get(request.messages().size() - 1);
+			ChatTurn lastTurn = request.messages().getLast();
 			if ("user".equalsIgnoreCase(lastTurn.role())) {
 				recorder.startUserTurn(lastTurn.content(), request.providerId().trim(), modelName, request.reasoningEffort());
 			}
@@ -626,7 +626,7 @@ public class HarnessService {
 
 					// Skip tool calls that came with null id/name. Fucks up the backend
 					if (request.id() == null && request.name() == null) {
-						log.debug("Skipping tool call with no id and no name", completeToolCall.index());
+						log.debug("Skipping tool call with no id and no name. {}", completeToolCall.index());
 						return;
 					}
 					sink.next(
