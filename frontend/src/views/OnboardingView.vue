@@ -1,5 +1,5 @@
 <template>
-	<ScrollArea class="h-full">
+	<ScrollArea class="h-full bg-card">
 		<div class="mx-auto flex max-w-2xl flex-col gap-8 p-6">
 			<div class="space-y-1">
 				<h1 class="text-xl font-semibold tracking-tight text-foreground">Welcome to Castiel</h1>
