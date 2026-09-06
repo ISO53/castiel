@@ -10,7 +10,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 try {
 	cytoscape.use(fcose);
 } catch {
-	// Duplicate cytoscape copy — runLayout() falls back to the built-in cose layout.
+	// Duplicate cytoscape copy. runLayout() falls back to the built-in cose layout.
 }
 
 /**
@@ -165,7 +165,7 @@ function layoutIfVisible() {
 	try {
 		instance.layout({ ...props.layout }).run();
 	} catch {
-		// Requested layout (e.g. fcose) failed to register — degrade gracefully.
+		// Requested layout (e.g. fcose) failed to register. Degrade gracefully.
 		instance.layout({ name: "cose", animate: true, padding: 30 }).run();
 	}
 	return true;

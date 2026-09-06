@@ -3,7 +3,7 @@
 		v-if="sections.length === 0"
 		:icon="Boxes"
 		message="No technologies fingerprinted yet."
-		hint="The service stack will assemble here — frontend on top, infrastructure below."
+		hint="The service stack will assemble here. Frontend on top, infrastructure below."
 	/>
 	<ScrollArea v-else class="h-full min-h-0"><div class="p-3">
 		<h2 class="mb-3 text-sm font-bold uppercase tracking-widest text-foreground">Tech Stack</h2>
@@ -28,7 +28,7 @@
 							:stroke="section.color"
 							stroke-width="1"
 						>
-							<title>{{ [tech.desc, tech.evidence].filter(Boolean).join(" — ") || tech.name }}</title>
+							<title>{{ [tech.desc, tech.evidence].filter(Boolean).join(" - ") || tech.name }}</title>
 						</polygon>
 					</svg>
 					<div class="absolute left-52 top-1 w-72 min-w-0">

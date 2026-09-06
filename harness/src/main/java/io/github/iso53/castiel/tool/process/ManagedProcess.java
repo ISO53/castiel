@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Registry entry for one agent-spawned background process.
  *
- * <p>Lifecycle: {@code RUNNING} until the process exits — either on its own
+ * <p>Lifecycle: {@code RUNNING} until the process exits. Either on its own
  * ({@link State#EXITED}) or killed through {@link ProcessManager#kill}
  * ({@link State#KILLED}). Finished entries stay in the registry until the agent reads
  * them or the user removes them from the UI.

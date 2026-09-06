@@ -20,7 +20,7 @@ const forwarded = useForwardPropsEmits(props, emits);
 
 // Ref to the underlying reka-ui SplitterPanel. We re-expose its programmatic
 // API (collapse/expand/isCollapsed/...) so callers can drive the panel via a
-// template ref on this wrapper — e.g. <ResizablePanel ref="x"> then x.collapse().
+// template ref on this wrapper. e.g. <ResizablePanel ref="x"> then x.collapse().
 // Getters keep isCollapsed/isExpanded as plain booleans (no ref-unwrap issues).
 const panel = ref(null);
 

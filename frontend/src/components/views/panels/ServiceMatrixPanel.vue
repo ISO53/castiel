@@ -39,7 +39,7 @@ const rows = computed(() => {
 
 const columns = [
 	{ accessorKey: "ip", header: "Host" },
-	{ accessorKey: "hostname", header: "Hostname", cell: ({ getValue }) => getValue() || "—" },
+	{ accessorKey: "hostname", header: "Hostname", cell: ({ getValue }) => getValue() || "-" },
 	{
 		accessorKey: "port",
 		header: "Port",
@@ -47,12 +47,12 @@ const columns = [
 		sortingFn: (a, b) => Number(a.original.port) - Number(b.original.port),
 	},
 	{ accessorKey: "state", header: "State" },
-	{ accessorKey: "service", header: "Service", cell: ({ getValue }) => getValue() || "—" },
-	{ accessorKey: "product", header: "Product", cell: ({ getValue }) => getValue() || "—" },
-	{ accessorKey: "version", header: "Version", cell: ({ getValue }) => getValue() || "—" },
-	{ accessorKey: "banner", header: "Banner", enableSorting: false, cell: ({ getValue }) => getValue() || "—" },
-	{ id: "cert", header: "TLS SANs", enableSorting: false, cell: ({ row }) => row.original.certSans.join(", ") || "—" },
-	{ accessorKey: "discoveredBy", header: "Discovered By", enableSorting: false, cell: ({ getValue }) => getValue() || "—" },
-	{ id: "evidence", header: "Evidence", enableSorting: false, cell: ({ row }) => row.original.evidence.join(", ") || "—" },
+	{ accessorKey: "service", header: "Service", cell: ({ getValue }) => getValue() || "-" },
+	{ accessorKey: "product", header: "Product", cell: ({ getValue }) => getValue() || "-" },
+	{ accessorKey: "version", header: "Version", cell: ({ getValue }) => getValue() || "-" },
+	{ accessorKey: "banner", header: "Banner", enableSorting: false, cell: ({ getValue }) => getValue() || "-" },
+	{ id: "cert", header: "TLS SANs", enableSorting: false, cell: ({ row }) => row.original.certSans.join(", ") || "-" },
+	{ accessorKey: "discoveredBy", header: "Discovered By", enableSorting: false, cell: ({ getValue }) => getValue() || "-" },
+	{ id: "evidence", header: "Evidence", enableSorting: false, cell: ({ row }) => row.original.evidence.join(", ") || "-" },
 ];
 </script>

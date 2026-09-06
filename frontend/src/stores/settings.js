@@ -5,7 +5,7 @@ const API_BASE_URL = `${window.location.origin}/api/settings`;
 const LLAMA_CPP_ID = "llama.cpp";
 const OLLAMA_ID = "ollama";
 const OPENROUTER_ID = "openrouter";
-/** OpenRouter's endpoint is fixed — users only provide their API key. */
+/** OpenRouter's endpoint is fixed. Users only provide their API key. */
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1";
 
 async function readError(response) {

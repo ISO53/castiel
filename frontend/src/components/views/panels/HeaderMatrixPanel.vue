@@ -106,7 +106,7 @@ const columns = [
 		header: "Value",
 		enableSorting: false,
 		accessorFn: (row) => row.value,
-		cell: ({ getValue }) => getValue() || "—",
+		cell: ({ getValue }) => getValue() || "-",
 	},
 	{
 		id: "present",
@@ -133,14 +133,14 @@ const cookieRows = computed(() => {
 const cookieColumns = [
 	{ accessorKey: "name", header: "Name" },
 	{ accessorKey: "site", header: "Site" },
-	{ accessorKey: "flags", header: "Flags", cell: ({ getValue }) => getValue() || "—" },
-	{ accessorKey: "purpose", header: "Purpose", enableSorting: false, cell: ({ getValue }) => getValue() || "—" },
+	{ accessorKey: "flags", header: "Flags", cell: ({ getValue }) => getValue() || "-" },
+	{ accessorKey: "purpose", header: "Purpose", enableSorting: false, cell: ({ getValue }) => getValue() || "-" },
 	{
 		id: "discoveredBy",
 		header: "Found Via",
 		enableSorting: false,
 		accessorFn: (row) => row.discoveredBy,
-		cell: ({ getValue }) => getValue() || "—",
+		cell: ({ getValue }) => getValue() || "-",
 	},
 ];
 </script>

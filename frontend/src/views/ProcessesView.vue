@@ -198,7 +198,7 @@ function shortCommand(command) {
 							Explanation <span class="font-normal text-zinc-500">(optional)</span>
 						</Label>
 						<Textarea id="process-description" v-model="startDescription" :rows="3"
-							placeholder="Why you started it — the agent will read this." />
+							placeholder="Why you started it. The agent will read this." />
 					</div>
 					<p v-if="startError" class="text-xs text-red-400">{{ startError }}</p>
 					<DialogFooter>

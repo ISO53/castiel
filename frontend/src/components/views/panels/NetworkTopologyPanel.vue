@@ -41,7 +41,7 @@
 								<td class="py-0.5 pr-3">{{ service.state ?? "open" }}</td>
 								<td class="py-0.5 pr-3">{{ service.service ?? "?" }}</td>
 								<td class="py-0.5 pr-3 text-muted-foreground">
-									{{ [service.product, service.version].filter(Boolean).join(" ") || "—" }}
+									{{ [service.product, service.version].filter(Boolean).join(" ") || "-" }}
 								</td>
 							</tr>
 						</tbody>

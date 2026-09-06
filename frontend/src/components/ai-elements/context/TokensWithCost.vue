@@ -8,7 +8,7 @@ const props = defineProps<{
 
 const formattedTokens = computed(() => {
   return props.tokens === undefined
-    ? '—'
+    ? '-'
     : new Intl.NumberFormat('en-US', {
         notation: 'compact',
       }).format(props.tokens)

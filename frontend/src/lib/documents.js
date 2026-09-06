@@ -67,7 +67,7 @@ export function joinWorkspacePath(cwd, name) {
 
 /**
  * Fetches an engagement document and parses it as JSON.
- * Missing files surface as errors — scaffolding should have created them.
+ * Missing files surface as errors. Scaffolding should have created them.
  */
 export async function fetchDocument(file, cwd) {
 	const query = new URLSearchParams({ path: joinWorkspacePath(cwd, file) });

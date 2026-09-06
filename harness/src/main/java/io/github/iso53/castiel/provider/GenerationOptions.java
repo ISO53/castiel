@@ -5,8 +5,8 @@ import java.util.Objects;
 
 /**
  * Provider-agnostic generation choices made per chat request in the UI. Each
- * {@link LlmProvider} translates these into its native request parameters —
- * levels that a provider cannot express degrade gracefully there.
+ * {@link LlmProvider} translates these into its native request parameters.
+ * Levels that a provider cannot express degrade gracefully there.
  *
  * @param reasoningEffort {@code "off"}, {@code "low"}, {@code "medium"}, {@code "high"} or
  *                        {@code null} for the provider default.

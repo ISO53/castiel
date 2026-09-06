@@ -12,7 +12,7 @@ import java.util.List;
  * {@link GenerationOptions} map onto native request parameters.
  *
  * <p>Implementations are lightweight views over an immutable
- * {@link io.github.iso53.castiel.model.LlmProviderConfig} and are created per use — no state.
+ * {@link io.github.iso53.castiel.model.LlmProviderConfig} and are created per use. No state.
  */
 public interface LlmProvider {
 	/**

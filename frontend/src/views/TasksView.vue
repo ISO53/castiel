@@ -49,7 +49,7 @@ function canonicalStatus(status) {
 
 /**
  * Normalizes statuses in place (idempotent) so every task lands on a column.
- * Called against the slot-provided document — never through props.
+ * Called against the slot-provided document. Never through props.
  */
 function normalizeTasks(data) {
 	const list = data?.tasks ?? [];

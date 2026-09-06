@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * Creates {@link LlmProvider} instances from persisted provider config. The single
- * switch over {@link ProviderType} lives here — everything provider-specific is
+ * switch over {@link ProviderType} lives here. Everything provider-specific is
  * behind the {@link LlmProvider} implementations.
  */
 @Service

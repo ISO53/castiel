@@ -170,7 +170,7 @@ public class BackgroundShellTool implements ToolProvider {
 		value = {
 			"Sends input to a running background process stdin (interactive programs such as",
 			"REPL-style tools). Write text directly; embed <enter> for Enter, <space> for Space,",
-			"<tab> for Tab. Sending returns immediately — re-read the output after a short wait",
+			"<tab> for Tab. Sending returns immediately. Re-read the output after a short wait",
 			"to see how the program reacted. Password prompts may not work over pipes.",
 		}
 	)
@@ -207,7 +207,7 @@ public class BackgroundShellTool implements ToolProvider {
 	@Tool(
 		name = "bg_wait",
 		value = {
-			"Arms a harness timer, then STOP generating — end your turn with plain text only.",
+			"Arms a harness timer, then STOP generating. End your turn with plain text only.",
 			"When the time elapses (or a tracked process exits sooner) the harness restarts you",
 			"with a [harness] message describing what changed. Use this whenever your remaining",
 			"work depends on a running process instead of polling bg_read repeatedly.",
@@ -222,7 +222,7 @@ public class BackgroundShellTool implements ToolProvider {
 		return (
 			"Wake-up armed for " +
 			effective +
-			"s. Stop generating now — end your turn with plain text and no further tool calls."
+			"s. Stop generating now. End your turn with plain text and no further tool calls."
 		);
 	}
 

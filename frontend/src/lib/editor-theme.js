@@ -5,7 +5,7 @@ import { tags as t } from "@lezer/highlight";
 /**
  * Minimal CodeMirror theme wired to the app's CSS variables so light/dark follow
  * the UI automatically. The highlight palette uses fixed hues that read well on
- * both themes — deliberately tiny compared to full theme packages.
+ * both themes. Deliberately tiny compared to full theme packages.
  */
 export const castielEditorTheme = EditorView.theme({
 	"&": {

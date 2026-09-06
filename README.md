@@ -26,7 +26,7 @@ cd harness && mvn spring-boot:run     # terminal 1: backend (API only) on 8081
 cd frontend && npm run dev            # terminal 2: UI on 5173, /api proxied to 8081
 ```
 
-Open http://localhost:5173 and start working — the UI talks to the backend through the Vite proxy. Nothing is served at http://localhost:8081 in dev mode; that port is API only.
+Open http://localhost:5173 and start working. The UI talks to the backend through the Vite proxy. Nothing is served at http://localhost:8081 in dev mode; that port is API only.
 
 ### Build & run
 
@@ -66,7 +66,7 @@ Castiel installs nothing and touches nothing outside two places.
 | Engagement documents, chats, saved evidence | Inside the workspace folder you open (`engagement.json`, `.chats/`, ...) |
 | Application settings (`settings.json`) | OS application-data directory: `%APPDATA%\castiel` on Windows, `~/Library/Application Support/castiel` on macOS, `~/.config/castiel` on Linux |
 
-Delete both and Castiel is gone without a trace — though as with any AI tool, the agent itself can make changes on your computer.
+Delete both and Castiel is gone without a trace. Though as with any AI tool, the agent itself can make changes on your computer.
 
 ## License
 

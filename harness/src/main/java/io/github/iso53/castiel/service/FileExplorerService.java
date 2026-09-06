@@ -170,7 +170,7 @@ public class FileExplorerService {
 
 	/**
 	 * Writes UTF-8 text content back to an existing file. Only files that already
-	 * exist are accepted — the editor edits, it does not create.
+	 * exist are accepted. The editor edits, it does not create.
 	 *
 	 * @param path    Absolute file path.
 	 * @param content New file contents.
@@ -323,7 +323,7 @@ public class FileExplorerService {
 
 		Path parent = target.getParent();
 		if (parent == null || !Files.isDirectory(parent)) {
-			// Deleted a drive root's only child edge case — fall back to listing the drive.
+			// Deleted a drive root's only child edge case. Fall back to listing the drive.
 			parent = target.getRoot();
 		}
 		return list(parent.toString(), true, false);

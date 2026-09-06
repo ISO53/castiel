@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
  *
  * <p>Each process gets a stable registry id, a mandatory human-readable purpose line, a
  * bounded output buffer tailed independently by the agent and the UI, and an open stdin
- * fed through a queued writer thread. Killing walks the full process tree — the child we
+ * fed through a queued writer thread. Killing walks the full process tree. The child we
  * spawn is a shell wrapper, and destroying only the shell would orphan the real work.
  */
 @Service
@@ -212,8 +212,8 @@ public class ProcessManager {
 	}
 
 	/**
-	 * Delivers queued stdin payloads. Writes happen here — never inline in the tool call —
-	 * so a process that stopped reading its pipe can block this worker freely without ever
+	 * Delivers queued stdin payloads. Writes happen here. Never inline in the tool call.
+	 * So a process that stopped reading its pipe can block this worker freely without ever
 	 * stalling the model's tool execution loop.
 	 */
 	private static void pumpInput(ManagedProcess entry) {

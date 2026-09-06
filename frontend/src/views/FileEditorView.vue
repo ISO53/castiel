@@ -22,7 +22,7 @@
 			<span>{{ lineCount }} lines</span>
 			<span class="ml-auto flex items-center gap-1.5" :class="dirty ? 'text-amber-500' : ''">
 				<span class="size-1.5 rounded-full" :class="dirty ? 'bg-amber-500' : 'bg-emerald-500'" />
-				{{ dirty ? "Unsaved changes — Ctrl+S to save" : "Saved" }}
+				{{ dirty ? "Unsaved changes. Ctrl+S to save" : "Saved" }}
 			</span>
 		</footer>
 	</div>
@@ -84,7 +84,7 @@ export default {
 		this.destroyView();
 	},
 	methods: {
-		// Lean extension set: no autocomplete, no search, no folding — the AI writes
+		// Lean extension set: no autocomplete, no search, no folding. The AI writes
 		// the code; humans mostly read it.
 		baseExtensions() {
 			return [

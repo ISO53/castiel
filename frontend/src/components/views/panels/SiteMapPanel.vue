@@ -32,7 +32,7 @@ const rows = computed(() => {
 			url: site.url,
 			status: site.status ?? "",
 			auth: site.auth_scheme ?? "",
-			info: [site.title, site.description, site.summary, site.notes].filter(Boolean).join(" — "),
+			info: [site.title, site.description, site.summary, site.notes].filter(Boolean).join(" - "),
 			discoveredBy: site.discovered_by ?? "",
 		});
 	}
@@ -43,7 +43,7 @@ const rows = computed(() => {
 			url: page.url,
 			status: page.status != null ? String(page.status) : "",
 			auth: page.auth ?? "",
-			info: [page.purpose, page.title, page.notes].filter(Boolean).join(" — "),
+			info: [page.purpose, page.title, page.notes].filter(Boolean).join(" - "),
 			discoveredBy: page.discovered_by ?? "",
 		});
 	}
@@ -54,7 +54,7 @@ const rows = computed(() => {
 			url: directory.path,
 			status: "",
 			auth: "",
-			info: [directory.type, directory.notes].filter(Boolean).join(" — "),
+			info: [directory.type, directory.notes].filter(Boolean).join(" - "),
 			discoveredBy: directory.discovered_by ?? "",
 		});
 	}
@@ -76,27 +76,27 @@ const columns = [
 		id: "status",
 		header: "Status",
 		accessorFn: (row) => row.status,
-		cell: ({ getValue }) => getValue() || "—",
+		cell: ({ getValue }) => getValue() || "-",
 	},
 	{
 		id: "auth",
 		header: "Auth",
 		accessorFn: (row) => row.auth,
-		cell: ({ getValue }) => getValue() || "—",
+		cell: ({ getValue }) => getValue() || "-",
 	},
 	{
 		id: "info",
 		header: "Info",
 		enableSorting: false,
 		accessorFn: (row) => row.info,
-		cell: ({ getValue }) => getValue() || "—",
+		cell: ({ getValue }) => getValue() || "-",
 	},
 	{
 		id: "discoveredBy",
 		header: "Found Via",
 		enableSorting: false,
 		accessorFn: (row) => row.discoveredBy,
-		cell: ({ getValue }) => getValue() || "—",
+		cell: ({ getValue }) => getValue() || "-",
 	},
 ];
 </script>

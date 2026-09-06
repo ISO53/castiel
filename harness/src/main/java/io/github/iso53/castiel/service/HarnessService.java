@@ -171,7 +171,7 @@ public class HarnessService {
 			flushOpenPart();
 		}
 
-		/** Persists the assistant message so far — also used on cancel to keep partial output. */
+		/** Persists the assistant message so far. Also used on cancel to keep partial output. */
 		synchronized void flushPending() {
 			flushOpenPart();
 			saveAssistantMessage();
@@ -264,7 +264,7 @@ public class HarnessService {
 						null
 					);
 				} catch (IOException ex) {
-					// Malformed arguments — fall back to a plain tool part below.
+					// Malformed arguments. Fall back to a plain tool part below.
 				}
 			}
 			return ChatMessagePart.tool(request.id(), request.name(), request.arguments());
@@ -393,12 +393,12 @@ public class HarnessService {
 	 *
 	 * <p>Event protocol:
 	 * <ul>
-	 *   <li>{@code start} — JSON {@code {id}} identifying this generation (use with {@link #cancel})</li>
-	 *   <li>default event — raw assistant token; thinking is wrapped in {@code <think>} tags</li>
-	 *   <li>{@code tool_call} — JSON {@code {id, name, arguments}} when the model calls a tool</li>
-	 *   <li>{@code tool_result} — JSON {@code {id, name, result}} once the tool has run</li>
-	 *   <li>{@code usage} — JSON token usage totals accumulated across all model rounds so far</li>
-	 *   <li>{@code error} — plain text error message</li>
+	 *   <li>{@code start} - JSON {@code {id}} identifying this generation (use with {@link #cancel})</li>
+	 *   <li>default event - raw assistant token; thinking is wrapped in {@code <think>} tags</li>
+	 *   <li>{@code tool_call} - JSON {@code {id, name, arguments}} when the model calls a tool</li>
+	 *   <li>{@code tool_result} - JSON {@code {id, name, result}} once the tool has run</li>
+	 *   <li>{@code usage} - JSON token usage totals accumulated across all model rounds so far</li>
+	 *   <li>{@code error} - plain text error message</li>
 	 * </ul>
 	 */
 	public Flux<ServerSentEvent<String>> stream(ChatStreamRequest request) {
@@ -436,7 +436,7 @@ public class HarnessService {
 				return Flux.error(new IllegalStateException("Another generation is still streaming for this chat"));
 			}
 			backgroundShellTool.setActiveChatId(chatId);
-			// The last turn is the message the user just sent — record it before streaming.
+			// The last turn is the message the user just sent. Record it before streaming.
 			recorder = new TurnRecorder(chatId);
 			ChatTurn lastTurn = request.messages().getLast();
 			if ("user".equalsIgnoreCase(lastTurn.role())) {
@@ -511,8 +511,8 @@ public class HarnessService {
 			LlmProvider provider = llmClientFactory.create(config);
 			backgroundShellTool.setActiveChatId(chatId);
 
-			// The harness instruction turn is a real message of the conversation —
-			// persist it before streaming so the assistant side attaches to it.
+			// The harness instruction turn is a real message of the conversation.
+			// Persist it before streaming so the assistant side attaches to it.
 			TurnRecorder recorder = new TurnRecorder(chatId);
 			recorder.startUserTurn(harnessText, session.providerId(), session.modelName(), session.reasoningEffort());
 
@@ -872,8 +872,8 @@ public class HarnessService {
 
 	/**
 	 * Replays an assistant turn. Turns carrying tool calls become an {@link AiMessage} with
-	 * tool execution requests followed by one {@link ToolExecutionResultMessage} per call —
-	 * the shape expected by every LangChain4j provider.
+	 * tool execution requests followed by one {@link ToolExecutionResultMessage} per call.
+	 * The shape expected by every LangChain4j provider.
 	 */
 	private static void appendAssistantTurn(List<ChatMessage> messages, ChatTurn turn) {
 		List<ToolExecutionRequest> requests = turn

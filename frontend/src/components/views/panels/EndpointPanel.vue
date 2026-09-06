@@ -77,7 +77,7 @@ const endpoints = computed(() => {
 			site: endpoint.site ?? "",
 			status: endpoint.status != null ? String(endpoint.status) : "",
 			auth: endpoint.auth ?? "unknown",
-			info: [endpoint.summary, endpoint.notes].filter(Boolean).join(" — "),
+			info: [endpoint.summary, endpoint.notes].filter(Boolean).join(" - "),
 			evidence: (endpoint.evidence ?? []).join(", "),
 			discoveredBy: endpoint.discovered_by ?? "",
 		});
@@ -125,28 +125,28 @@ function methodClass(endpointKey) {
 
 const endpointColumns = [
 	{ accessorKey: "endpoint", header: "Endpoint" },
-	{ accessorKey: "status", header: "Status", cell: ({ getValue }) => getValue() || "—" },
+	{ accessorKey: "status", header: "Status", cell: ({ getValue }) => getValue() || "-" },
 	{ accessorKey: "auth", header: "Auth" },
 	{
 		id: "info",
 		header: "Summary / Notes",
 		enableSorting: false,
 		accessorFn: (row) => row.info,
-		cell: ({ getValue }) => getValue() || "—",
+		cell: ({ getValue }) => getValue() || "-",
 	},
 	{
 		id: "evidence",
 		header: "Evidence",
 		enableSorting: false,
 		accessorFn: (row) => row.evidence,
-		cell: ({ getValue }) => getValue() || "—",
+		cell: ({ getValue }) => getValue() || "-",
 	},
 	{
 		id: "discoveredBy",
 		header: "Found Via",
 		enableSorting: false,
 		accessorFn: (row) => row.discoveredBy,
-		cell: ({ getValue }) => getValue() || "—",
+		cell: ({ getValue }) => getValue() || "-",
 	},
 ];
 
@@ -155,13 +155,13 @@ const parameterColumns = [
 	{ accessorKey: "location", header: "Location" },
 	{ accessorKey: "endpoint", header: "Endpoint" },
 	{ accessorKey: "status", header: "Status" },
-	{ accessorKey: "notes", header: "Notes", enableSorting: false, cell: ({ getValue }) => getValue() || "—" },
+	{ accessorKey: "notes", header: "Notes", enableSorting: false, cell: ({ getValue }) => getValue() || "-" },
 	{
 		id: "discoveredBy",
 		header: "Found Via",
 		enableSorting: false,
 		accessorFn: (row) => row.discoveredBy,
-		cell: ({ getValue }) => getValue() || "—",
+		cell: ({ getValue }) => getValue() || "-",
 	},
 ];
 </script>

@@ -45,7 +45,7 @@
 				type="button"
 				class="pointer-events-auto flex h-6 items-center gap-1.5 rounded-md px-2 py-0 text-xs transition-colors disabled:cursor-default disabled:opacity-60"
 				:class="chipClasses(item)"
-				:title="workspace.cwd ? item.label : `${item.label} — open a workspace to engage`"
+				:title="workspace.cwd ? item.label : `${item.label}. Open a workspace to engage`"
 				:disabled="!workspace.cwd || engagement.loading"
 				@click="select(item)"
 			>

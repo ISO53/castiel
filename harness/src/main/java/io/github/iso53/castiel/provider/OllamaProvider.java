@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Ollama backend. Reasoning effort maps onto Ollama's boolean {@code think} parameter —
+ * Ollama backend. Reasoning effort maps onto Ollama's boolean {@code think} parameter.
  * {@code off} disables thinking, every other level enables it (Ollama has no levels).
  */
 public class OllamaProvider implements LlmProvider {

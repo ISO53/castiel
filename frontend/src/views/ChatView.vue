@@ -305,7 +305,7 @@ const CHAT_API = `${window.location.origin}/api/chat/stream`;
 const CHAT_BASE = `${window.location.origin}/api/chat`;
 
 // The harness normalizes provider-side thinking to <think> tags, but some models emit
-// raw <think>/<thinking> tags inline in the content stream — accept every spelling.
+// raw <think>/<thinking> tags inline in the content stream. Accept every spelling.
 const THINK_OPEN_TAGS = ["<think>", "<thinking>"];
 const THINK_CLOSE_TAGS = ["</think>", "</thinking>"];
 
@@ -483,7 +483,7 @@ export default {
 			return option ? `Reasoning: ${option.label}` : "Reasoning";
 		},
 		// Rendering hundreds of command items (OpenRouter catalogs 400+ models) makes the
-		// dialog mount crawl, so we filter and cap the list ourselves — the search box
+		// dialog mount crawl, so we filter and cap the list ourselves. The search box
 		// covers everything beyond the cap.
 		visibleModels() {
 			const query = this.modelSearch.trim().toLowerCase();
@@ -492,7 +492,7 @@ export default {
 				: this.models;
 			return filtered.slice(0, 100);
 		},
-		// A response was requested but nothing streamed yet — show the loader.
+		// A response was requested but nothing streamed yet. Show the loader.
 		assistantIdle() {
 			if (!this.streaming) return false;
 			const last = this.messages[this.messages.length - 1];
@@ -672,7 +672,7 @@ export default {
 				try {
 					await fetch(`${CHAT_API}/${encodeURIComponent(this.generationId)}/cancel`, { method: "POST" });
 				} catch {
-					// Best effort — aborting the local stream is enough to stop the UI.
+					// Best effort. Aborting the local stream is enough to stop the UI.
 				}
 			}
 			controller?.abort();
@@ -723,7 +723,7 @@ export default {
 			}
 
 			if (codeLines !== null) {
-				// Unterminated fence — still streaming, render what we have as code.
+				// Unterminated fence. Still streaming, render what we have as code.
 				segments.push(this.codeSegment(codeLines.join("\n"), info));
 			} else {
 				flushText();
@@ -915,7 +915,7 @@ export default {
 							entry.options = Array.isArray(args.options) ? args.options : [];
 							entry.multiSelect = Boolean(args.multiSelect);
 						}
-						// A tool call always starts a new segment — any thinking that follows
+						// A tool call always starts a new segment. Any thinking that follows
 						// (next round) must not merge into a previous block.
 						assistantMessage.isThinking = false;
 						assistantMessage.parts.push(entry);
@@ -946,7 +946,7 @@ export default {
 				this.flushStreamBuffer(assistantMessage);
 			} catch (error) {
 				if (error?.name === "AbortError") {
-					// User stopped the generation — keep whatever streamed, no error shown.
+					// User stopped the generation. Keep whatever streamed, no error shown.
 					this.flushStreamBuffer(assistantMessage);
 					return;
 				}
@@ -1018,7 +1018,7 @@ export default {
 			}
 		},
 		// Appends streamed text to the message's last part, opening a new part whenever
-		// the thinking/text mode changed or a tool call intervened — this is what keeps
+		// the thinking/text mode changed or a tool call intervened. This is what keeps
 		// interleaved thinking blocks separate instead of merging them at the top.
 		appendToActivePart(message, text) {
 			if (!text) return;
@@ -1149,7 +1149,7 @@ export default {
 			source.onerror = () => {
 				// Connection-level failure: EventSource retries automatically while the
 				// endpoint exists. If the chat id is gone the server 404s and we give up
-				// after close — handled by disconnectWakeChannel on tab/chat switch.
+				// after close. Handled by disconnectWakeChannel on tab/chat switch.
 			};
 		},
 		finalizeWakeTurn() {

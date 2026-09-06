@@ -28,7 +28,7 @@
 					v-for="server in mcp.servers"
 					:key="server.id"
 					class="flex items-center gap-2 rounded-md px-2 py-1.5"
-					:title="`${server.target} — ${server.tools.length} tool(s)`"
+					:title="`${server.target} - ${server.tools.length} tool(s)`"
 				>
 					<span
 						class="size-2 shrink-0 rounded-full"

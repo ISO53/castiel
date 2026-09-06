@@ -20,7 +20,7 @@ import java.util.List;
 
 /**
  * Web search for the model, backed by DuckDuckGo's legacy HTML endpoint
- * ({@code html.duckduckgo.com/html/}) — no API key required.
+ * ({@code html.duckduckgo.com/html/}). No API key required.
  */
 @Service
 public class WebSearchTool implements ToolProvider {

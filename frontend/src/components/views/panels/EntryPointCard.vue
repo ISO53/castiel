@@ -19,7 +19,7 @@
 				</p>
 			</div>
 			<p v-if="ep.method || ep.action" class="shrink-0 font-mono text-[10px] text-muted-foreground">
-				<span :class="methodClass">{{ ep.method ?? "—" }}</span>
+				<span :class="methodClass">{{ ep.method ?? "-" }}</span>
 				{{ ep.action ?? "" }}
 			</p>
 		</div>
@@ -78,7 +78,7 @@ const METHOD_CLASSES = {
 const pageLabel = computed(() => props.ep.page?.replace(/^https?:\/\//, "") ?? "");
 
 const authTitle = computed(() => {
-	if (props.ep.auth === "public") return "Public — no authentication required";
+	if (props.ep.auth === "public") return "Public. No authentication required";
 	if (props.ep.auth === "authenticated") return "Requires authentication";
 	return "Authentication state unknown";
 });

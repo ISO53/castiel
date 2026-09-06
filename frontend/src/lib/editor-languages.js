@@ -1,4 +1,4 @@
-// Language support is loaded lazily per file extension — each import becomes its
+// Language support is loaded lazily per file extension. Each import becomes its
 // own Vite chunk, so opening the app pays nothing until a matching file opens.
 const LANGUAGE_LOADERS = {
 	js: () => import("@codemirror/lang-javascript").then((m) => m.javascript()),
@@ -36,7 +36,7 @@ const LANGUAGE_LOADERS = {
 	java: () => import("@codemirror/lang-cpp").then((m) => m.cpp()),
 	cs: () => import("@codemirror/lang-cpp").then((m) => m.cpp()),
 
-	// Legacy stream modes — small and good enough for config/script files.
+	// Legacy stream modes. Small and good enough for config/script files.
 	sh: () => import("@codemirror/legacy-modes/mode/shell").then((m) => streamLanguage(m.shell)),
 	bash: () => import("@codemirror/legacy-modes/mode/shell").then((m) => streamLanguage(m.shell)),
 	zsh: () => import("@codemirror/legacy-modes/mode/shell").then((m) => streamLanguage(m.shell)),

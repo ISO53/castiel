@@ -60,7 +60,7 @@
 						:key="entry.id"
 						type="button"
 						class="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted/60"
-						:title="`${entry.description} — opens the ${entry.label} views`"
+						:title="`${entry.description} - opens the ${entry.label} views`"
 						@click="openDocumentView(entry)"
 					>
 						<span class="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded border bg-muted/40 text-muted-foreground">
@@ -216,7 +216,7 @@ export default {
 			try {
 				await this.workspace.fetch();
 			} catch {
-				// No session to restore — stay on the empty state until a workspace is opened.
+				// No session to restore. Stay on the empty state until a workspace is opened.
 			}
 		},
 		async reload() {
