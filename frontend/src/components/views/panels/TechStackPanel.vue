@@ -13,14 +13,13 @@
 				<h3 class="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{{ section.name }}</h3>
 			</div>
 
-			<div class="min-w-fit">
+			<div class="min-w-fit pt-2.5 pb-2.5">
 				<div
 					v-for="(tech, index) in section.techs"
 					:key="tech.name"
 					class="relative h-10"
-					:class="index > 0 ? '-mt-5' : ''"
 				>
-					<svg class="absolute left-14 top-0 h-10 w-36" viewBox="0 0 160 64">
+					<svg class="absolute left-14 -top-2.5 h-[60px] w-36 overflow-visible" viewBox="0 0 160 64">
 						<polygon
 							points="80,2 156,32 80,62 4,32"
 							:fill="section.color"
@@ -31,7 +30,7 @@
 							<title>{{ [tech.desc, tech.evidence].filter(Boolean).join(" - ") || tech.name }}</title>
 						</polygon>
 					</svg>
-					<div class="absolute left-52 top-1 w-72 min-w-0">
+					<div class="absolute left-52 top-1/2 -translate-y-1/2 w-72 sm:w-96 min-w-0">
 						<p class="truncate text-xs font-semibold text-foreground" :title="tech.name">{{ tech.name }}</p>
 						<p v-if="tech.desc" class="truncate text-[10px] leading-tight text-muted-foreground" :title="tech.desc">
 							{{ tech.desc }}
