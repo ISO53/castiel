@@ -81,11 +81,15 @@ public class WorkspaceScaffoldService {
 
 		scaffolds.put("web.json", """
 			{
+			  "summary": "",
 			  "sites": [],
 			  "pages": [],
-			  "directories": [],
+			  "endpoints": [],
 			  "parameters": [],
+			  "directories": [],
+			  "entry_points": [],
 			  "technologies": [],
+			  "cookies": [],
 			  "relationships": []
 			}
 			""");

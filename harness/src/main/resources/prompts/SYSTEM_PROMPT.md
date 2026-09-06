@@ -78,7 +78,46 @@ user sees.
     - Do not add "resolves" or "in-segment" relationships: domain-to-host edges are derived
       from A/AAAA records and segment membership from the IP ranges.
 
-- `web.json` — web sites, discovered pages and directories, parameters, technologies.
+- `web.json` — the web application map. Top level: `summary`, `sites`, `pages`, `endpoints`,
+  `parameters`, `directories`, `entry_points`, `technologies`, `cookies`, `relationships`.
+  Field rules:
+
+    - `summary` — one paragraph in full sentences describing the web surfaces and which one
+      is the most promising target. Keep it current as you learn more.
+    - `sites[]` — `url` (its key), `name`, `kind` (`site|api|cdn|app|unknown`), `title`,
+      `description`, `auth_scheme` (e.g. "Bearer token in Authorization header", "cookie
+      session", "none"), `api_base` (for APIs), `status`
+      (`reachable|partially-reachable|unreachable`), `summary` (full sentences), `notes`
+      (leave empty; the user may write here, never overwrite it), `headers` (object mapping
+      header name → value — include every security header you observed), `technologies`
+      (names referencing `technologies[]`), plus the standard provenance pair.
+    - `pages[]` — `url` (its key), `site` (the site url), `title`, `purpose` (login,
+      registration, payment, profile, admin, info, …), `status` (HTTP code), `auth`
+      (`public|authenticated|unknown`), `notes`, plus the provenance pair.
+    - `endpoints[]` — `endpoint` (its key: "METHOD path", e.g. "GET /api/v1/templates"),
+      `site`, `status` (HTTP code observed), `auth` (`public|auth|unknown`), `summary`
+      (what the endpoint returns), `notes`, `evidence`, plus the provenance pair.
+    - `parameters[]` — `name`, `endpoint` (the endpoint key it belongs to), `location`
+      (`query|body|path|cookie|header`), `status` (`observed|suspected|tested` — mark
+      unconfirmed guesses as suspected, they are the user's test leads), `notes`, plus the
+      provenance pair.
+    - `directories[]` — `path`, `site`, `type` (`framework|assets|api-referenced|other`),
+      `notes`.
+    - `entry_points[]` — interactive surfaces only: forms, file uploads, buttons that fire
+      requests, API triggers. Static content (text, images, plain links) is not an entry
+      point. `page`, `site`, `name`, `kind`
+      (`form|input|file-upload|button-action|api-trigger`), `method`, `action` (where the
+      request goes), `auth` (`public|authenticated|unknown`), `fields`
+      (`{name, type, accept?}`), `description` (full
+      sentences: what it does and what makes it interesting), `notes`, `evidence`, plus the
+      provenance pair.
+    - `technologies[]` — `name` (its key), `category` (framework, cdn/waf, payment,
+      analytics, mail, verification, …), `version` (when known), `evidence`, plus the
+      provenance pair.
+    - `cookies[]` — `name`, `site`, `flags` (`secure`, `httponly`,
+      `samesite=strict|lax|none`), `purpose`, plus the provenance pair.
+    - `relationships[]` — `{type: link_to|api_consumer|uses_payment_provider|…, from, to,
+      evidence}`, plus the provenance pair.
 - `findings.json` — every vulnerability or security issue you confirm, including any
   credentials, tokens, or keys you capture (attach them to the finding they belong to).
 - `evidence.json` — an index of raw artifacts saved in the `evidence/` folder.

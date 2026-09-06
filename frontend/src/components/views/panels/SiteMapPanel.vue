@@ -22,17 +22,18 @@ import EmptyHint from "@/components/views/EmptyHint.vue";
 
 const props = defineProps({ data: { type: Object, default: null } });
 
-/** Sites and pages flatten into one row each; sites sort above their pages. */
+/** Sites, pages and directories flatten into one row each; sites sort above their pages. */
 const rows = computed(() => {
 	const result = [];
 	for (const site of props.data?.sites ?? []) {
 		if (!site?.url) continue;
 		result.push({
-			kind: "site",
+			kind: site.kind ?? "site",
 			url: site.url,
-			status: "",
-			info: [site.title, site.description, site.notes].filter(Boolean).join(" — "),
-			discovered_by: site.discovered_by ?? "",
+			status: site.status ?? "",
+			auth: site.auth_scheme ?? "",
+			info: [site.title, site.description, site.summary, site.notes].filter(Boolean).join(" — "),
+			discoveredBy: site.discovered_by ?? "",
 		});
 	}
 	for (const page of props.data?.pages ?? []) {
@@ -40,9 +41,21 @@ const rows = computed(() => {
 		result.push({
 			kind: "page",
 			url: page.url,
-			status: page.status ?? "",
+			status: page.status != null ? String(page.status) : "",
+			auth: page.auth ?? "",
 			info: [page.purpose, page.title, page.notes].filter(Boolean).join(" — "),
-			discovered_by: page.discovered_by ?? "",
+			discoveredBy: page.discovered_by ?? "",
+		});
+	}
+	for (const directory of props.data?.directories ?? []) {
+		if (!directory?.path) continue;
+		result.push({
+			kind: "directory",
+			url: directory.path,
+			status: "",
+			auth: "",
+			info: [directory.type, directory.notes].filter(Boolean).join(" — "),
+			discoveredBy: directory.discovered_by ?? "",
 		});
 	}
 	return result;
@@ -53,19 +66,22 @@ const columns = [
 		id: "kind",
 		header: "Type",
 		accessorFn: (row) => row.kind,
-		cell: ({ getValue }) => getValue(),
-		sortingFn: (a, b) => (a.original.kind === "site" ? -1 : 1) - (b.original.kind === "site" ? -1 : 1),
 	},
 	{
 		id: "url",
-		header: "URL",
+		header: "URL / Path",
 		accessorFn: (row) => row.url,
-		cell: ({ getValue }) => getValue(),
 	},
 	{
 		id: "status",
 		header: "Status",
 		accessorFn: (row) => row.status,
+		cell: ({ getValue }) => getValue() || "—",
+	},
+	{
+		id: "auth",
+		header: "Auth",
+		accessorFn: (row) => row.auth,
 		cell: ({ getValue }) => getValue() || "—",
 	},
 	{
@@ -79,7 +95,7 @@ const columns = [
 		id: "discoveredBy",
 		header: "Found Via",
 		enableSorting: false,
-		accessorFn: (row) => row.discovered_by,
+		accessorFn: (row) => row.discoveredBy,
 		cell: ({ getValue }) => getValue() || "—",
 	},
 ];

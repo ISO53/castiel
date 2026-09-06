@@ -5,7 +5,7 @@
 		message="No technologies fingerprinted yet."
 		hint="The service stack will assemble here — frontend on top, infrastructure below."
 	/>
-	<div v-else class="h-full min-h-0 overflow-y-auto p-3">
+	<ScrollArea v-else class="h-full min-h-0"><div class="p-3">
 		<h2 class="mb-3 text-sm font-bold uppercase tracking-widest text-foreground">Tech Stack</h2>
 
 		<section v-for="section in sections" :key="section.name" class="mb-5">
@@ -41,12 +41,14 @@
 			</div>
 		</section>
 	</div>
+	</ScrollArea>
 </template>
 
 <script setup>
 import { computed } from "vue";
 import { Boxes } from "@lucide/vue";
 import EmptyHint from "@/components/views/EmptyHint.vue";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const props = defineProps({ data: { type: Object, default: null } });
 
@@ -100,7 +102,7 @@ const sections = computed(() => {
 		const target = section ?? buckets[1];
 		target.techs.push({
 			name,
-			desc: meta.category ?? meta.version ?? "",
+			desc: [meta.category, meta.version].filter(Boolean).join(" · "),
 			evidence: meta.evidence ?? "",
 		});
 	}

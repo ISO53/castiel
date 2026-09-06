@@ -7,7 +7,7 @@
 				:placeholder="searchPlaceholder" />
 		</div>
 
-		<div class="min-h-0 flex-1 overflow-auto">
+		<ScrollArea class="min-h-0 flex-1">
 			<table class="w-full border-collapse text-xs">
 				<thead class="sticky top-0 z-10 bg-muted">
 					<tr>
@@ -39,7 +39,7 @@
 					</tr>
 				</tbody>
 			</table>
-		</div>
+		</ScrollArea>
 	</div>
 </template>
 
@@ -53,6 +53,7 @@ import {
 } from "@tanstack/vue-table";
 import { ArrowDown, ArrowUp, ArrowUpDown, Search } from "@lucide/vue";
 import { computed, ref } from "vue";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 /**
  * Headless TanStack Table rendered with app styling: sortable headers plus an optional
