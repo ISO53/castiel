@@ -1,6 +1,6 @@
 <template>
 	<div
-		class="group rounded-lg border border-border bg-background p-3"
+		class="group rounded-lg border border-border bg-card p-3"
 	>
 		<div class="flex items-start justify-between gap-2">
 			<div class="flex min-w-0 items-center gap-2">
