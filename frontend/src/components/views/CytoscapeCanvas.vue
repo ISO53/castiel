@@ -107,6 +107,16 @@ const STYLESHEET = [
 		},
 	},
 	{
+		// DNS-derived edges (A/AAAA records, subdomains) in the domain blue.
+		selector: "edge.dns",
+		style: { "line-color": "#60a5fa", "target-arrow-color": "#60a5fa" },
+	},
+	{
+		// Explicit cross-cutting relationships (cert reuse, access, trust) dashed amber.
+		selector: "edge.rel",
+		style: { "line-style": "dashed", "line-color": "#d97706", "target-arrow-color": "#d97706" },
+	},
+	{
 		selector: "node:selected",
 		style: { "border-color": "#e4e4e7", "border-width": 2 },
 	},

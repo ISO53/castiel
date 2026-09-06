@@ -158,7 +158,14 @@ public class FileExplorerService {
 			throw new IllegalArgumentException("This looks like a binary file and cannot be opened in the editor.");
 		}
 
-		return new FileContent(target.toString(), nameOf(target), size, new String(bytes, StandardCharsets.UTF_8));
+		// Strip a UTF-8 BOM so JSON.parse on the frontend does not choke on files
+		// saved by Windows editors that insist on writing one.
+		String content = new String(bytes, StandardCharsets.UTF_8);
+		if (!content.isEmpty() && content.charAt(0) == '\uFEFF') {
+			content = content.substring(1);
+		}
+
+		return new FileContent(target.toString(), nameOf(target), size, content);
 	}
 
 	/**

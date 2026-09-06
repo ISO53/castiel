@@ -51,7 +51,33 @@ user sees.
 - `engagement.json` — target scope, out-of-scope entries, objectives, rules of engagement,
   and the current phase. OSINT findings about the organization (people, email addresses,
   social profiles) also live here, under the `osint` key.
-- `network.json` — network segments, hosts and their services, DNS domains and records.
+- `network.json` — the network map. Top level: `summary`, `segments`, `hosts`, `domains`,
+  `relationships`. Field rules:
+
+    - `summary` — one paragraph in full sentences describing what the network looks like so
+      far. Keep it current as you learn more.
+    - `segments[]` — `cidr` (its key), `label`, `role` (`internal|dmz|vpn|guest|unknown`),
+      plus the standard provenance pair.
+    - `hosts[]` — `ip` (its key), `hostnames` (array; PTR records and certificate SANs often
+      reveal more than one), `status` (`up|down|filtered`), `os` as
+      `{name, confidence: confirmed|likely|guessed}`, `role` (your best guess: web-server, db,
+      domain-controller, router, workstation, …), `summary` (full sentences: what this host is
+      and why it matters — the user sees it in the topology), `notes` (leave empty; the user
+      may write here, never overwrite it), nested `services[]`, and the provenance pair plus
+      `last_seen`.
+    - `services[]` — `port`, `protocol` (`tcp|udp`), `state` (`open|closed|filtered`),
+      `service`, `product`, `version`, `banner` (raw grab when the tool gives one), and on TLS
+      services `cert` as `{subject, san[], issuer, expires}` (the SAN list is a recon goldmine —
+      always record it), plus the provenance pair and `evidence` (file names registered in
+      `evidence.json`).
+    - `domains[]` — `domain` (its key), `parent` (the apex domain for subdomains, omit on
+      apexes), `records` (object keyed by type: A, AAAA, MX, NS, TXT, CNAME, SRV), `summary`,
+      plus the provenance pair. Every subdomain you confirm becomes its own entry here.
+    - `relationships[]` — only for edges the rest of the document cannot express, e.g.
+      `{from, to, type: shares-certificate|provides-access|trusts, detail}`.
+    - Do not add "resolves" or "in-segment" relationships: domain-to-host edges are derived
+      from A/AAAA records and segment membership from the IP ranges.
+
 - `web.json` — web sites, discovered pages and directories, parameters, technologies.
 - `findings.json` — every vulnerability or security issue you confirm, including any
   credentials, tokens, or keys you capture (attach them to the finding they belong to).

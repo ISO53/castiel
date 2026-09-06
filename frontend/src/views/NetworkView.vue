@@ -6,10 +6,7 @@
 					Topology
 				</TabsTrigger>
 				<TabsTrigger value="services" class="h-8 min-w-fit px-5">
-					Ports & Services
-				</TabsTrigger>
-				<TabsTrigger value="dns" class="h-8 min-w-fit px-5">
-					DNS
+					Ports &amp; Services
 				</TabsTrigger>
 			</TabsList>
 			<TabsContent value="topology" class="min-h-0 flex-1 overflow-hidden pt-2">
@@ -18,9 +15,6 @@
 			<TabsContent value="services" class="min-h-0 flex-1 overflow-hidden">
 				<ServiceMatrixPanel :data="data" />
 			</TabsContent>
-			<TabsContent value="dns" class="min-h-0 flex-1 overflow-hidden pt-2">
-				<DnsTreePanel :data="data" />
-			</TabsContent>
 		</Tabs>
 	</DocumentShell>
 </template>
@@ -28,7 +22,6 @@
 <script setup>
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DocumentShell from "@/components/views/DocumentShell.vue";
-import DnsTreePanel from "@/components/views/panels/DnsTreePanel.vue";
 import NetworkTopologyPanel from "@/components/views/panels/NetworkTopologyPanel.vue";
 import ServiceMatrixPanel from "@/components/views/panels/ServiceMatrixPanel.vue";
 </script>

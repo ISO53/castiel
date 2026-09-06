@@ -13,19 +13,24 @@ import EmptyHint from "@/components/views/EmptyHint.vue";
 
 const props = defineProps({ data: { type: Object, default: null } });
 
-/** Flattens hosts × their nested services into one sortable matrix row each. */
+/** Flattens hosts × their nested services into one self-contained row per service. */
 const rows = computed(() => {
 	const result = [];
 	for (const host of props.data?.hosts ?? []) {
 		for (const service of host.services ?? []) {
 			result.push({
 				ip: host.ip,
-				hostname: host.hostname ?? "",
+				hostname: host.hostnames?.[0] ?? "",
 				port: service.port,
 				protocol: service.protocol ?? "tcp",
 				state: service.state ?? "open",
 				service: service.service ?? "",
-				version: service.version ?? service.product ?? "",
+				product: service.product ?? "",
+				version: service.version ?? "",
+				banner: service.banner ?? "",
+				certSans: service.cert?.san ?? [],
+				discoveredBy: service.discovered_by ?? "",
+				evidence: service.evidence ?? [],
 			});
 		}
 	}
@@ -34,6 +39,7 @@ const rows = computed(() => {
 
 const columns = [
 	{ accessorKey: "ip", header: "Host" },
+	{ accessorKey: "hostname", header: "Hostname", cell: ({ getValue }) => getValue() || "—" },
 	{
 		accessorKey: "port",
 		header: "Port",
@@ -41,7 +47,12 @@ const columns = [
 		sortingFn: (a, b) => Number(a.original.port) - Number(b.original.port),
 	},
 	{ accessorKey: "state", header: "State" },
-	{ accessorKey: "service", header: "Service" },
-	{ accessorKey: "version", header: "Product / Version", cell: ({ getValue }) => getValue() || "—" },
+	{ accessorKey: "service", header: "Service", cell: ({ getValue }) => getValue() || "—" },
+	{ accessorKey: "product", header: "Product", cell: ({ getValue }) => getValue() || "—" },
+	{ accessorKey: "version", header: "Version", cell: ({ getValue }) => getValue() || "—" },
+	{ accessorKey: "banner", header: "Banner", enableSorting: false, cell: ({ getValue }) => getValue() || "—" },
+	{ id: "cert", header: "TLS SANs", enableSorting: false, cell: ({ row }) => row.original.certSans.join(", ") || "—" },
+	{ accessorKey: "discoveredBy", header: "Discovered By", enableSorting: false, cell: ({ getValue }) => getValue() || "—" },
+	{ id: "evidence", header: "Evidence", enableSorting: false, cell: ({ row }) => row.original.evidence.join(", ") || "—" },
 ];
 </script>

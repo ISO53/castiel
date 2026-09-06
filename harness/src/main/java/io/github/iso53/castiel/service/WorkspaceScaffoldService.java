@@ -71,6 +71,7 @@ public class WorkspaceScaffoldService {
 
 		scaffolds.put("network.json", """
 			{
+			  "summary": "",
 			  "segments": [],
 			  "hosts": [],
 			  "domains": [],
