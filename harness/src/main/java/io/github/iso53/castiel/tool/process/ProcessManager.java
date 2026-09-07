@@ -16,6 +16,7 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.security.SecureRandom;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -143,15 +144,20 @@ public class ProcessManager {
 	 *
 	 * <p>Kills descendants before their parents on repeated tree snapshots, so newly spawned
 	 * grandchildren are caught by the next pass instead of escaping as orphans. Completion
-	 * still flows through {@code onExit}, which records the KILLED state.
+	 * still flows through {@code onExit}, which records the KILLED state. A marker line is
+	 * appended to the output buffer so later reads (agent or UI) see who ended the process;
+	 * the buffer itself is retained until the entry is removed.
 	 *
+	 * @param killedBy who ordered the kill, phrased for display ("the agent", "the user").
 	 * @return descriptive text about what was terminated, for agent-visible feedback.
 	 */
-	public String kill(String id) {
+	public String kill(String id, String killedBy) {
 		ManagedProcess entry = require(id);
 		if (!entry.isRunning()) {
 			return "Process " + id + " was not running (state: " + entry.state() + ").";
 		}
+		entry.output().append("\n[harness] process killed by " + killedBy
+				+ " at " + Instant.now() + "\n");
 		entry.requestKill();
 		List<String> victims = destroyTree(entry.underlying().toHandle());
 		return "Terminated "
@@ -162,6 +168,11 @@ public class ProcessManager {
 				+ (victims.isEmpty()
 						? "."
 						: " together with " + victims.size() + " child process(es):\n" + String.join("\n", victims));
+	}
+
+	/** Agent-facing kill via {@code bg_kill}. */
+	public String kill(String id) {
+		return kill(id, "the agent");
 	}
 
 	/** Last-resort cleanup so closing Castiel never leaves scans running headless. */

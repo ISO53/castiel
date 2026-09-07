@@ -92,6 +92,28 @@ export const useProcessesStore = defineStore("processes", {
 			}
 		},
 		/**
+		 * Kills a running process on the user's behalf. The row and its output stay in
+		 * the registry (the kill marker streams into the terminal pane); only remove()
+		 * takes a row off the list. A 409 means the process already exited on its own;
+		 * the refetch below corrects the row.
+		 */
+		async kill(id) {
+			const response = await fetch(`${API}/${encodeURIComponent(id)}/kill`, { method: "POST" }).catch(() => {
+				throw new Error("Harness is unreachable; try again shortly.");
+			});
+			if (!response.ok && response.status !== 409) {
+				let message = `Could not kill the process (HTTP ${response.status}).`;
+				try {
+					const body = await response.json();
+					if (body?.error) message = body.error;
+				} catch {
+					// Non-JSON error body; keep the generic message.
+				}
+				throw new Error(message);
+			}
+			await this.fetchList();
+		},
+		/**
 		 * Starts a process on the user's behalf from the bottom-dock dialog; the
 		 * description is optional. Resolves with the new row and auto-selects it so
 		 * the terminal pane opens on it; rejects with a user-facing error message.

@@ -118,6 +118,23 @@ public class ProcessController {
 		return Mono.just(Map.of("removed", removed));
 	}
 
+	/**
+	 * Kills a running process on the user's behalf. The entry stays in the registry with
+	 * its output buffer, so the user and the agent can still inspect what it produced;
+	 * only removal (DELETE) takes a row off the list.
+	 */
+	@PostMapping("/{id}/kill")
+	public Mono<Map<String, Object>> kill(@PathVariable("id") String id) {
+		ManagedProcess entry = require(id);
+		if (!entry.isRunning()) {
+			throw new IllegalStateException(id + " is not running (state: " + entry.state().name() + ")");
+		}
+		String killDescription = manager.kill(id, "the user");
+		Map<String, Object> body = toRow(manager.get(id));
+		body.put("killDescription", killDescription);
+		return Mono.just(body);
+	}
+
 	private ManagedProcess require(String id) {
 		ManagedProcess entry = manager.get(id);
 		if (entry == null) {

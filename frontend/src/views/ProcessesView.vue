@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { ChevronDown, PanelBottomClose, Terminal as TerminalIcon, Trash2 } from "@lucide/vue";
+import { ChevronDown, PanelBottomClose, SquareX, Terminal as TerminalIcon, Trash2 } from "@lucide/vue";
 import { Terminal } from "@/components/ai-elements/terminal";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -36,6 +36,22 @@ const startError = ref("");
 const starting = ref(false);
 
 const canStart = computed(() => startCommand.value.trim().length > 0 && !starting.value);
+
+// Id of the row with a kill request in flight; debounces double-clicks.
+const killingId = ref(null);
+
+async function killProcess(row) {
+	if (killingId.value) return;
+	killingId.value = row.id;
+	try {
+		await store.kill(row.id);
+	} catch {
+		// Harness unreachable or the process raced to exit; the change feed
+		// refreshes the row either way, so there is nothing to surface here.
+	} finally {
+		if (killingId.value === row.id) killingId.value = null;
+	}
+}
 
 function openStartDialog() {
 	startCommand.value = "";
@@ -160,6 +176,11 @@ function shortCommand(command) {
 							<td class="px-3 py-0">
 								<div class="flex h-7 items-center justify-end gap-1">
 									<ChevronDown v-if="row.id === store.selectedId" :size="14" class="text-zinc-500" />
+									<Button v-if="row.state === 'RUNNING'" size="icon" variant="ghost"
+										class="size-6 text-zinc-500 hover:text-red-400" title="Kill process"
+										:disabled="killingId === row.id" @click.stop="killProcess(row)">
+										<SquareX :size="13" />
+									</Button>
 									<Button v-if="row.state !== 'RUNNING'" size="icon" variant="ghost"
 										class="size-6 text-zinc-500 hover:text-red-400" title="Remove from tracking"
 										@click.stop="store.remove(row.id)">
