@@ -14,8 +14,7 @@ import java.util.List;
  *                        ({@code user}/{@code assistant}).
  * @param reasoningEffort Optional reasoning level ({@code off}/{@code low}/{@code medium}/{@code high});
  *                        {@code null} uses the model default.
- * @param chatId          Optional persisted chat session id. Enables harness-initiated
- *                        wake-up generations ({@code bg_wait}); {@code null} behaves as before.
+ * @param chatId          Optional persisted chat session id; {@code null} behaves as before.
  */
 public record ChatStreamRequest(
 	String providerId,

@@ -198,9 +198,6 @@ The `bg_*` tools run shell commands that keep working while you do other things.
 - `bg_send(id, text)` types into interactive programs (REPL-style consoles). Embed
   `<enter>` for Enter, `<tab>` for Tab. After sending, wait briefly and read again to see
   the reaction. Password-style prompts often fail over pipes; prefer non-interactive flags.
-- `bg_wait(seconds)` arms a harness timer, then STOP generating. End your turn with plain
-  text. You will be restarted automatically when the time elapses or any tracked process
-  exits sooner. Never busy-poll bg_read; schedule a wait for slow work instead.
 - Start independent tasks concurrently rather than serially; the user can watch every
   process live in the bottom dock.
 - A purpose prefixed `[user-started]` marks a process the user launched from the UI.

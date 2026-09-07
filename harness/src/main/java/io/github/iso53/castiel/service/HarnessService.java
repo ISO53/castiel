@@ -20,7 +20,6 @@ import io.github.iso53.castiel.model.*;
 import io.github.iso53.castiel.provider.GenerationOptions;
 import io.github.iso53.castiel.provider.LlmProvider;
 import io.github.iso53.castiel.tool.*;
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
@@ -58,33 +57,18 @@ public class HarnessService {
 	/** Maximum characters kept from a single MCP tool result; larger outputs spill to disk. */
 	private static final int MCP_OUTPUT_CHAR_CAP = 16_384;
 
-	/**
-	 * Safety valve against runaway autonomy: consecutive harness-initiated generations
-	 * without a real user message are capped; a genuine user turn resets the counter.
-	 */
-	private static final int MAX_CONSECUTIVE_WAKEUPS = 15;
-
 	private static final ObjectMapper JSON = new ObjectMapper();
 
 	private final LlmClientFactory llmClientFactory;
 	private final UserSettingsService userSettingsService;
 	private final UserQuestionTool userQuestionTool;
-	private final BackgroundShellTool backgroundShellTool;
 	private final ChatPersistenceService chatPersistence;
-	private final NudgeScheduler nudgeScheduler;
-	private final WakeupBus wakeupBus;
 	private final McpManager mcpManager;
 	private final WorkspaceEventBus workspaceEvents;
 	private final WorkspaceSession workspaceSession;
 	private final List<ToolSpecification> toolSpecifications;
 	private final Map<String, ToolExecutor> toolExecutors;
 	private final ConcurrentMap<String, GenerationState> generations = new ConcurrentHashMap<>();
-
-	/** Chat ids with a generation (user- or harness-initiated) currently streaming. */
-	private final ConcurrentMap<String, Boolean> busyChats = new ConcurrentHashMap<>();
-
-	/** Consecutive harness-initiated generations per chat, reset by user turns. */
-	private final ConcurrentMap<String, Integer> wakeupCounts = new ConcurrentHashMap<>();
 
 	/**
 	 * Bookkeeping for one in-flight chat stream: the LangChain4j {@link StreamingHandle}
@@ -103,8 +87,6 @@ public class HarnessService {
 		LlmClientFactory llmClientFactory,
 		UserSettingsService userSettingsService,
 		ChatPersistenceService chatPersistence,
-		NudgeScheduler nudgeScheduler,
-		WakeupBus wakeupBus,
 		McpManager mcpManager,
 		WorkspaceEventBus workspaceEvents,
 		WorkspaceSession workspaceSession,
@@ -113,22 +95,16 @@ public class HarnessService {
 		this.llmClientFactory = llmClientFactory;
 		this.userSettingsService = userSettingsService;
 		this.chatPersistence = chatPersistence;
-		this.nudgeScheduler = nudgeScheduler;
-		this.wakeupBus = wakeupBus;
 		this.mcpManager = mcpManager;
 		this.workspaceEvents = workspaceEvents;
 		this.workspaceSession = workspaceSession;
 
 		UserQuestionTool questionTool = null;
-		BackgroundShellTool shellTool = null;
 		this.toolSpecifications = new ArrayList<>();
 		Map<String, ToolExecutor> executors = new LinkedHashMap<>();
 		for (ToolProvider provider : toolProviders) {
 			if (provider instanceof UserQuestionTool userTool) {
 				questionTool = userTool;
-			}
-			if (provider instanceof BackgroundShellTool backgroundTool) {
-				shellTool = backgroundTool;
 			}
 			for (Method method : provider.getClass().getMethods()) {
 				if (method.isAnnotationPresent(Tool.class)) {
@@ -141,18 +117,14 @@ public class HarnessService {
 		if (questionTool == null) {
 			throw new IllegalStateException(UserQuestionTool.class.getSimpleName() + " bean is missing");
 		}
-		if (shellTool == null) {
-			throw new IllegalStateException(BackgroundShellTool.class.getSimpleName() + " bean is missing");
-		}
 		this.userQuestionTool = questionTool;
-		this.backgroundShellTool = shellTool;
 		this.toolExecutors = executors;
 	}
 
 	/** Wraps file-mutating tools so their execution pings the UI's workspace feed. */
 	private ToolExecutor decorate(ToolProvider provider, ToolExecutor delegate) {
 		if (!(provider instanceof FileWriteTool || provider instanceof FileEditTool
-				|| provider instanceof BashTool || provider instanceof BackgroundShellTool)) {
+				|| provider instanceof BashTool)) {
 			return delegate;
 		}
 		boolean reportsPath = provider instanceof FileWriteTool || provider instanceof FileEditTool;
@@ -196,18 +168,6 @@ public class HarnessService {
 			}
 			return "*";
 		}
-	}
-
-	/** Wires the nudge scheduler to this service once both beans exist. */
-	@PostConstruct
-	void wireWakeUps() {
-		nudgeScheduler.setWakeHandler(token -> {
-			int split = token.indexOf('\u0000');
-			triggerWakeup(
-				split < 0 ? token : token.substring(0, split),
-				split < 0 ? "the requested check-in time elapsed" : token.substring(split + 1)
-			);
-		});
 	}
 
 	/**
@@ -255,11 +215,6 @@ public class HarnessService {
 		List<ChatMessage> messages = buildMessages(resolveTurns(request, sessionAware ? chatId : null));
 		TurnRecorder recorder = null;
 		if (sessionAware) {
-			wakeupCounts.remove(chatId); // Real user activity resets the autonomy guard.
-			if (busyChats.putIfAbsent(chatId, Boolean.TRUE) != null) {
-				return Flux.error(new IllegalStateException("Another generation is still streaming for this chat"));
-			}
-			backgroundShellTool.setActiveChatId(chatId);
 			// The last turn is the message the user just sent. Record it before streaming.
 			recorder = new TurnRecorder(chatId, chatPersistence);
 			ChatTurn lastTurn = request.messages().getLast();
@@ -268,14 +223,7 @@ public class HarnessService {
 			}
 		}
 
-		Flux<ServerSentEvent<String>> generation = openGeneration(provider, modelName, options, messages, recorder);
-		if (!sessionAware) {
-			return generation;
-		}
-		return generation.doFinally(signal -> {
-			busyChats.remove(chatId);
-			backgroundShellTool.setActiveChatId(null);
-		});
+		return openGeneration(provider, modelName, options, messages, recorder);
 	}
 
 	/** Spawns a full model generation with its own cancellable id and streaming state. */
@@ -296,70 +244,6 @@ public class HarnessService {
 			sink.next(event("start", json(Map.of("id", generationId))));
 			streamRound(provider, modelName, options, messages, sink, state, 0);
 		});
-	}
-
-	/**
-	 * Starts a harness-initiated generation: replays the persisted chat thread, injects a
-	 * {@code [harness]} instruction turn explaining why the agent was woken, streams the
-	 * result into the chat's wake-up channel, and emits a {@code harness_turn} event so the
-	 * frontend can persist that instruction as part of the conversation.
-	 *
-	 * <p>Ownership of {@code busyChats} is acquired here and released in the generation's
-	 * {@code doFinally}; all synchronous failure paths release it before returning.
-	 */
-	public void triggerWakeup(String chatId, String reason) {
-		if (chatId == null || chatId.isBlank()) {
-			return;
-		}
-		if (busyChats.putIfAbsent(chatId, Boolean.TRUE) != null) {
-			log.info("Skipping wake-up for {}: a generation is already streaming", chatId);
-			return;
-		}
-		try {
-			int used = wakeupCounts.merge(chatId, 1, Integer::sum);
-			if (used > MAX_CONSECUTIVE_WAKEUPS) {
-				log.warn("Wake-up budget exhausted for {}; waiting for human input", chatId);
-				busyChats.remove(chatId);
-				return;
-			}
-
-			ChatSession session = chatPersistence.loadChat(chatId);
-			LlmProviderConfig config = userSettingsService.get().requireProvider(session.providerId());
-			List<ChatMessage> messages = buildMessages(toTurns(session.messages()));
-			String harnessText =
-				"[harness] Automated check: " +
-				reason +
-				". Review your background processes with bg_list/bg_read and continue working.";
-			messages.add(UserMessage.from(harnessText));
-
-			LlmProvider provider = llmClientFactory.create(config);
-			backgroundShellTool.setActiveChatId(chatId);
-
-			// The harness instruction turn is a real message of the conversation.
-			// Persist it before streaming so the assistant side attaches to it.
-			TurnRecorder recorder = new TurnRecorder(chatId, chatPersistence);
-			recorder.startUserTurn(harnessText, session.providerId(), session.modelName(), session.reasoningEffort());
-
-			wakeupBus.emit(chatId, event("harness_turn", json(Map.of("role", "user", "content", harnessText))));
-
-			openGeneration(provider, session.modelName(), new GenerationOptions(session.reasoningEffort()), messages, recorder)
-				.doFinally(signal -> {
-					// Finalize marker for the frontend regardless of how the turn ended,
-					// then release the session slot.
-					wakeupBus.emit(chatId, event("harness_done", "{}"));
-					busyChats.remove(chatId);
-					backgroundShellTool.setActiveChatId(null);
-				})
-				.subscribe(
-					sse -> wakeupBus.emit(chatId, sse),
-					error -> log.error("Wake-up generation failed for {}", chatId, error)
-				);
-			log.info("Wake-up generation started for {} ({})", chatId, reason);
-		} catch (Exception ex) {
-			busyChats.remove(chatId);
-			backgroundShellTool.setActiveChatId(null);
-			log.error("Could not start wake-up generation for {}: {}", chatId, ex.getMessage());
-		}
 	}
 
 	/**

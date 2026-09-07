@@ -47,8 +47,8 @@ public class ProcessController {
 
 	/**
 	 * Starts a background process on the user's behalf from the bottom-dock dialog.
-	 * The command runs like any agent-started process. Same tracking, output, stdin
-	 * and wake-up rules; the purpose is silently prefixed so the agent can tell who
+	 * The command runs like any agent-started process. Same tracking, output, and stdin
+	 * rules; the purpose is silently prefixed so the agent can tell who
 	 * started it.
 	 */
 	@PostMapping

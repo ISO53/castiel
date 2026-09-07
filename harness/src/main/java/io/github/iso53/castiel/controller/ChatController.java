@@ -2,7 +2,6 @@ package io.github.iso53.castiel.controller;
 
 import io.github.iso53.castiel.model.ChatStreamRequest;
 import io.github.iso53.castiel.service.HarnessService;
-import io.github.iso53.castiel.service.WakeupBus;
 import io.github.iso53.castiel.tool.UserQuestionTool;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -23,12 +22,10 @@ public class ChatController {
 
 	private final HarnessService harnessService;
 	private final UserQuestionTool userQuestionTool;
-	private final WakeupBus wakeupBus;
 
-	public ChatController(HarnessService harnessService, UserQuestionTool userQuestionTool, WakeupBus wakeupBus) {
+	public ChatController(HarnessService harnessService, UserQuestionTool userQuestionTool) {
 		this.harnessService = harnessService;
 		this.userQuestionTool = userQuestionTool;
-		this.wakeupBus = wakeupBus;
 	}
 
 	/**
@@ -80,20 +77,5 @@ public class ChatController {
 	@GetMapping("/health")
 	public Mono<Map<String, String>> health() {
 		return Mono.just(Map.of("status", "UP", "service", "Castiel Harness AI Streaming"));
-	}
-
-	/**
-	 * SSE channel carrying harness-initiated generations (bg_wait timers, process exit
-	 * notifications) for an open chat. Uses the same event protocol as {@link #streamChat};
-	 * tokens/tool events arriving here belong to the same conversation and must be rendered
-	 * and saved by the frontend like any user-triggered stream.
-	 */
-	@GetMapping(value = "/{chatId}/wakeup-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-	public Flux<ServerSentEvent<String>> wakeupStream(@PathVariable("chatId") String chatId) {
-		return wakeupBus.subscribe(chatId).onErrorResume(ex ->
-				Flux.just(ServerSentEvent.<String>builder()
-						.event("error")
-						.data(ex.getMessage() == null ? "wake-up stream failed" : ex.getMessage())
-						.build()));
 	}
 }

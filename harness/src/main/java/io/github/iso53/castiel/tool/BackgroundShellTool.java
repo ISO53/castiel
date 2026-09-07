@@ -2,7 +2,6 @@ package io.github.iso53.castiel.tool;
 
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
-import io.github.iso53.castiel.service.NudgeScheduler;
 import io.github.iso53.castiel.tool.process.BoundedOutputBuffer;
 import io.github.iso53.castiel.tool.process.ManagedProcess;
 import io.github.iso53.castiel.tool.process.ProcessManager;
@@ -18,9 +17,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>Contrast with {@link BashTool}: that tool blocks until a quick command finishes.
  * The {@code bg_*} family starts processes that keep running across many model rounds,
- * can be polled for new output since the last read, accept stdin input for REPL-style
- * programs, and can arm harness wake-up timers so the agent continues work while
- * waiting instead of burning tool calls in busy loops.
+ * can be polled for new output since the last read, and accept stdin input for REPL-style
+ * programs.
  */
 @Service
 public class BackgroundShellTool implements ToolProvider {
@@ -30,26 +28,12 @@ public class BackgroundShellTool implements ToolProvider {
 	private static final int MAX_READ_CHARS = 20_000;
 
 	private final ProcessManager manager;
-	private final NudgeScheduler scheduler;
-
-	/**
-	 * Chat session the currently streaming generation belongs to; set and cleared by
-	 * {@code HarnessService} around each generation. Single-user application assumption:
-	 * concurrent generations would overwrite each other's value, which degrades to an
-	 * error message from {@code bg_wait}, never incorrect scheduling of both.
-	 */
-	private volatile String activeChatId;
 
 	/** Agent-read cursor per process so bg_read returns deltas across calls. */
 	private final Map<String, Long> agentCursors = new ConcurrentHashMap<>();
 
-	public BackgroundShellTool(ProcessManager manager, NudgeScheduler scheduler) {
+	public BackgroundShellTool(ProcessManager manager) {
 		this.manager = manager;
-		this.scheduler = scheduler;
-	}
-
-	public void setActiveChatId(String chatId) {
-		this.activeChatId = chatId;
 	}
 
 	@Tool(
@@ -202,28 +186,6 @@ public class BackgroundShellTool implements ToolProvider {
 		} catch (IllegalArgumentException ex) {
 			return "Error: " + ex.getMessage();
 		}
-	}
-
-	@Tool(
-		name = "bg_wait",
-		value = {
-			"Arms a harness timer, then STOP generating. End your turn with plain text only.",
-			"When the time elapses (or a tracked process exits sooner) the harness restarts you",
-			"with a [harness] message describing what changed. Use this whenever your remaining",
-			"work depends on a running process instead of polling bg_read repeatedly.",
-		}
-	)
-	public String wait(@P("Seconds to wait before the harness wakes you (15-300)") Integer seconds) {
-		String chatId = activeChatId;
-		if (chatId == null || chatId.isBlank()) {
-			return "Error: this chat session cannot receive wake-ups (no session id); continue working without scheduling";
-		}
-		int effective = scheduler.schedule(chatId, seconds == null ? NudgeScheduler.MIN_WAIT_SECONDS : seconds);
-		return (
-			"Wake-up armed for " +
-			effective +
-			"s. Stop generating now. End your turn with plain text and no further tool calls."
-		);
 	}
 
 	private long cursorFor(ManagedProcess entry) {

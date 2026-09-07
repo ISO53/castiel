@@ -1,6 +1,5 @@
 package io.github.iso53.castiel.tool.process;
 
-import io.github.iso53.castiel.service.NudgeScheduler;
 import io.github.iso53.castiel.service.WorkspaceSession;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
@@ -42,7 +41,6 @@ public class ProcessManager {
 	public static final String USER_START_PREFIX = "[user-started] ";
 
 	private final WorkspaceSession workspace;
-	private final NudgeScheduler nudgeScheduler;
 
 	/** Random suffix source for registry ids. */
 	private static final SecureRandom ID_RANDOM = new SecureRandom();
@@ -53,9 +51,8 @@ public class ProcessManager {
 	/** Fan-out of registry change pings for the UI's SSE feed. */
 	private final Sinks.Many<String> changes = Sinks.many().replay().latest();
 
-	public ProcessManager(WorkspaceSession workspace, NudgeScheduler nudgeScheduler) {
+	public ProcessManager(WorkspaceSession workspace) {
 		this.workspace = workspace;
-		this.nudgeScheduler = nudgeScheduler;
 	}
 
 	/**
@@ -201,7 +198,6 @@ public class ProcessManager {
 			// Pipe already gone.
 		}
 		LOG.info("Background process {} exited with code {}: {}", entry.id(), code, summary(entry.purpose()));
-		nudgeScheduler.notifyProcessEvent();
 		notifyChange();
 	}
 
