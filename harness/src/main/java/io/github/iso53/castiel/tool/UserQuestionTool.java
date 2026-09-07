@@ -1,13 +1,18 @@
 package io.github.iso53.castiel.tool;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.regex.Pattern;
 
 /**
  * Lets the model ask the human a multiple-choice question and block on the answer.
@@ -69,5 +74,75 @@ public class UserQuestionTool implements ToolProvider {
 	public boolean completeUserAnswer(String toolCallId, String answer) {
 		CompletableFuture<String> future = pendingQuestions.get(toolCallId);
 		return future != null && future.complete(answer);
+	}
+
+	// ---- argument repair -------------------------------------------------------------------
+	// Models frequently send the options as glued prose ("Option one.Option two.Option three.")
+	// or as a one-element array instead of the declared List<String>. This tool owns the
+	// repair of its own arguments; the harness applies it wherever the arguments are
+	// consumed (live UI events, persisted history, replayed model history). Idempotent.
+
+	private static final ObjectMapper REPAIR_JSON = new ObjectMapper();
+
+	/** Splits a numbered option list such as "1. foo 2. bar". */
+	private static final Pattern NUMBERED_OPTIONS = Pattern.compile("(?:^|\\s)\\d{1,2}\\.\\s+");
+	/** Splits glued sentences such as "First option.Second option." (letter, period, capital). */
+	private static final Pattern GLUED_OPTIONS = Pattern.compile("(?<=[a-z0-9\\)\"]\\.)\\s*(?=[\\p{Lu}\\p{Lt}])");
+
+	/**
+	 * Returns {@code arguments} with {@code options} repaired into a JSON string array when
+	 * {@code name} is this tool; any other tool's arguments pass through untouched.
+	 */
+	public static String normalizeArguments(String name, String arguments) {
+		if (!NAME.equals(name)) {
+			return arguments == null ? "" : arguments;
+		}
+		try {
+			JsonNode root = REPAIR_JSON.readTree(arguments == null || arguments.isBlank() ? "{}" : arguments);
+			if (!root.isObject()) {
+				return arguments;
+			}
+			JsonNode options = root.get("options");
+			List<String> repaired = null;
+			if (options == null || options.isNull() || (options.isArray() && options.isEmpty())) {
+				repaired = List.of();
+			} else if (options.isTextual()) {
+				repaired = splitOptionText(options.asText());
+			} else if (options.isArray() && options.size() == 1 && options.get(0).isTextual()) {
+				List<String> split = splitOptionText(options.get(0).asText());
+				repaired = split.size() > 1 ? split : List.of(options.get(0).asText());
+			}
+			if (repaired == null) {
+				return arguments; // Already a proper array (or an unknown shape left untouched).
+			}
+			((ObjectNode) root).set("options", REPAIR_JSON.valueToTree(repaired));
+			return REPAIR_JSON.writeValueAsString(root);
+		} catch (Exception ex) {
+			return arguments; // Repair is best-effort; never break a stream over it.
+		}
+	}
+
+	/** Best-effort split of a single options string into individual options. */
+	private static List<String> splitOptionText(String text) {
+		String trimmed = text == null ? "" : text.strip();
+		if (trimmed.isEmpty()) {
+			return List.of();
+		}
+		List<String> items = new ArrayList<>();
+		for (String item : NUMBERED_OPTIONS.split(trimmed)) {
+			if (!item.isBlank()) {
+				items.add(item.strip());
+			}
+		}
+		if (items.size() > 1) {
+			return items;
+		}
+		items.clear();
+		for (String item : GLUED_OPTIONS.split(trimmed)) {
+			if (!item.isBlank()) {
+				items.add(item.strip());
+			}
+		}
+		return items.size() > 1 ? items : List.of(trimmed);
 	}
 }

@@ -116,12 +116,15 @@
 														Choose an answer{{ part.multiSelect ? " (multiple allowed)" : "" }},
 														or type your own under Other.
 													</QuestionnaireDescription>
-													<QuestionnaireChoices>
+													<QuestionnaireChoices v-if="part.options && part.options.length">
 														<QuestionnaireChoice v-for="option in part.options" :key="option"
 															:value="option">
 															<span class="font-medium">{{ option }}</span>
 														</QuestionnaireChoice>
 													</QuestionnaireChoices>
+													<p v-else class="text-[11px] leading-relaxed text-muted-foreground">
+														No answer options arrived — type your answer below.
+													</p>
 													<div class="flex flex-col gap-1.5 pt-1">
 														<p class="text-[11px] font-medium">Other</p>
 														<QuestionnaireInput placeholder="Type a custom answer�" />
@@ -781,9 +784,35 @@ export default {
 				{
 					name: "q",
 					required: true,
-					choices: call.options.map((option) => ({ value: option })),
+					choices: (call.options ?? []).map((option) => ({ value: option })),
 				},
 			];
+		},
+		// Repairs option payloads the model sends as glued prose instead of a JSON array,
+		// mirroring the harness-side repair so both live streams and raw arguments render.
+		parseQuestionOptions(options) {
+			if (Array.isArray(options)) {
+				if (options.length === 1 && typeof options[0] === "string") {
+					return this.splitOptionText(options[0]);
+				}
+				return options.filter((option) => typeof option === "string" && option.trim());
+			}
+			if (typeof options === "string") return this.splitOptionText(options);
+			return [];
+		},
+		splitOptionText(text) {
+			const trimmed = String(text ?? "").trim();
+			if (!trimmed) return [];
+			const numbered = trimmed
+				.split(/(?:^|\s)\d{1,2}\.\s+/)
+				.map((item) => item.trim())
+				.filter(Boolean);
+			if (numbered.length > 1) return numbered;
+			const glued = trimmed
+				.split(/(?<=[a-z0-9)\]"]\.)\s*(?=[A-Z\u00C0-\u024F])/)
+				.map((item) => item.trim())
+				.filter(Boolean);
+			return glued.length > 1 ? glued : [trimmed];
 		},
 
 		createMessage(role, content) {
@@ -856,6 +885,24 @@ export default {
 			this.abortController = controller;
 
 			try {
+				// Only the new turn is sent; the harness loads the rest of the thread from the
+				// persisted session by chatId, so request bodies stay small on long chats.
+				const userMessage = this.messages[this.messages.length - 2];
+				const lastTurn = {
+					role: userMessage.role,
+					content: this.messageText(userMessage),
+					toolCalls:
+						userMessage.role === "assistant"
+							? userMessage.parts
+									.filter((part) => part.type === "tool")
+									.map(({ id, name, arguments: args, result }) => ({
+										id,
+										name,
+										arguments: args,
+										result: result ?? "",
+									}))
+							: [],
+				};
 				const response = await fetch(CHAT_API, {
 					method: "POST",
 					headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
@@ -865,23 +912,7 @@ export default {
 						modelName: this.modelName,
 						reasoningEffort: this.reasoningEffort,
 						chatId: this.currentChatId ?? null,
-						messages: this.messages
-							.slice(0, -1)
-							.map((message) => ({
-								role: message.role,
-								content: this.messageText(message),
-								toolCalls:
-									message.role === "assistant"
-										? message.parts
-											.filter((part) => part.type === "tool")
-											.map(({ id, name, arguments: args, result }) => ({
-												id,
-												name,
-												arguments: args,
-												result: result ?? "",
-											}))
-										: [],
-							})),
+						messages: [lastTurn],
 					}),
 				});
 				if (!response.ok) throw new Error(await this.readError(response));
@@ -912,7 +943,7 @@ export default {
 						if (call.name === "ask_user_question") {
 							const args = JSON.parse(call.arguments || "{}");
 							entry.question = args.question ?? "(no question)";
-							entry.options = Array.isArray(args.options) ? args.options : [];
+							entry.options = this.parseQuestionOptions(args.options);
 							entry.multiSelect = Boolean(args.multiSelect);
 						}
 						// A tool call always starts a new segment. Any thinking that follows

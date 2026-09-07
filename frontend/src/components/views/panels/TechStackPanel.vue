@@ -19,7 +19,7 @@
 					:key="tech.name"
 					class="relative h-10"
 				>
-					<svg class="absolute left-14 -top-2.5 h-[60px] w-36 overflow-visible" viewBox="0 0 160 64">
+					<svg class="absolute left-14 -top-2.5 h-15 w-36 overflow-visible" viewBox="0 0 160 64">
 						<polygon
 							points="80,2 156,32 80,62 4,32"
 							:fill="section.color"

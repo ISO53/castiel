@@ -32,6 +32,7 @@ import reactor.core.publisher.FluxSink;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -54,6 +55,9 @@ public class HarnessService {
 	private static final String SYSTEM_PROMPT_PATH = "prompts/SYSTEM_PROMPT.md";
 	private static final int MAX_TOOL_ROUNDS = 64;
 
+	/** Maximum characters kept from a single MCP tool result; larger outputs spill to disk. */
+	private static final int MCP_OUTPUT_CHAR_CAP = 16_384;
+
 	/**
 	 * Safety valve against runaway autonomy: consecutive harness-initiated generations
 	 * without a real user message are capped; a genuine user turn resets the counter.
@@ -71,6 +75,7 @@ public class HarnessService {
 	private final WakeupBus wakeupBus;
 	private final McpManager mcpManager;
 	private final WorkspaceEventBus workspaceEvents;
+	private final WorkspaceSession workspaceSession;
 	private final List<ToolSpecification> toolSpecifications;
 	private final Map<String, ToolExecutor> toolExecutors;
 	private final ConcurrentMap<String, GenerationState> generations = new ConcurrentHashMap<>();
@@ -94,191 +99,6 @@ public class HarnessService {
 		volatile TurnRecorder recorder;
 	}
 
-	/**
-	 * Persists the messages of one session-aware generation to the chat file as they
-	 * become fully formed: the user turn that started it up front, then the assistant
-	 * message (streamed text/thinking plus tool calls and their results) updated round
-	 * by round. Persistence failures are logged and swallowed so they never break a
-	 * running stream.
-	 */
-	private final class TurnRecorder {
-
-		private final String chatId;
-		private ChatSession session;
-		private final String assistantId = UUID.randomUUID().toString();
-		private final List<ChatMessagePart> parts = new ArrayList<>();
-		private StringBuilder openPart;
-		private String openPartType;
-		private boolean assistantSaved;
-
-		TurnRecorder(String chatId) {
-			this.chatId = chatId;
-		}
-
-		/** Loads or creates the session file and appends the user turn that starts this generation. */
-		synchronized void startUserTurn(String content, String providerId, String modelName, String reasoningEffort) {
-			ChatSession loaded;
-			try {
-				loaded = chatPersistence.loadChat(chatId);
-			} catch (Exception ex) {
-				loaded = null;
-			}
-			List<io.github.iso53.castiel.model.ChatMessage> messages =
-				loaded == null ? new ArrayList<>() : new ArrayList<>(loaded.messages());
-			messages.add(new io.github.iso53.castiel.model.ChatMessage(
-				UUID.randomUUID().toString(), "user", List.of(ChatMessagePart.text(content))));
-			String title = loaded != null
-				? loaded.title()
-				: content.isBlank() ? "New Chat" : content.substring(0, Math.min(content.length(), 80)).trim();
-			session = new ChatSession(
-				chatId,
-				title,
-				providerId,
-				modelName,
-				reasoningEffort,
-				loaded != null ? loaded.createdAt() : null,
-				null,
-				messages
-			);
-			save();
-		}
-
-		/** Accumulates streamed text into the open part, starting a new one whenever the type flips. */
-		synchronized void appendChunk(String type, String text) {
-			if (text == null || text.isEmpty()) {
-				return;
-			}
-			if (openPart != null && !openPartType.equals(type)) {
-				boolean wasThinking = "thinking".equals(openPartType);
-				flushOpenPart();
-				if (wasThinking && "text".equals(type)) {
-					// Mirror the frontend: drop the newlines right after a thinking block.
-					text = text.replaceFirst("^[\r\n]+", "");
-					if (text.isEmpty()) {
-						return;
-					}
-				}
-			}
-			if (openPart == null) {
-				openPart = new StringBuilder();
-				openPartType = type;
-			}
-			openPart.append(text);
-		}
-
-		/** Moves any buffered text into the parts list; called when a round completes. */
-		synchronized void flushRoundText() {
-			flushOpenPart();
-		}
-
-		/** Persists the assistant message so far. Also used on cancel to keep partial output. */
-		synchronized void flushPending() {
-			flushOpenPart();
-			saveAssistantMessage();
-		}
-
-		synchronized void addToolCall(ToolExecutionRequest request) {
-			if (session == null) {
-				return;
-			}
-			parts.add(toolPart(request));
-			saveAssistantMessage();
-		}
-
-		synchronized void completeToolCall(String id, String result) {
-			if (session == null) {
-				return;
-			}
-			for (int index = 0; index < parts.size(); index++) {
-				ChatMessagePart part = parts.get(index);
-				if ("tool".equals(part.type()) && id.equals(part.id())) {
-					parts.set(index, part.withResult(result));
-					break;
-				}
-			}
-			saveAssistantMessage();
-		}
-
-		private void flushOpenPart() {
-			if (openPart == null) {
-				return;
-			}
-			if (!openPart.isEmpty()) {
-				parts.add("thinking".equals(openPartType)
-						? ChatMessagePart.thinking(openPart.toString())
-						: ChatMessagePart.text(openPart.toString()));
-			}
-			openPart = null;
-			openPartType = null;
-		}
-
-		// Appends the assistant message to the session on first save, then updates it
-		// in place (it is always the last message) as more parts complete.
-		private void saveAssistantMessage() {
-			if (session == null || parts.isEmpty()) {
-				return;
-			}
-			io.github.iso53.castiel.model.ChatMessage assistant =
-				new io.github.iso53.castiel.model.ChatMessage(assistantId, "assistant", List.copyOf(parts));
-			List<io.github.iso53.castiel.model.ChatMessage> messages = new ArrayList<>(session.messages());
-			if (assistantSaved) {
-				messages.set(messages.size() - 1, assistant);
-			} else {
-				messages.add(assistant);
-				assistantSaved = true;
-			}
-			session = new ChatSession(
-				session.id(),
-				session.title(),
-				session.providerId(),
-				session.modelName(),
-				session.reasoningEffort(),
-				session.createdAt(),
-				session.updatedAt(),
-				messages
-			);
-			save();
-		}
-
-		// Tool parts carry question details for ask_user_question so history renders
-		// like the live UI; everything else is a plain id/name/arguments part.
-		private ChatMessagePart toolPart(ToolExecutionRequest request) {
-			if (UserQuestionTool.NAME.equals(request.name())) {
-				try {
-					JsonNode args = JSON.readTree(request.arguments() == null ? "{}" : request.arguments());
-					List<String> options = new ArrayList<>();
-					if (args.path("options").isArray()) {
-						args.path("options").forEach(option -> options.add(option.asText()));
-					}
-					return new ChatMessagePart(
-						"tool",
-						null,
-						request.id(),
-						request.name(),
-						request.arguments(),
-						null,
-						null,
-						args.path("question").asText("(no question)"),
-						options.isEmpty() ? null : List.copyOf(options),
-						args.path("multiSelect").asBoolean(false),
-						null
-					);
-				} catch (IOException ex) {
-					// Malformed arguments. Fall back to a plain tool part below.
-				}
-			}
-			return ChatMessagePart.tool(request.id(), request.name(), request.arguments());
-		}
-
-		private void save() {
-			try {
-				chatPersistence.saveChat(session);
-			} catch (Exception ex) {
-				log.warn("Could not persist chat {}: {}", chatId, ex.getMessage());
-			}
-		}
-	}
-
 	public HarnessService(
 		LlmClientFactory llmClientFactory,
 		UserSettingsService userSettingsService,
@@ -287,6 +107,7 @@ public class HarnessService {
 		WakeupBus wakeupBus,
 		McpManager mcpManager,
 		WorkspaceEventBus workspaceEvents,
+		WorkspaceSession workspaceSession,
 		List<ToolProvider> toolProviders
 	) {
 		this.llmClientFactory = llmClientFactory;
@@ -296,6 +117,7 @@ public class HarnessService {
 		this.wakeupBus = wakeupBus;
 		this.mcpManager = mcpManager;
 		this.workspaceEvents = workspaceEvents;
+		this.workspaceSession = workspaceSession;
 
 		UserQuestionTool questionTool = null;
 		BackgroundShellTool shellTool = null;
@@ -424,11 +246,13 @@ public class HarnessService {
 
 		LlmProvider provider = llmClientFactory.create(config);
 		String modelName = request.modelName().trim();
-		List<ChatMessage> messages = buildMessages(request.messages());
 		GenerationOptions options = new GenerationOptions(request.reasoningEffort());
 
 		boolean sessionAware = request.chatId() != null && !request.chatId().isBlank();
 		String chatId = sessionAware ? request.chatId().trim() : null;
+		// Session-aware requests carry only the new turn(s); the durable thread is loaded
+		// from persistence by chat id so request bodies stay small regardless of history size.
+		List<ChatMessage> messages = buildMessages(resolveTurns(request, sessionAware ? chatId : null));
 		TurnRecorder recorder = null;
 		if (sessionAware) {
 			wakeupCounts.remove(chatId); // Real user activity resets the autonomy guard.
@@ -437,7 +261,7 @@ public class HarnessService {
 			}
 			backgroundShellTool.setActiveChatId(chatId);
 			// The last turn is the message the user just sent. Record it before streaming.
-			recorder = new TurnRecorder(chatId);
+			recorder = new TurnRecorder(chatId, chatPersistence);
 			ChatTurn lastTurn = request.messages().getLast();
 			if ("user".equalsIgnoreCase(lastTurn.role())) {
 				recorder.startUserTurn(lastTurn.content(), request.providerId().trim(), modelName, request.reasoningEffort());
@@ -513,7 +337,7 @@ public class HarnessService {
 
 			// The harness instruction turn is a real message of the conversation.
 			// Persist it before streaming so the assistant side attaches to it.
-			TurnRecorder recorder = new TurnRecorder(chatId);
+			TurnRecorder recorder = new TurnRecorder(chatId, chatPersistence);
 			recorder.startUserTurn(harnessText, session.providerId(), session.modelName(), session.reasoningEffort());
 
 			wakeupBus.emit(chatId, event("harness_turn", json(Map.of("role", "user", "content", harnessText))));
@@ -639,7 +463,7 @@ public class HarnessService {
 									"name",
 									request.name() == null ? "" : request.name(),
 									"arguments",
-									request.arguments() == null ? "" : request.arguments()
+									UserQuestionTool.normalizeArguments(request.name(), request.arguments())
 								)
 							)
 						)
@@ -772,7 +596,8 @@ public class HarnessService {
 		ToolExecutor executor = toolExecutors.get(request.name());
 		if (executor == null) {
 			// Not a local tool; the MCP manager answers unknown tools the same way.
-			return mcpManager.executeTool(request);
+			// MCP results are unbounded upstream, so cap them before they hit the context.
+			return capMcpOutput(request.name(), mcpManager.executeTool(request));
 		}
 		try {
 			return executor.execute(request, null);
@@ -844,6 +669,32 @@ public class HarnessService {
 		return turns;
 	}
 
+	/**
+	 * Builds the full turn list for a generation. Session-aware requests carry only the new
+	 * turn(s) from the frontend; the durable thread is loaded from persistence by chat id.
+	 * Incoming turns already present at the tail of persistence (a retry after a failed
+	 * generation) are skipped so the model never sees a duplicated user message.
+	 */
+	private List<ChatTurn> resolveTurns(ChatStreamRequest request, String chatId) {
+		if (chatId == null) {
+			return request.messages();
+		}
+		List<ChatTurn> turns;
+		try {
+			turns = new ArrayList<>(toTurns(chatPersistence.loadChat(chatId).messages()));
+		} catch (Exception ex) {
+			turns = new ArrayList<>(); // New chat: the session file does not exist yet.
+		}
+		for (ChatTurn incoming : request.messages()) {
+			if (!turns.isEmpty() && turns.getLast().equals(incoming)) {
+				continue;
+			}
+			turns.add(incoming);
+		}
+		return turns;
+	}
+
+
 	private List<ChatMessage> buildMessages(List<ChatTurn> turns) {
 		List<ChatMessage> messages = new ArrayList<>();
 		String systemPrompt = readSystemPrompt();
@@ -851,7 +702,7 @@ public class HarnessService {
 			messages.add(SystemMessage.from(systemPrompt));
 		}
 
-		for (ChatTurn turn : turns) {
+		for (ChatTurn turn : HistoryCompactor.compactTurns(turns)) {
 			if (turn == null) {
 				continue;
 			}
@@ -880,7 +731,13 @@ public class HarnessService {
 			.toolCalls()
 			.stream()
 			.map(call ->
-				ToolExecutionRequest.builder().id(call.id()).name(call.name()).arguments(call.arguments()).build()
+				ToolExecutionRequest
+					.builder()
+					.id(call.id())
+					.name(call.name())
+					// Repair malformed ask_user_question options so replayed history is valid.
+					.arguments(UserQuestionTool.normalizeArguments(call.name(), call.arguments()))
+					.build()
 			)
 			.toList();
 
@@ -895,6 +752,40 @@ public class HarnessService {
 		messages.add(new AiMessage(text, requests));
 		for (int index = 0; index < turn.toolCalls().size(); index++) {
 			messages.add(ToolExecutionResultMessage.from(requests.get(index), turn.toolCalls().get(index).result()));
+		}
+	}
+
+	// ---- MCP output capping ----------------------------------------------------------------
+
+	/** Caps oversized MCP results; the full output is saved into the workspace for re-reading. */
+	private String capMcpOutput(String toolName, String result) {
+		if (result == null || result.length() <= MCP_OUTPUT_CHAR_CAP) {
+			return result;
+		}
+		String savedTo = saveMcpOutput(toolName, result);
+		return result.substring(0, MCP_OUTPUT_CHAR_CAP)
+			+ "\n\n[harness: result truncated at " + MCP_OUTPUT_CHAR_CAP + " of " + result.length()
+			+ " characters. Full output saved to " + savedTo
+			+ " — use read_file with offset/limit to inspect it.]";
+	}
+
+	private String saveMcpOutput(String toolName, String content) {
+		String safeName = toolName == null ? "tool" : toolName.replaceAll("[^A-Za-z0-9._-]", "_");
+		try {
+			Path dir = workspaceSession.root()
+				.map(root -> root.resolve("evidence").resolve("tool-output"))
+				.orElse(null);
+			if (dir == null) {
+				return "(no workspace open — the remainder is not retained)";
+			}
+			Files.createDirectories(dir);
+			Path target = dir.resolve("mcp-" + safeName + "-" + System.currentTimeMillis() + ".txt");
+			Files.writeString(target, content, StandardCharsets.UTF_8);
+			workspaceSession.remember(target);
+			return "evidence/tool-output/" + target.getFileName();
+		} catch (Exception ex) {
+			log.warn("Could not save oversized MCP output from {}: {}", toolName, ex.getMessage());
+			return "(could not save: " + ex.getMessage() + ")";
 		}
 	}
 

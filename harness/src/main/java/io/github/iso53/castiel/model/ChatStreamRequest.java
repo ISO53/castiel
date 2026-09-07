@@ -7,7 +7,11 @@ import java.util.List;
  *
  * @param providerId      Settings provider id (e.g. {@code llama.cpp}).
  * @param modelName       Model id from the provider catalog.
- * @param messages        Full thread in chronological order ({@code user}/{@code assistant}).
+ * @param messages        Turns not yet persisted. When {@code chatId} is set this is only the
+ *                        new turn (usually the user's message); the harness loads the rest of
+ *                        the thread from the persisted session. Without {@code chatId} this
+ *                        must be the full thread in chronological order
+ *                        ({@code user}/{@code assistant}).
  * @param reasoningEffort Optional reasoning level ({@code off}/{@code low}/{@code medium}/{@code high});
  *                        {@code null} uses the model default.
  * @param chatId          Optional persisted chat session id. Enables harness-initiated

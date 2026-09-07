@@ -86,8 +86,7 @@ public record McpServerConfig(
 			throw new IllegalArgumentException("\"mcpServers\" must be an object");
 		}
 		Map<String, McpServerConfig> result = new LinkedHashMap<>();
-		for (Iterator<Map.Entry<String, JsonNode>> it = servers.fields(); it.hasNext(); ) {
-			Map.Entry<String, JsonNode> entry = it.next();
+		for (Map.Entry<String, JsonNode> entry : servers.properties()) {
 			String id = entry.getKey() == null ? "" : entry.getKey().trim();
 			if (id.isBlank()) {
 				throw new IllegalArgumentException("MCP server ids must not be blank");
@@ -123,8 +122,7 @@ public record McpServerConfig(
 				if (!envNode.isObject()) {
 					throw new IllegalArgumentException("\"env\" must be an object");
 				}
-				for (Iterator<Map.Entry<String, JsonNode>> it = envNode.fields(); it.hasNext(); ) {
-					Map.Entry<String, JsonNode> var = it.next();
+				for (Map.Entry<String, JsonNode> var : envNode.properties()) {
 					env.put(var.getKey(), var.getValue().asText());
 				}
 			}

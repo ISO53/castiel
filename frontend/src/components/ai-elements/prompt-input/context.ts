@@ -1,5 +1,4 @@
 import type { AttachmentFile, PromptInputContext, PromptInputMessage } from './types'
-import { nanoid } from 'nanoid'
 import { inject, onBeforeUnmount, provide, ref } from 'vue'
 import { PROMPT_INPUT_KEY } from './types'
 
@@ -90,7 +89,7 @@ export function usePromptInputProvider(props: {
     }
 
     const newAttachments: AttachmentFile[] = capped.map(file => ({
-      id: nanoid(),
+      id: crypto.randomUUID(),
       type: 'file',
       url: URL.createObjectURL(file),
       mediaType: file.type,
