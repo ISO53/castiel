@@ -94,10 +94,9 @@ public class WorkspaceScaffoldService {
 			}
 			""");
 
-		scaffolds.put("findings.json", """
+		scaffolds.put("vulnerabilities.json", """
 			{
-			  "findings": [],
-			  "relationships": []
+			  "vulnerabilities": []
 			}
 			""");
 

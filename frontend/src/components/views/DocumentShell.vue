@@ -1,5 +1,5 @@
 <template>
-	<section class="flex h-full min-h-0 flex-col bg-background">
+	<section class="flex h-full min-h-0 flex-col bg-card">
 		<div class="min-h-0 flex-1 overflow-hidden">
 			<p v-if="error" class="px-2 py-2 text-xs leading-relaxed text-destructive wrap-break-word">{{ error }}</p>
 			<div v-else-if="loading && !hasData"

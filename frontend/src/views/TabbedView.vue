@@ -27,7 +27,7 @@
 				<FileEditorView v-else-if="tab.component === 'FileEditorView'" :path="tab.path" />
 				<NetworkView v-else-if="tab.component === 'NetworkView'" />
 				<WebAppView v-else-if="tab.component === 'WebAppView'" />
-				<FindingsView v-else-if="tab.component === 'FindingsView'" />
+				<VulnerabilitiesView v-else-if="tab.component === 'VulnerabilitiesView'" />
 				<EvidenceView v-else-if="tab.component === 'EvidenceView'" />
 				<TasksView v-else-if="tab.component === 'TasksView'" />
 			</div>
@@ -49,7 +49,7 @@ const FileEditorView = defineAsyncComponent(() => import("@/views/FileEditorView
 // Engagement document views pull their charting/graphing libraries, so keep them chunked too.
 const NetworkView = defineAsyncComponent(() => import("@/views/NetworkView.vue"));
 const WebAppView = defineAsyncComponent(() => import("@/views/WebAppView.vue"));
-const FindingsView = defineAsyncComponent(() => import("@/views/FindingsView.vue"));
+const VulnerabilitiesView = defineAsyncComponent(() => import("@/views/VulnerabilitiesView.vue"));
 const EvidenceView = defineAsyncComponent(() => import("@/views/EvidenceView.vue"));
 const TasksView = defineAsyncComponent(() => import("@/views/TasksView.vue"));
 import { useTabsStore } from "@/stores/tabs";

@@ -23,7 +23,7 @@ public class WorkspaceInfoTool implements ToolProvider {
 		"engagement.json",
 		"network.json",
 		"web.json",
-		"findings.json",
+		"vulnerabilities.json",
 		"evidence.json",
 		"tasks.json"
 	);

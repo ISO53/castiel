@@ -20,11 +20,11 @@ export const ENGAGEMENT_DOCUMENTS = [
 		description: "Sites, pages, tech stack & headers",
 	},
 	{
-		id: "findings",
-		file: "findings.json",
-		label: "Findings",
-		component: "FindingsView",
-		description: "Vulnerabilities & severity",
+		id: "vulnerabilities",
+		file: "vulnerabilities.json",
+		label: "Vulnerabilities",
+		component: "VulnerabilitiesView",
+		description: "Vulnerabilities & CVSS",
 	},
 	{
 		id: "evidence",

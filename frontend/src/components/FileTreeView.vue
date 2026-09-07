@@ -106,7 +106,7 @@ const FILES_API = `${window.location.origin}/api/files`;
 const DOC_ICONS = {
 	network: Network,
 	web: Globe,
-	findings: Bug,
+	vulnerabilities: Bug,
 	evidence: ImageIcon,
 	tasks: ListChecks,
 };

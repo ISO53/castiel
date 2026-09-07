@@ -39,7 +39,7 @@ public class EngagementService {
 		"Information gathering is open. Interact with in-scope targets freely and fill in"
 			+ " network.json, web.json, and identity.json.",
 		"Probe in-scope targets for weaknesses using the recon data; record each issue in"
-			+ " findings.json with severity and evidence.",
+			+ " vulnerabilities.json with a CVSS score, proof state, and evidence.",
 		"Attempt to exploit confirmed vulnerabilities. Report every attempt and result to"
 			+ " the user; stop when told to.",
 		"The engagement is finished. Summarize results and follow the user's direction."
