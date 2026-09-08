@@ -1,6 +1,17 @@
 {
-	"name": "frontend",
+	"name": "castiel",
 	"version": "0.0.0",
+	"description": "AI powered pentesting harness",
+	"license": "GPL-3.0",
+	"author": {
+		"name": "iso53",
+		"url": "https://github.com/iso53"
+	},
+	"homepage": "https://iso53.github.io/castiel",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ISO53/castiel.git"
+	},
 	"private": true,
 	"type": "module",
 	"scripts": {
