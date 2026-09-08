@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="castiel-logo.svg" alt="castiel. AI-assisted penetration testing harness">
+  <img width="100%" src="castiel-logo.svg" alt="castiel. AI-assisted penetration testing harness">
 </p>
 
 <p align="center">
