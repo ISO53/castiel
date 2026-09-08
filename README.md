@@ -1,21 +1,52 @@
-# Castiel
+<p align="center">
+  <img src="castiel-logo.svg" alt="castiel. AI-assisted penetration testing harness">
+</p>
 
-Castiel is an AI-assisted penetration testing harness. You open a project folder (the *workspace*), connect it to a language model of your choice, and work together through a chat: the model can run commands, read and edit files, search the web, and organize everything it finds into structured documents you can view as graphs, boards, and tables.
+<p align="center">
+    <b>castiel</b> is an AI-assisted penetration testing harness.
+</p>
+
+<br>
+
+<p align="center">
+  <a href="https://github.com/ISO53/castiel/releases/latest">
+    <img src="https://img.shields.io/github/v/release/ISO53/castiel?label=GitHub%20Release&style=round-square&color=black" alt="GitHub Release">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-GNU-black.svg?style=round-square" alt="License">
+  </a>
+  <img src="https://img.shields.io/github/languages/code-size/ISO53/castiel?style=round-square&color=black" alt="GitHub code size in bytes">
+</p>
+
+# castiel
+
+castiel is an AI-assisted penetration testing harness. You open a project folder (the *workspace*), connect it to a language model of your choice, and work together through a chat: the model can run commands, read and edit files, search the web, run background processes, connect to MCP servers and organize everything it finds into structured documents you can view as graphs, boards, and tables.
 
 The human stays in charge. You define the target and scope, decide when to move between engagement phases, and approve how far things go. The model does the hands-on technical work and keeps its findings recorded in the workspace.
 
-## How it's built
-
-| Part | What it is | Tech |
-| --- | --- | --- |
-| `harness/` | The backend: connects to the model, provides its tools, stores chats and settings | Java 25, Spring Boot, LangChain4j |
-| `frontend/` | The desktop-style UI: chat, file explorer, document views | Vue 3, Vite, Tailwind CSS |
-
-Works with any OpenAI-compatible provider (OpenAI, llama.cpp server, LM Studio, vLLM, OpenRouter) and with Ollama for fully local models.
+> [!WARNING]
+> This app is still under heavy development. Expect bugs, incomplete features and breaking changes.
 
 ## Getting started
 
 Requirements: Java 25+ and Maven, plus Node.js 22+ (with npm) for the frontend.
+
+### Install
+
+Grab the latest release JAR from [GitHub Releases](https://github.com/ISO53/castiel/releases). Only Java 25+ is needed, no Maven or npm.
+
+```sh
+# Windows PowerShell
+curl.exe -L -o castiel.jar https://github.com/ISO53/castiel/releases/latest/download/castiel.jar
+
+# Linux/macOS
+wget https://github.com/ISO53/castiel/releases/latest/download/castiel.jar
+
+# Run
+java -jar castiel.jar
+```
+
+Open http://localhost:8081 and start working.
 
 ### Development
 
@@ -39,35 +70,31 @@ npm run build
 
 cd ../harness
 mvn package
-java -jar target/castiel-0.0.1-SNAPSHOT.jar
-```
-
-The terminal stays quiet: all you see is the banner and where to open the app.
-
-```
-UI accessible at http://localhost:8081
+java -jar target/castiel-{version}.jar
 ```
 
 Settings are overridden the standard Spring Boot way:
 
 ```sh
-java -jar target/castiel-0.0.1-SNAPSHOT.jar --server.port=9090   # different port
-java -Dlogging.level.root=DEBUG -jar target/castiel-0.0.1-SNAPSHOT.jar   # verbose logs
+java -jar target/castiel-{version}.jar --server.port=9090   # different port
+java -Dlogging.level.root=DEBUG -jar target/castiel-{version}.jar   # verbose logs
 ```
 
-Then open the app, create or open a workspace, pick your provider and model in the settings, and start a chat.
+## Usage
 
-## Where Castiel writes
+On first launch, an onboarding page prepares the workspace. Start by connecting an LLM provider. The supported options are `llama.cpp`, `Ollama`, and `OpenRouter`. For remote models, `OpenRouter` is the simplest choice. If you already have a subscription with another provider, you can bring it through OpenRouter's BYOK integration, which uses your existing key against its OpenAI-compatible `v1/chat/completions` API and provides structured responses with little setup.
 
-Castiel installs nothing and touches nothing outside two places.
+> [!TIP]
+> While the large, smart reasoning models are better suited for critical findings in a pentesting environment they are less likely to follow the system prompt or the user's instructions for small things. They tend to use `bash` tool and custom scripts for everything instead of leveraging built in tools or MCP servers. Small models on the other hand are very good at following instructions and tool using but they are less capable and less reliable.
 
-| Data | Location |
-| --- | --- |
-| Engagement documents, chats, saved evidence | Inside the workspace folder you open (`engagement.json`, `.chats/`, ...) |
-| Application settings (`settings.json`) | OS application-data directory: `%APPDATA%\castiel` on Windows, `~/Library/Application Support/castiel` on macOS, `~/.config/castiel` on Linux |
+Next, connect any MCP servers you'd like. castiel highly recommends `obscura` for headless browser tooling and `Caido` for web security auditing, but the choice is yours.
 
-Delete both and Castiel is gone without a trace. Though as with any AI tool, the agent itself can make changes on your computer.
+On first use, create a workspace. castiel automatically generates the necessary template files and folders, and as soon as you start chatting, the engagement begins. During the first phase, castiel asks questions to understand your target and the boundaries of the session; follow-on phases run as standard pentesting sessions. You stay in control of when sessions transition. castiel can suggest moving to the next phase when it believes the current one is complete, but the decision is always yours.
+
+The left panel shows the file tree with two toggleable view modes: raw files or rendered views, so you can review castiel's findings either as files or as graphs, boards, and tables. Some views are also interactive.
+
+The bottom panel handles background processes. The agent can run long-running tasks (an nmap scan, for example) in the background while it continues other work, checking on them periodically. You can also launch your own background processes and let castiel track their progress and report results back to the workspace. The right panel is where the chat takes place.
 
 ## License
 
-[GPL-3.0](LICENSE)
+This project is licensed under the [GPL-3.0](LICENSE) license.
