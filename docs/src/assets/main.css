@@ -1,0 +1,51 @@
+/* castiel website — global palette & base styles.
+   Palette: black background, soft white foreground, red accent (used sparingly). */
+
+:root {
+	--bg: #000000;
+	--surface: #0a0a0a;
+	--fg: #ededed;
+	--muted: #a1a1a1;
+	--faint: #6b6b6b;
+	--border: #222222;
+	--accent: #c10007;
+	--accent-soft: rgba(193, 0, 7, 0.18);
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	background: var(--bg);
+	color: var(--fg);
+	font-family:
+		system-ui,
+		-apple-system,
+		"Segoe UI",
+		Roboto,
+		"Helvetica Neue",
+		Arial,
+		sans-serif;
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+}
+
+a {
+	color: inherit;
+	text-decoration: none;
+}
+
+img,
+svg,
+canvas {
+	display: block;
+}
