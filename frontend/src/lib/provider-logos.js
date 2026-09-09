@@ -1,3 +1,4 @@
+import clineLogo from "@/assets/providers/cline.svg";
 import llamaCppLogo from "@/assets/providers/llama-cpp.svg";
 import ollamaLogo from "@/assets/providers/ollama.svg";
 import openRouterLogo from "@/assets/providers/open-router.svg";
@@ -8,6 +9,7 @@ import openRouterLogo from "@/assets/providers/open-router.svg";
  * has no known brand (generic UI is rendered instead).
  */
 const LOGOS = {
+	cline: clineLogo,
 	"llama.cpp": llamaCppLogo,
 	openrouter: openRouterLogo,
 	"open-router": openRouterLogo,

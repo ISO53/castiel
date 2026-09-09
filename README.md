@@ -82,7 +82,7 @@ java -Dlogging.level.root=DEBUG -jar target/castiel-{version}.jar   # verbose lo
 
 ## Usage
 
-On first launch, an onboarding page prepares the workspace. Start by connecting an LLM provider. The supported options are `llama.cpp`, `Ollama`, and `OpenRouter`. For remote models, `OpenRouter` is the simplest choice. If you already have a subscription with another provider, you can bring it through OpenRouter's BYOK integration, which uses your existing key against its OpenAI-compatible `v1/chat/completions` API and provides structured responses with little setup.
+On first launch, an onboarding page prepares the workspace. Start by connecting an LLM provider. The supported options are `llama.cpp`, `Ollama`, `OpenRouter`, and `Cline`. For remote models, `OpenRouter` is the simplest choice. If you already have a subscription with another provider, you can bring it through OpenRouter's BYOK integration, which uses your existing key against its OpenAI-compatible `v1/chat/completions` API and provides structured responses with little setup.
 
 > [!TIP]
 > While the large, smart reasoning models are better suited for critical findings in a pentesting environment they are less likely to follow the system prompt or the user's instructions for small things. They tend to use `bash` tool and custom scripts for everything instead of leveraging built in tools or MCP servers. Small models on the other hand are very good at following instructions and tool using but they are less capable and less reliable.

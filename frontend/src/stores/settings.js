@@ -5,8 +5,11 @@ const API_BASE_URL = `${window.location.origin}/api/settings`;
 const LLAMA_CPP_ID = "llama.cpp";
 const OLLAMA_ID = "ollama";
 const OPENROUTER_ID = "openrouter";
+const CLINE_ID = "cline";
 /** OpenRouter's endpoint is fixed. Users only provide their API key. */
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1";
+/** Cline's endpoint is fixed. Users only provide their API key. */
+const CLINE_API_URL = "https://api.cline.bot/api/v1";
 
 async function readError(response) {
 	const body = await response.text();
@@ -52,6 +55,15 @@ export function defaultOpenRouterProvider() {
 	};
 }
 
+/** Default form values for the Cline settings section (UI-only). */
+export function defaultClineProvider() {
+	return {
+		type: "OPENAI_COMPATIBLE",
+		apiUrl: CLINE_API_URL,
+		apiKey: "",
+	};
+}
+
 export const useSettingsStore = defineStore("settings", {
 	state: () => ({
 		providers: {},
@@ -75,6 +87,12 @@ export const useSettingsStore = defineStore("settings", {
 			return {
 				...defaultOpenRouterProvider(),
 				...(state.providers[OPENROUTER_ID] ?? {}),
+			};
+		},
+		cline(state) {
+			return {
+				...defaultClineProvider(),
+				...(state.providers[CLINE_ID] ?? {}),
 			};
 		},
 	},
@@ -131,6 +149,13 @@ export const useSettingsStore = defineStore("settings", {
 			return this.connectProvider(OPENROUTER_ID, {
 				type: "OPENAI_COMPATIBLE",
 				apiUrl: OPENROUTER_API_URL,
+				apiKey: form.apiKey ?? "",
+			});
+		},
+		connectCline(form) {
+			return this.connectProvider(CLINE_ID, {
+				type: "OPENAI_COMPATIBLE",
+				apiUrl: CLINE_API_URL,
 				apiKey: form.apiKey ?? "",
 			});
 		},

@@ -229,6 +229,66 @@
 						</div>
 					</CollapsibleContent>
 				</Collapsible>
+				<Collapsible v-model:open="clineOpen" class="rounded-lg border border-border">
+					<CollapsibleTrigger
+						class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/40">
+						<span class="flex items-center gap-2 text-sm font-medium text-foreground">
+							<img v-if="providerLogo('cline')" :src="providerLogo('cline')"
+								class="size-4 shrink-0" alt="" aria-hidden="true" />
+							Cline
+						</span>
+						<ChevronDown class="size-4 shrink-0 text-muted-foreground transition-transform duration-200"
+							:class="clineOpen ? 'rotate-180' : ''" />
+					</CollapsibleTrigger>
+
+					<CollapsibleContent class="border-t border-border px-4 py-4">
+						<div class="flex flex-col gap-4">
+							<div class="space-y-2 text-xs text-muted-foreground leading-relaxed">
+								<p>
+									Access models from Anthropic, OpenAI, Google, and more through Cline's
+									OpenAI-compatible endpoint.
+								</p>
+								<ul class="list-disc space-y-1 pl-4">
+									<li>
+										Create an API key at
+										<a class="underline underline-offset-2 hover:text-foreground"
+											href="https://app.cline.bot" target="_blank" rel="noreferrer">app.cline.bot</a>
+										under Settings &gt; API Keys
+									</li>
+									<li>Click Connect below to start using Cline in Castiel</li>
+								</ul>
+							</div>
+
+							<div class="flex flex-col gap-3">
+								<div class="flex flex-col gap-1.5">
+									<Label for="cline_api_key">API key</Label>
+									<Input id="cline_api_key" v-model="clineForm.apiKey" type="password"
+										placeholder="Your Cline API key" autocomplete="off" spellcheck="false" />
+								</div>
+							</div>
+
+							<div class="flex items-center gap-3 pt-1">
+								<Button size="sm" :disabled="connectingCline || !clineForm.apiKey.trim()"
+									@click="connectClineRequest">
+									{{ connectingCline ? "Connecting..." : "Connect" }}
+								</Button>
+								<div v-if="clineHealth" class="flex items-center gap-2 text-xs">
+									<span class="size-2 rounded-full"
+										:class="clineHealth.ok ? 'bg-emerald-500' : 'bg-destructive'"
+										aria-hidden="true" />
+									<span :class="clineHealth.ok ? 'text-muted-foreground' : 'text-destructive'">
+										{{ clineHealth.message }}
+									</span>
+								</div>
+							</div>
+
+							<p v-if="clineError" class="text-xs text-destructive wrap-break-word">
+								{{ clineError }}
+							</p>
+						</div>
+					</CollapsibleContent>
+				</Collapsible>
+
 			</section>
 
 			<section class="space-y-4">
@@ -312,6 +372,13 @@ export default {
 			openrouterForm: {
 				apiKey: "",
 			},
+			clineOpen: false,
+			connectingCline: false,
+			clineError: "",
+			clineHealth: null,
+			clineForm: {
+				apiKey: "",
+			},
 			mcp: useMcpStore(),
 			mcpConfig: null,
 			mcpFileError: "",
@@ -340,6 +407,11 @@ export default {
 				apiKey: openrouter.apiKey ?? "",
 			};
 			this.openrouterOpen = Boolean(settings.providers.openrouter);
+			const cline = settings.cline;
+			this.clineForm = {
+				apiKey: cline.apiKey ?? "",
+			};
+			this.clineOpen = Boolean(settings.providers.cline);
 		} catch (err) {
 			this.error = err instanceof Error ? err.message : String(err);
 		}
@@ -382,6 +454,19 @@ export default {
 				this.openrouterError = err instanceof Error ? err.message : String(err);
 			} finally {
 				this.connectingOpenRouter = false;
+			}
+		},
+		async connectClineRequest() {
+			this.connectingCline = true;
+			this.clineError = "";
+			this.clineHealth = null;
+			const settings = useSettingsStore();
+			try {
+				this.clineHealth = await settings.connectCline(this.clineForm);
+			} catch (err) {
+				this.clineError = err instanceof Error ? err.message : String(err);
+			} finally {
+				this.connectingCline = false;
 			}
 		},
 		// Opens mcp.json in the built-in file editor; saving it triggers a live reload.
