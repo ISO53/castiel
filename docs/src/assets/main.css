@@ -50,3 +50,10 @@ svg,
 canvas {
 	display: block;
 }
+
+/* Shared horizontal container: 90% width, 5% margins on both sides.
+   Navbar, hero and all other sections align to these same margins. */
+.container {
+	width: 90%;
+	margin-inline: auto;
+}

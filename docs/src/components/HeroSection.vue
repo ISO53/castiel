@@ -10,24 +10,32 @@ const heroDoc = heroPreset.doc;
 	<section class="hero">
 		<div class="hero-glow">
 			<MeshGradient :doc="heroDoc" />
-			<!-- Keeps the glow from washing out the copy. -->
-			<div class="hero-shade"></div>
 		</div>
 
-		<div class="hero-content">
-			<h1 class="hero-title">castiel</h1>
-			<p class="hero-sub">AI assisted penetration testing harness</p>
+		<div class="hero-inner container">
+			<div class="hero-left">
+				<h1 class="hero-title">castiel</h1>
+				<p class="hero-sub">AI assisted penetration testing harness</p>
+			</div>
 
-			<div class="hero-actions">
-				<a
-					class="hero-button primary"
-					href="https://github.com/ISO53/castiel/releases"
-					target="_blank"
-					rel="noopener"
-				>
-					Download
-				</a>
-				<RouterLink class="hero-button ghost" to="/docs">Documentation</RouterLink>
+			<div class="hero-right">
+				<p class="hero-desc">
+					castiel is an AI-assisted penetration testing harness that pairs
+					your workspace with the language model of your choice. You can
+					download the latest release from GitHub, or search the docs to
+					get started.
+				</p>
+				<div class="hero-actions">
+					<a
+						class="hero-button primary"
+						href="https://github.com/ISO53/castiel/releases"
+						target="_blank"
+						rel="noopener"
+					>
+						Download
+					</a>
+					<RouterLink class="hero-button ghost" to="/docs">Documentation</RouterLink>
+				</div>
 			</div>
 		</div>
 	</section>
@@ -39,7 +47,7 @@ const heroDoc = heroPreset.doc;
 	display: grid;
 	place-items: center;
 	min-height: 100svh;
-	padding: 4rem 1.5rem;
+	padding: 7rem 0 4rem;
 	overflow: hidden;
 }
 
@@ -48,32 +56,40 @@ const heroDoc = heroPreset.doc;
 	inset: 0;
 }
 
-.hero-content {
+.hero-inner {
 	position: relative;
-	max-width: 46rem;
-	text-align: center;
+	display: grid;
+	grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+	gap: 4rem;
+	align-items: center;
 }
 
 .hero-title {
-	margin: 0 0 1.25rem;
-	font-size: clamp(3.5rem, 11vw, 7.5rem);
+	margin: 0 0 0.75rem;
+	font-size: clamp(3.5rem, 9vw, 6.5rem);
 	font-weight: 500;
 	line-height: 1;
 	letter-spacing: -0.04em;
 }
 
 .hero-sub {
-	margin: 0 auto 2.5rem;
+	margin: 0;
 	color: var(--muted);
-	font-size: clamp(1rem, 2.2vw, 1.2rem);
+	font-size: clamp(1rem, 2vw, 1.15rem);
 	font-weight: 400;
+}
+
+.hero-desc {
+	margin: 0 0 1.75rem;
+	color: var(--muted);
+	font-size: clamp(0.95rem, 1.6vw, 1.05rem);
+	line-height: 1.7;
 }
 
 .hero-actions {
 	display: flex;
-	justify-content: center;
-	gap: 0.75rem;
 	flex-wrap: wrap;
+	gap: 0.75rem;
 }
 
 .hero-button {
@@ -105,4 +121,12 @@ const heroDoc = heroPreset.doc;
 .hero-button.ghost:hover {
 	border-color: var(--fg);
 }
+
+@media (max-width: 860px) {
+	.hero-inner {
+		grid-template-columns: 1fr;
+		gap: 2.5rem;
+	}
+}
 </style>
+

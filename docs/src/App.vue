@@ -1,4 +1,9 @@
+<script setup>
+import NavBar from "@/components/NavBar.vue";
+</script>
+
 <template>
-	<!-- Blank for now: layout, header/nav and footer come in later steps. -->
+	<!-- Navbar is global; pages render below it. -->
+	<NavBar />
 	<RouterView />
 </template>
