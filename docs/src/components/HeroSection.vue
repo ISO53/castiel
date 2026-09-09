@@ -57,7 +57,7 @@ const heroDoc = heroPreset.doc;
 .hero-title {
 	margin: 0 0 1.25rem;
 	font-size: clamp(3.5rem, 11vw, 7.5rem);
-	font-weight: 800;
+	font-weight: 500;
 	line-height: 1;
 	letter-spacing: -0.04em;
 }
