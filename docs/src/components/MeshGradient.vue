@@ -49,6 +49,8 @@ let reducedMotion = false;
 let resizeObserver = null;
 let intersectionObserver = null;
 let disposed = false;
+/** Internal doc clone with hue cycling frozen (see onMounted). */
+let activeDoc = null;
 
 const sub = subdivisionFor(props.doc.rows, props.doc.cols);
 
@@ -66,7 +68,7 @@ function resize() {
 
 function renderFrame() {
 	if (!renderer || disposed) return;
-	const doc = props.doc;
+	const doc = activeDoc ?? props.doc;
 
 	engine.syncColors(doc);
 	evalSurface(surface, doc.rows, doc.cols, sub, engine.nodePos, engine.nodeCol, doc.nodes);
@@ -90,7 +92,7 @@ function frame(now) {
 	lastTime = now;
 	// Skip the (not free) CPU/GPU work while the hero is offscreen or hidden.
 	if (!inView || document.hidden) return;
-	engine.tick(props.doc, dt);
+	engine.tick(activeDoc ?? props.doc, dt);
 	renderFrame();
 }
 
@@ -113,7 +115,10 @@ function onVisibilityChange() {
 
 onMounted(() => {
 	reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-	const doc = props.doc;
+	activeDoc = structuredClone(props.doc);
+	activeDoc.animation.hueFlow = 0;
+	engine.flowTime = 75;
+	const doc = activeDoc;
 
 	try {
 		renderer = new THREE.WebGLRenderer({
@@ -237,4 +242,3 @@ onBeforeUnmount(() => {
 	height: 100%;
 }
 </style>
-
