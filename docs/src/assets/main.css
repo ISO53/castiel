@@ -28,6 +28,7 @@ body {
 	background: var(--bg);
 	color: var(--fg);
 	font-family:
+		"Geist Variable",
 		system-ui,
 		-apple-system,
 		"Segoe UI",
