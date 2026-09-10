@@ -34,7 +34,14 @@ const heroDoc = heroPreset.doc;
 					>
 						Download
 					</a>
-					<RouterLink class="hero-button ghost" to="/docs">Documentation</RouterLink>
+					<a
+						class="hero-button ghost"
+						href="https://github.com/ISO53/castiel#readme"
+						target="_blank"
+						rel="noopener"
+					>
+						Documentation
+					</a>
 				</div>
 			</div>
 		</div>

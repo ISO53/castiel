@@ -100,7 +100,14 @@ onBeforeUnmount(() => {
 				>
 					Download castiel
 				</a>
-				<RouterLink class="cta-button ghost" to="/docs">Read the docs</RouterLink>
+				<a
+					class="cta-button ghost"
+					href="https://github.com/ISO53/castiel#readme"
+					target="_blank"
+					rel="noopener"
+				>
+					Read the docs
+				</a>
 			</div>
 
 			<p class="cta-note">Free &amp; open source — GPL-3.0.</p>

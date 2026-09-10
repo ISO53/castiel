@@ -9,12 +9,6 @@ const router = createRouter({
 			name: "home",
 			component: HomeView,
 		},
-		{
-			path: "/docs",
-			name: "docs",
-			// Lazy-loaded so the docs bundle is only fetched when visited.
-			component: () => import("@/views/DocsView.vue"),
-		},
 	],
 	// Scroll to the top on route change, or to the anchor for hash links
 	// (e.g. the Install section on the landing page). The fixed navbar's

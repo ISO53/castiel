@@ -13,7 +13,14 @@ const year = new Date().getFullYear();
 
 			<div class="footer-group website">
 				<p class="footer-heading">Website</p>
-				<RouterLink to="/docs" class="footer-link">Docs</RouterLink>
+				<a
+					class="footer-link"
+					href="https://github.com/ISO53/castiel#readme"
+					target="_blank"
+					rel="noopener"
+				>
+					Docs
+				</a>
 				<RouterLink to="/#install" class="footer-link">Install</RouterLink>
 			</div>
 
