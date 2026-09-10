@@ -18,6 +18,11 @@
 				<span class="fctl-label">Recon</span>
 			</div>
 			<div class="fctl-link"></div>
+			<div class="fctl-step done">
+				<span class="fctl-dot"></span>
+				<span class="fctl-label">Scanning</span>
+			</div>
+			<div class="fctl-link"></div>
 			<div class="fctl-step next">
 				<span class="fctl-dot"></span>
 				<span class="fctl-label">Exploit</span>
