@@ -117,7 +117,9 @@ onMounted(() => {
 	reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 	activeDoc = structuredClone(props.doc);
 	activeDoc.animation.hueFlow = 0;
-	engine.flowTime = 75;
+	// Reset the singleton's hue clock: at flowTime 0 every node shows its
+	// exact document color, so the frozen doc renders as designed.
+	engine.flowTime = 0;
 	const doc = activeDoc;
 
 	try {
