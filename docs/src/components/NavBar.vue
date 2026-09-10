@@ -40,6 +40,7 @@ onMounted(async () => {
 
 			<div class="nav-links">
 				<RouterLink to="/docs" class="nav-link">Docs</RouterLink>
+				<RouterLink to="/#install" class="nav-link">Install</RouterLink>
 				<a
 					class="nav-link"
 					href="https://github.com/ISO53/castiel/releases"

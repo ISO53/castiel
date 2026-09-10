@@ -16,6 +16,13 @@ const router = createRouter({
 			component: () => import("@/views/DocsView.vue"),
 		},
 	],
+	// Scroll to the top on route change, or to the anchor for hash links
+	// (e.g. the Install section on the landing page). The fixed navbar's
+	// overlap is handled by scroll-margin-top on the target section.
+	scrollBehavior(to) {
+		if (to.hash) return { el: to.hash, behavior: "smooth" };
+		return { top: 0 };
+	},
 });
 
 export default router;
