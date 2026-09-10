@@ -53,7 +53,7 @@ import FeatureControl from "@/components/features/FeatureControl.vue";
 				<div class="feature-body">
 					<h3 class="feature-title">Background processes</h3>
 					<p class="feature-desc">
-						Long-running scans keep working while the conversation continues.
+						Long-running scans, started by you or the agent, keep working while the conversation continues.
 					</p>
 				</div>
 			</article>
