@@ -1,13 +1,17 @@
 <script setup>
+import { Star, Download } from "@lucide/vue";
 import logoUrl from "@/assets/castiel-logo.svg";
+import githubUrl from "@/assets/github.svg";
 </script>
 
 <template>
 	<header class="navbar">
 		<nav class="nav-inner container">
-			<RouterLink to="/" class="nav-brand" aria-label="castiel home">
-				<img :src="logoUrl" alt="castiel" class="nav-logo" />
-			</RouterLink>
+			<div class="nav-left">
+				<RouterLink to="/" class="nav-brand" aria-label="castiel home">
+					<img :src="logoUrl" alt="castiel" class="nav-logo" />
+				</RouterLink>
+			</div>
 
 			<div class="nav-links">
 				<RouterLink to="/docs" class="nav-link">Docs</RouterLink>
@@ -28,7 +32,9 @@ import logoUrl from "@/assets/castiel-logo.svg";
 					target="_blank"
 					rel="noopener"
 				>
-					GitHub
+					<img :src="githubUrl" alt="" class="nav-github-icon" />
+					<Star class="nav-star-icon" aria-hidden="true" />
+					<span>Stars</span>
 				</a>
 				<a
 					class="nav-button primary"
@@ -36,7 +42,8 @@ import logoUrl from "@/assets/castiel-logo.svg";
 					target="_blank"
 					rel="noopener"
 				>
-					Download
+					<Download class="nav-download-icon" aria-hidden="true" />
+					<span>Download</span>
 				</a>
 			</div>
 		</nav>
@@ -58,20 +65,46 @@ import logoUrl from "@/assets/castiel-logo.svg";
 .nav-inner {
 	display: flex;
 	align-items: center;
-	gap: 2rem;
+	gap: 1rem;
 	padding: 0.75rem 0;
+}
+
+/* Three equal columns keep the links exactly centered, whatever the
+   logo/button widths are: logo hard-left, links center, actions hard-right. */
+.nav-left {
+	flex: 1;
+}
+
+.nav-links {
+	flex: 1;
+	display: flex;
+	justify-content: center;
+	gap: 1.4rem;
+}
+
+.nav-actions {
+	flex: 1;
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.6rem;
+}
+
+.nav-brand {
+	display: inline-flex;
+	align-items: center;
 }
 
 .nav-logo {
 	display: block;
 	height: 1.1rem;
 	width: auto;
+	/* Grayscale at rest; reveal the brand color on hover. */
+	filter: grayscale(1);
+	transition: filter 0.15s ease;
 }
 
-.nav-links {
-	display: flex;
-	flex: 1;
-	gap: 1.4rem;
+.nav-brand:hover .nav-logo {
+	filter: grayscale(0);
 }
 
 .nav-link {
@@ -84,13 +117,10 @@ import logoUrl from "@/assets/castiel-logo.svg";
 	color: var(--fg);
 }
 
-.nav-actions {
-	display: flex;
-	align-items: center;
-	gap: 0.6rem;
-}
-
 .nav-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
 	padding: 0.42rem 0.95rem;
 	border-radius: 6px;
 	font-size: 0.85rem;
@@ -117,6 +147,17 @@ import logoUrl from "@/assets/castiel-logo.svg";
 
 .nav-button.ghost:hover {
 	border-color: var(--fg);
+}
+
+.nav-github-icon {
+	height: 0.9rem;
+	width: auto;
+}
+
+.nav-star-icon,
+.nav-download-icon {
+	width: 0.9rem;
+	height: 0.9rem;
 }
 
 @media (max-width: 640px) {
