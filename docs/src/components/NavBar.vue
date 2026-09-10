@@ -1,7 +1,32 @@
 <script setup>
+import { onMounted, ref } from "vue";
 import { Star, Download } from "@lucide/vue";
 import logoUrl from "@/assets/castiel-logo.svg";
 import githubUrl from "@/assets/github.svg";
+
+// Live star count from the GitHub API; falls back to a plain "Stars" label
+// if the request fails (offline, rate-limited, etc.).
+const starCount = ref(null);
+
+function formatCount(value) {
+	return new Intl.NumberFormat("en", {
+		notation: "compact",
+		maximumFractionDigits: 1,
+	}).format(value);
+}
+
+onMounted(async () => {
+	try {
+		const res = await fetch("https://api.github.com/repos/ISO53/castiel");
+		if (!res.ok) return;
+		const data = await res.json();
+		if (typeof data.stargazers_count === "number") {
+			starCount.value = data.stargazers_count;
+		}
+	} catch {
+		// Network error — the label stays as the fallback.
+	}
+});
 </script>
 
 <template>
@@ -34,7 +59,7 @@ import githubUrl from "@/assets/github.svg";
 				>
 					<img :src="githubUrl" alt="" class="nav-github-icon" />
 					<Star class="nav-star-icon" aria-hidden="true" />
-					<span>Stars</span>
+					<span class="nav-star-count">{{ starCount !== null ? formatCount(starCount) : "Stars" }}</span>
 				</a>
 				<a
 					class="nav-button primary"
@@ -150,7 +175,7 @@ import githubUrl from "@/assets/github.svg";
 }
 
 .nav-github-icon {
-	height: 0.9rem;
+	height: 1.2rem;
 	width: auto;
 }
 
@@ -158,6 +183,10 @@ import githubUrl from "@/assets/github.svg";
 .nav-download-icon {
 	width: 0.9rem;
 	height: 0.9rem;
+}
+
+.nav-star-count {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 @media (max-width: 640px) {
