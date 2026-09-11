@@ -45,6 +45,13 @@ a {
 	text-decoration: none;
 }
 
+::selection {
+	background: #ffffff;
+	color: #000000;
+	-webkit-text-fill-color: #000000;
+	text-shadow: none;
+}
+
 img,
 svg,
 canvas {
