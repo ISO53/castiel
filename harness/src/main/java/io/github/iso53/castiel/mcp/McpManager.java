@@ -58,9 +58,9 @@ public class McpManager {
 	void start() {
 		ensureConfigFile();
 		reloadConfigFile();
-		for (McpServerConfig config : registeredConfigs.values()) {
-			Thread.ofVirtual().name("mcp-connect-" + config.id()).start(() -> connect(config));
-		}
+		registeredConfigs.values().stream()
+			.filter(McpServerConfig::enabled)
+			.forEach(config -> Thread.ofVirtual().name("mcp-connect-" + config.id()).start(() -> connect(config)));
 		watchConfigFile();
 	}
 
@@ -143,20 +143,85 @@ public class McpManager {
 	/** Builds the status report for one registered server from its live connection. */
 	private McpServerStatus status(McpServerConfig config) {
 		McpConnection connection = connections.get(config.id());
-		boolean connected = connection != null && connection.checkHealth();
+		boolean connected = config.enabled() && connection != null && connection.checkHealth();
 		List<String> tools = connection == null ? List.of() : names(connection.tools());
-		return new McpServerStatus(config.id(), config.displayName(), config.type(), config.target(), connected, tools);
+		return new McpServerStatus(
+			config.id(),
+			config.displayName(),
+			config.type(),
+			config.target(),
+			config.enabled(),
+			connected,
+			tools
+		);
 	}
 
-	/** Reconnects every unreachable server and returns the refreshed statuses. */
+	/** Reconnects every reachable-but-down server and returns the refreshed statuses. */
 	public List<McpServerStatus> reconnectDisconnected() {
 		for (McpServerConfig config : registeredConfigs.values()) {
+			if (!config.enabled()) {
+				continue;
+			}
 			McpConnection connection = connections.get(config.id());
 			if (connection == null || !connection.checkHealth()) {
 				connect(config);
 			}
 		}
 		return statuses();
+	}
+
+	/**
+	 * Persists the enabled flag of one server in the config file and applies it
+	 * live. Returns the refreshed statuses.
+	 */
+	public List<McpServerStatus> setEnabled(String id, boolean enabled) {
+		McpServerConfig config = registeredConfigs.get(id);
+		if (config == null) {
+			throw new IllegalArgumentException("No registered MCP server with id " + id);
+		}
+		if (config.enabled() != enabled) {
+			writeEnabledFlag(id, enabled);
+			reloadConfigFile();
+		}
+		return statuses();
+	}
+
+	/**
+	 * Sets or removes the {@code enabled} field on one server entry in the config
+	 * file, which stays the single source of truth; other entries are untouched.
+	 */
+	private void writeEnabledFlag(String id, boolean enabled) {
+		JsonNode root;
+		try {
+			root = CONFIG_JSON.readTree(configFile().toFile());
+		} catch (IOException ex) {
+			throw new IllegalStateException("Could not read " + configFile(), ex);
+		}
+		JsonNode servers = root.get("mcpServers");
+		ObjectNode entry = null;
+		if (servers != null && servers.isObject()) {
+			for (Map.Entry<String, JsonNode> node : servers.properties()) {
+				String key = node.getKey() == null ? "" : node.getKey().trim();
+				if (key.equals(id) && node.getValue() instanceof ObjectNode objectNode) {
+					entry = objectNode;
+					break;
+				}
+			}
+		}
+		if (entry == null) {
+			throw new IllegalArgumentException("No MCP server entry with id " + id);
+		}
+		if (enabled) {
+			entry.remove("enabled");
+		} else {
+			entry.put("enabled", false);
+		}
+		try {
+			Files.createDirectories(configFile().getParent());
+			CONFIG_JSON.writerWithDefaultPrettyPrinter().writeValue(configFile().toFile(), root);
+		} catch (IOException ex) {
+			throw new IllegalStateException("Could not write " + configFile(), ex);
+		}
 	}
 
 	/** Tool specifications from every connected server; MCP-internal duplicates are skipped. */
@@ -244,7 +309,10 @@ public class McpManager {
 		}
 		for (McpServerConfig config : loaded.values()) {
 			McpServerConfig old = previous.get(config.id());
-			if (old == null || !old.equals(config)) {
+			if (!config.enabled()) {
+				// Disabled servers never hold a connection, so their tools stay out of the chat.
+				disconnect(config.id());
+			} else if (old == null || !old.equals(config)) {
 				Thread.ofVirtual().name("mcp-connect-" + config.id()).start(() -> connect(config));
 			}
 		}

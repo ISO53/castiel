@@ -62,5 +62,20 @@ export const useMcpStore = defineStore("mcp", {
 			}
 			this.servers = await response.json();
 		},
+		/** Toggles one server; the flag is persisted in mcp.json and applies live. */
+		async setEnabled(id, enabled) {
+			const response = await fetch(
+				`${API_BASE_URL}/servers/${encodeURIComponent(id)}/enabled`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ enabled }),
+				},
+			);
+			if (!response.ok) {
+				throw new Error(await readError(response));
+			}
+			this.servers = await response.json();
+		},
 	},
 });

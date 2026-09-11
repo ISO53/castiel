@@ -20,6 +20,8 @@ import java.util.*;
  * @param command STDIO only: executable that runs the MCP server.
  * @param args    STDIO only: arguments passed to the executable.
  * @param env     STDIO only: extra environment variables for the subprocess.
+ * @param enabled Whether the server participates; disabled servers are never
+ *                connected, so their tools stay out of the chat.
  */
 public record McpServerConfig(
 	String id,
@@ -30,7 +32,8 @@ public record McpServerConfig(
 	String path,
 	String command,
 	List<String> args,
-	Map<String, String> env
+	Map<String, String> env,
+	boolean enabled
 ) {
 
 	public enum Type { HTTP, STDIO }
@@ -126,7 +129,7 @@ public record McpServerConfig(
 					env.put(var.getKey(), var.getValue().asText());
 				}
 			}
-			return new McpServerConfig(id, name, Type.STDIO, null, null, null, command, fileArgs, env);
+			return new McpServerConfig(id, name, Type.STDIO, null, null, null, command, fileArgs, env, booleanField(node, "enabled"));
 		}
 		String url = text(node, "url");
 		if (url != null) {
@@ -145,7 +148,7 @@ public record McpServerConfig(
 			}
 			int port = uri.getPort() > 0 ? uri.getPort() : 80;
 			String path = uri.getPath() == null ? "" : uri.getPath();
-			return new McpServerConfig(id, name, Type.HTTP, uri.getHost(), port, path, null, List.of(), Map.of());
+			return new McpServerConfig(id, name, Type.HTTP, uri.getHost(), port, path, null, List.of(), Map.of(), booleanField(node, "enabled"));
 		}
 		throw new IllegalArgumentException("either \"command\" or \"url\" is required");
 	}
@@ -153,5 +156,11 @@ public record McpServerConfig(
 	private static String text(JsonNode node, String field) {
 		JsonNode value = node.get(field);
 		return value != null && value.isTextual() && !value.asText().isBlank() ? value.asText().trim() : null;
+	}
+
+	/** Reads an optional boolean field, defaulting to {@code true} when missing or non-boolean. */
+	private static boolean booleanField(JsonNode node, String field) {
+		JsonNode value = node.get(field);
+		return value == null || !value.isBoolean() || value.asBoolean();
 	}
 }
