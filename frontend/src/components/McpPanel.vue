@@ -28,15 +28,22 @@
 					v-for="server in mcp.servers"
 					:key="server.id"
 					class="flex items-center gap-2 rounded-md px-2 py-1.5"
-					:title="`${server.target} - ${server.tools.length} tool(s)`"
+					:class="server.enabled ? '' : 'opacity-50'"
+					:title="server.enabled ? `${server.target} - ${server.tools.length} tool(s)` : `${server.name} is disabled`"
 				>
 					<span
 						class="size-2 shrink-0 rounded-full"
-						:class="server.connected ? 'bg-emerald-500' : 'bg-destructive'"
+						:class="server.enabled ? (server.connected ? 'bg-emerald-500' : 'bg-destructive') : 'bg-muted-foreground/40'"
 						aria-hidden="true"
 					/>
 					<span class="min-w-0 flex-1 truncate text-xs text-foreground">{{ server.name }}</span>
 					<span class="shrink-0 font-mono text-[10px] text-muted-foreground">{{ server.tools.length }}</span>
+					<Switch
+						size="sm"
+						:model-value="server.enabled"
+						:aria-label="`${server.enabled ? 'Disable' : 'Enable'} MCP server ${server.name}`"
+						@update:model-value="(value) => toggle(server, value)"
+					/>
 				</li>
 			</ul>
 			<EmptyState v-else text="No MCP servers registered. Add them in Settings.">
@@ -49,13 +56,14 @@
 <script>
 import { Plug, RefreshCw } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import EmptyState from "@/components/EmptyState.vue";
 import { useMcpStore } from "@/stores/mcp";
 
 // Live view of the MCP servers declared in mcp.json; the refresh button retries the down ones.
 export default {
 	name: "McpPanel",
-	components: { Button, EmptyState, Plug, RefreshCw },
+	components: { Button, EmptyState, Plug, RefreshCw, Switch },
 	data() {
 		return { mcp: useMcpStore(), reconnecting: false };
 	},
@@ -71,6 +79,13 @@ export default {
 				// Statuses keep their last known values; the SSE feed refreshes on changes.
 			} finally {
 				this.reconnecting = false;
+			}
+		},
+		async toggle(server, enabled) {
+			try {
+				await this.mcp.setEnabled(server.id, enabled);
+			} catch {
+				// The switch snaps back via the store's last known statuses; the SSE feed refreshes.
 			}
 		},
 	},

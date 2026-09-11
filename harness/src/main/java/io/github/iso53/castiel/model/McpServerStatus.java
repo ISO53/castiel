@@ -11,6 +11,7 @@ import java.util.List;
  * @param name      Display name of the server.
  * @param type      Transport type, {@code HTTP} or {@code STDIO}.
  * @param target    Human-readable connection target.
+ * @param enabled   Whether the server participates; disabled servers are never connected.
  * @param connected Whether the server currently answers pings.
  * @param tools     Names of the tools the server offers.
  */
@@ -19,6 +20,7 @@ public record McpServerStatus(
 	String name,
 	McpServerConfig.Type type,
 	String target,
+	boolean enabled,
 	boolean connected,
 	List<String> tools
 ) {
