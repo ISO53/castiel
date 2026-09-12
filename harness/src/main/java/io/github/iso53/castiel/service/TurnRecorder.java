@@ -27,6 +27,9 @@ final class TurnRecorder {
 
 	private static final ObjectMapper JSON = new ObjectMapper();
 
+	/** Result synthesized for tool calls whose generation ended before their result arrived. */
+	static final String INTERRUPTED_RESULT = "[harness: the generation was interrupted before this tool call completed]";
+
 	private final String chatId;
 	private final ChatPersistenceService chatPersistence;
 	private ChatSession session;
@@ -100,6 +103,12 @@ final class TurnRecorder {
 	/** Persists the assistant message so far. Also used on cancel to keep partial output. */
 	synchronized void flushPending() {
 		flushOpenPart();
+		// Seal tool calls that never completed so the persisted history replays validly.
+		parts.replaceAll(part ->
+		    "tool".equals(part.type()) && part.result() == null
+		        ? part.withResult(INTERRUPTED_RESULT)
+		        : part
+			);
 		saveAssistantMessage();
 	}
 
