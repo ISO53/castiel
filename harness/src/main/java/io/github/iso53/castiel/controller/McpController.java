@@ -54,10 +54,7 @@ public class McpController {
 		return mcpManager.reconnectDisconnected();
 	}
 
-	/**
-	 * Enables or disables one server; the flag is persisted in mcp.json and
-	 * applies live, so the change takes effect on the next chat turn.
-	 */
+	/** Enables or disables one server; the flag is persisted in mcp.json and applied live. */
 	@PostMapping("/servers/{id}/enabled")
 	public List<McpServerStatus> setEnabled(@PathVariable String id, @RequestBody EnabledRequest request) {
 		return mcpManager.setEnabled(id, request.enabled());

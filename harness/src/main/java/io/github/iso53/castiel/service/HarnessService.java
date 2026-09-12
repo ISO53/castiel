@@ -635,7 +635,10 @@ public class HarnessService {
 		String text = turn.content().isBlank() ? null : turn.content();
 		messages.add(new AiMessage(text, requests));
 		for (int index = 0; index < turn.toolCalls().size(); index++) {
-			messages.add(ToolExecutionResultMessage.from(requests.get(index), turn.toolCalls().get(index).result()));
+			ToolCallPayload call = turn.toolCalls().get(index);
+			// Null result would break provider replay after an interrupted turn. Fill it with a placeholder.
+			String result = call.result() == null ? TurnRecorder.INTERRUPTED_RESULT : call.result();
+			messages.add(ToolExecutionResultMessage.from(requests.get(index), result));
 		}
 	}
 

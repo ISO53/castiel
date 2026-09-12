@@ -85,7 +85,7 @@ export default {
 			try {
 				await this.mcp.setEnabled(server.id, enabled);
 			} catch {
-				// The switch snaps back via the store's last known statuses; the SSE feed refreshes.
+				// Statuses keep their last known values; the SSE feed refreshes on changes.
 			}
 		},
 	},

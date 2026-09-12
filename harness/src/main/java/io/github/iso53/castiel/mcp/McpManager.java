@@ -170,10 +170,7 @@ public class McpManager {
 		return statuses();
 	}
 
-	/**
-	 * Persists the enabled flag of one server in the config file and applies it
-	 * live. Returns the refreshed statuses.
-	 */
+	/** Persists the enabled flag for one server and applies it live. Returns refreshed statuses. */
 	public List<McpServerStatus> setEnabled(String id, boolean enabled) {
 		McpServerConfig config = registeredConfigs.get(id);
 		if (config == null) {
@@ -186,10 +183,7 @@ public class McpManager {
 		return statuses();
 	}
 
-	/**
-	 * Sets or removes the {@code enabled} field on one server entry in the config
-	 * file, which stays the single source of truth; other entries are untouched.
-	 */
+	/** Sets or removes the {@code enabled} field of one entry in the config file; other entries are untouched. */
 	private void writeEnabledFlag(String id, boolean enabled) {
 		JsonNode root;
 		try {
@@ -310,7 +304,7 @@ public class McpManager {
 		for (McpServerConfig config : loaded.values()) {
 			McpServerConfig old = previous.get(config.id());
 			if (!config.enabled()) {
-				// Disabled servers never hold a connection, so their tools stay out of the chat.
+				// Disabled servers never connect, so their tools stay out of the chat.
 				disconnect(config.id());
 			} else if (old == null || !old.equals(config)) {
 				Thread.ofVirtual().name("mcp-connect-" + config.id()).start(() -> connect(config));
