@@ -20,8 +20,7 @@ import java.util.*;
  * @param command STDIO only: executable that runs the MCP server.
  * @param args    STDIO only: arguments passed to the executable.
  * @param env     STDIO only: extra environment variables for the subprocess.
- * @param enabled Whether the server participates; disabled servers are never
- *                connected, so their tools stay out of the chat.
+ * @param enabled Whether the server participates; disabled servers are never connected.
  */
 public record McpServerConfig(
 	String id,
