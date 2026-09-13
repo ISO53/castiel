@@ -34,7 +34,12 @@ public class FileEditTool implements ToolProvider {
 		@P("Replacement text") String newString,
 		@P("True to replace every occurrence instead of failing on multiple matches") Boolean replaceAll
 	) {
-		Path file = workspace.resolveInWorkspace(path);
+		Path file;
+		try {
+			file = workspace.resolveInWorkspace(path);
+		} catch (IllegalArgumentException ex) {
+			return "Error: " + ex.getMessage();
+		}
 		if (oldString == null || oldString.isEmpty()) {
 			return "Error: old_string is required";
 		}

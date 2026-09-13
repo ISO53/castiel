@@ -25,7 +25,7 @@ import java.util.stream.Stream;
 public class ChatPersistenceService {
 
 	private static final Logger log = LoggerFactory.getLogger(ChatPersistenceService.class);
-	private static final String CHATS_FOLDER = ".chats";
+	private static final String CHATS_FOLDER = WorkspaceSession.CHATS_FOLDER;
 
 	private final WorkspaceSession workspaceSession;
 	private final ObjectMapper objectMapper;

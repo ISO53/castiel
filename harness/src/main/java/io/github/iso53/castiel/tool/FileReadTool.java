@@ -38,7 +38,12 @@ public class FileReadTool implements ToolProvider {
 		@P("Optional 1-based line number to start reading from; omit or null to start at the beginning") Integer offset,
 		@P("Optional maximum number of lines to return; omit or null for the default of 2000") Integer limit
 	) {
-		Path file = workspace.resolveInWorkspace(path);
+		Path file;
+		try {
+			file = workspace.resolveInWorkspace(path);
+		} catch (IllegalArgumentException ex) {
+			return "Error: " + ex.getMessage();
+		}
 		if (!Files.isRegularFile(file)) {
 			return "Error: not a readable file: " + file;
 		}

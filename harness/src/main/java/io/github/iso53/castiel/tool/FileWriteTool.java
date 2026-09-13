@@ -35,7 +35,12 @@ public class FileWriteTool implements ToolProvider {
 		if (content == null) {
 			return "Error: content is required";
 		}
-		Path file = workspace.resolveInWorkspace(path);
+		Path file;
+		try {
+			file = workspace.resolveInWorkspace(path);
+		} catch (IllegalArgumentException ex) {
+			return "Error: " + ex.getMessage();
+		}
 		if (Files.exists(file) && !Files.isRegularFile(file)) {
 			return "Error: " + file + " exists and is not a regular file";
 		}

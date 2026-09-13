@@ -57,7 +57,8 @@ public class WorkspaceSearchTool implements ToolProvider {
 		"target",
 		"dist",
 		"build",
-		"out"
+		"out",
+		WorkspaceSession.CHATS_FOLDER
 	);
 
 	private final WorkspaceSession workspace;

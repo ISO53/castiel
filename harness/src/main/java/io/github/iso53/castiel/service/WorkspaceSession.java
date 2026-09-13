@@ -70,14 +70,40 @@ public class WorkspaceSession {
 		return knownFiles.contains(file.toAbsolutePath().normalize());
 	}
 
+	public static final String CHATS_FOLDER = ".chats";
+
+	/**
+	 * Returns whether a path points to or is inside the .chats folder.
+	 */
+	public boolean isChatsFolder(Path path) {
+		if (path == null) {
+			return false;
+		}
+		Path normalized = path.toAbsolutePath().normalize();
+		if (root().isPresent()) {
+			Path chatsDir = root().get().resolve(CHATS_FOLDER).toAbsolutePath().normalize();
+			if (normalized.equals(chatsDir) || normalized.startsWith(chatsDir)) {
+				return true;
+			}
+		}
+		for (Path element : normalized) {
+			if (CHATS_FOLDER.equalsIgnoreCase(element.toString())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/**
 	 * Resolves a tool-supplied path against the workspace.
 	 *
 	 * <p>Absolute paths are returned normalized as-is (a pentest harness may inspect any
 	 * file on the system); relative paths must stay inside the workspace.
+	 * Access to the workspace {@code .chats} folder is restricted.
 	 *
 	 * @throws IllegalArgumentException When the path is blank/invalid, no workspace is open
-	 *                                  for a relative path, or a relative path escapes the workspace.
+	 *                                  for a relative path, a relative path escapes the workspace,
+	 *                                  or access to .chats is attempted.
 	 */
 	public Path resolveInWorkspace(String path) {
 		if (path == null || path.isBlank()) {
@@ -89,15 +115,20 @@ public class WorkspaceSession {
 		} catch (InvalidPathException ex) {
 			throw new IllegalArgumentException("Invalid path: " + path, ex);
 		}
+		Path resolved;
 		if (requested.isAbsolute()) {
-			return requested.normalize();
+			resolved = requested.normalize();
+		} else {
+			Path root = root().orElseThrow(() ->
+				new IllegalArgumentException("No workspace is open; open a workspace first or pass an absolute path")
+			);
+			resolved = root.resolve(requested).toAbsolutePath().normalize();
+			if (!resolved.startsWith(root)) {
+				throw new IllegalArgumentException("Path escapes the workspace: " + path);
+			}
 		}
-		Path root = root().orElseThrow(() ->
-			new IllegalArgumentException("No workspace is open; open a workspace first or pass an absolute path")
-		);
-		Path resolved = root.resolve(requested).toAbsolutePath().normalize();
-		if (!resolved.startsWith(root)) {
-			throw new IllegalArgumentException("Path escapes the workspace: " + path);
+		if (isChatsFolder(resolved)) {
+			throw new IllegalArgumentException("Access to " + CHATS_FOLDER + " folder is restricted: " + path);
 		}
 		return resolved;
 	}
