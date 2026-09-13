@@ -22,17 +22,10 @@ export const useChatsStore = defineStore("chats", {
 	state: () => ({
 		chats: [],
 		activeChatId: null,
-		historyOpen: false,
 		selectedSession: null,
 		loading: false,
 	}),
 	actions: {
-		toggleHistory() {
-			this.historyOpen = !this.historyOpen;
-			if (this.historyOpen) {
-				this.fetchList().catch(() => {});
-			}
-		},
 		async fetchList() {
 			this.loading = true;
 			try {
@@ -58,7 +51,6 @@ export const useChatsStore = defineStore("chats", {
 		},
 		async selectChat(id) {
 			const session = await this.loadChat(id);
-			this.historyOpen = false;
 			return session;
 		},
 		async deleteChat(id) {

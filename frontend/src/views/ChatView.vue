@@ -9,11 +9,11 @@
 				<Button
 					variant="ghost"
 					size="icon-sm"
-					:class="{ 'bg-accent text-accent-foreground': chats.historyOpen }"
+					:class="docks.right && docks.rightView === 'history' ? 'bg-accent text-accent-foreground' : ''"
 					:disabled="streaming || !cwd"
 					aria-label="Chat history"
 					:title="!cwd ? 'Open a workspace first to view history' : 'Chat history'"
-					@click="chats.toggleHistory()"
+					@click="docks.toggleView('right', 'history')"
 				>
 					<History class="size-3.5" />
 				</Button>
@@ -37,10 +37,6 @@
 					</DropdownMenuContent>
 				</DropdownMenu>
 
-				<Button variant="ghost" size="icon-sm" class="text-muted-foreground hover:text-foreground"
-					aria-label="Hide the chat dock" title="Hide dock" @click="docks.toggle('right')">
-					<PanelRightClose class="size-3.5" />
-				</Button>
 			</div>
 		</header>
 
@@ -269,7 +265,7 @@ import {
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "@/components/ai-elements/sources";
 import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "@/components/ai-elements/tool";
-import { Brain, Check, ChevronDown, MessageSquare, History, PanelRightClose, Plus, Trash2, X } from "@lucide/vue";
+import { Brain, Check, ChevronDown, MessageSquare, History, Plus, Trash2, X } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
 import EmptyState from "@/components/EmptyState.vue";
 import {
@@ -406,7 +402,6 @@ export default {
 		ToolOutput,
 		Trash2,
 		X,
-		PanelRightClose,
 	},
 
 	data() {
@@ -415,7 +410,6 @@ export default {
 			workspace: useWorkspaceStore(),
 			chats: useChatsStore(),
 			docks: useDocksStore(),
-			historyOpen: false,
 			currentChatId: null,
 			chatTitle: "",
 			providerId: null,
@@ -534,7 +528,6 @@ export default {
 				this.chats.fetchList().catch(() => {});
 			} else {
 				this.chats.chats = [];
-				this.chats.historyOpen = false;
 				this.messages = [];
 				this.currentChatId = null;
 				this.chatTitle = "";
@@ -581,19 +574,6 @@ export default {
 			}
 			return date.toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" });
 		},
-		async toggleHistory() {
-			this.historyOpen = !this.historyOpen;
-			if (this.historyOpen && this.cwd) {
-				this.loadingHistory = true;
-				try {
-					await this.chats.fetchList();
-				} catch (err) {
-					this.error = this.messageFor(err, "Could not load chat history.");
-				} finally {
-					this.loadingHistory = false;
-				}
-			}
-		},
 		async selectChat(chatId) {
 			if (this.streaming) return;
 			this.error = "";
@@ -618,9 +598,6 @@ export default {
 				if (this.providerId) {
 					this.loadProviderModels(this.providerId);
 				}
-
-				// Close history sidebar upon selecting a chat
-				this.historyOpen = false;
 			} catch (err) {
 				this.error = this.messageFor(err, "Could not load chat.");
 			}

@@ -6,32 +6,9 @@
 				<p class="truncate text-xs font-medium text-foreground" :title="cwd ?? ''">{{ headerTitle }}</p>
 			</div>
 			<div class="flex shrink-0 items-center gap-0.5">
-				<Button
-					variant="ghost"
-					size="icon-sm"
-					:class="mode === 'files' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'"
-					aria-label="Show file tree"
-					@click="mode = 'files'"
-				>
-					<FolderTree />
-				</Button>
-				<Button
-					variant="ghost"
-					size="icon-sm"
-					:class="mode === 'views' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'"
-					aria-label="Show engagement views"
-					:disabled="!cwd"
-					@click="mode = 'views'"
-				>
-					<LayoutGrid />
-				</Button>
 				<Button variant="ghost" size="icon-sm" :disabled="!cwd || loadingRoot" aria-label="Refresh file tree"
 					@click="reload">
 					<RotateCw :class="loadingRoot ? 'animate-spin' : ''" />
-				</Button>
-				<Button variant="ghost" size="icon-sm" class="text-muted-foreground hover:text-foreground"
-					aria-label="Hide the file tree dock" title="Hide dock" @click="docks.toggle('left')">
-					<PanelLeftClose />
 				</Button>
 			</div>
 		</header>
@@ -87,13 +64,10 @@ import { fileTreeActions, fileTreeUi } from "@/components/file-tree-ui";
 import {
 	Bug,
 	FolderOpen,
-	FolderTree,
 	Globe,
 	Image as ImageIcon,
-	LayoutGrid,
 	ListChecks,
 	Network,
-	PanelLeftClose,
 	RotateCw,
 } from "@lucide/vue";
 import { ENGAGEMENT_DOCUMENTS } from "@/lib/documents";
@@ -156,9 +130,6 @@ export default {
 		FileTree,
 		FileTreeEntry,
 		FolderOpen,
-		FolderTree,
-		LayoutGrid,
-		PanelLeftClose,
 		RotateCw,
 		Spinner,
 	},
@@ -175,12 +146,14 @@ export default {
 			loadingRoot: false,
 			error: "",
 			fileTreeUi,
-			mode: "files",
 			documents: ENGAGEMENT_DOCUMENTS,
 			docIcons: DOC_ICONS,
 		};
 	},
 	computed: {
+		mode() {
+			return this.docks.leftView;
+		},
 		cwd() {
 			return this.workspace.cwd;
 		},
