@@ -25,7 +25,7 @@
 
 					<ResizablePanel collapsible :collapsed-size="0" :default-size="20" :min-size="8" ref="bottomDock"
 						@collapse="docks.bottom = false" @expand="docks.bottom = true">
-						<ProcessesView />
+						<component :is="bottomView" />
 					</ResizablePanel>
 				</ResizablePanelGroup>
 			</ResizablePanel>
@@ -34,9 +34,12 @@
 
 			<ResizablePanel collapsible :collapsed-size="0" :default-size="30" :min-size="15" :max-size="50"
 				ref="rightDock" @collapse="docks.right = false" @expand="docks.right = true">
-				<ChatView />
+				<component :is="rightView" />
 			</ResizablePanel>
 		</ResizablePanelGroup>
+
+		<!-- Bottom bar -->
+		<DockBar />
 
 		<!-- Chat history opens in a dialog instead of a resizable panel -->
 		<Dialog :open="chats.historyOpen" @update:open="chats.historyOpen = $event">
@@ -50,8 +53,10 @@
 </template>
 
 <script>
+import { computed, markRaw } from "vue";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import DockBar from "@/components/DockBar.vue";
 import ChatView from "@/views/ChatView.vue";
 import ChatHistoryPanel from "@/components/ChatHistoryPanel.vue";
 import FileTreeView from "@/components/FileTreeView.vue";
@@ -65,6 +70,16 @@ import { useTabsStore } from "@/stores/tabs";
 
 const ONBOARDING_SEEN_KEY = "castiel.onboardingComplete";
 
+// Bottom-dock views; a new view registers here and in the DockBar.
+const BOTTOM_DOCK_VIEWS = {
+	processes: markRaw(ProcessesView),
+};
+
+// Right-dock views; a new view registers here and in the DockBar.
+const RIGHT_DOCK_VIEWS = {
+	chat: markRaw(ChatView),
+};
+
 export default {
 	name: "App",
 	components: {
@@ -76,6 +91,7 @@ export default {
 		DialogTitle,
 		ChatView,
 		ChatHistoryPanel,
+		DockBar,
 		FileTreeView,
 		McpPanel,
 		MenuBar,
@@ -85,7 +101,10 @@ export default {
 	setup() {
 		const docks = useDocksStore();
 		const chats = useChatsStore();
-		return { docks, chats };
+		// Docks render one registered view at a time.
+		const rightView = computed(() => RIGHT_DOCK_VIEWS[docks.rightView] ?? RIGHT_DOCK_VIEWS.chat);
+		const bottomView = computed(() => BOTTOM_DOCK_VIEWS[docks.bottomView] ?? BOTTOM_DOCK_VIEWS.processes);
+		return { docks, chats, rightView, bottomView };
 	},
 	mounted() {
 		// The onboarding tour opens once; it can be reopened from the Help menu.

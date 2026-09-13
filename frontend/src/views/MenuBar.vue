@@ -14,6 +14,11 @@
 		<MenubarMenu>
 			<MenubarTrigger>Window</MenubarTrigger>
 			<MenubarContent>
+				<MenubarItem @click="docks.openView('left', 'files')">File tree</MenubarItem>
+				<MenubarItem @click="docks.openView('left', 'views')">Engagement views</MenubarItem>
+				<MenubarItem @click="docks.openView('right', 'chat')">Chat</MenubarItem>
+				<MenubarItem @click="docks.openView('bottom', 'processes')">Background processes</MenubarItem>
+				<MenubarSeparator />
 				<MenubarItem @click="docks.toggle('left')">Toggle left dock</MenubarItem>
 				<MenubarItem @click="docks.toggle('right')">Toggle right dock</MenubarItem>
 				<MenubarItem @click="docks.toggle('bottom')">Toggle bottom dock</MenubarItem>

@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { ChevronDown, PanelBottomClose, SquareX, Terminal as TerminalIcon, Trash2 } from "@lucide/vue";
+import { ChevronDown, SquareX, Terminal as TerminalIcon, Trash2 } from "@lucide/vue";
 import { Terminal } from "@/components/ai-elements/terminal";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -8,12 +8,10 @@ import EmptyState from "@/components/EmptyState.vue";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useDocksStore } from "@/stores/docks";
 import { useProcessesStore } from "@/stores/processes";
 import { useWorkspaceStore } from "@/stores/workspace";
 
 const store = useProcessesStore();
-const docks = useDocksStore();
 const workspace = useWorkspaceStore();
 
 onMounted(() => store.startFeed());
@@ -123,10 +121,6 @@ function shortCommand(command) {
 					aria-label="Start a background process" title="Start a background process"
 					@click="openStartDialog">
 					<TerminalIcon :size="14" />
-				</Button>
-				<Button size="icon" variant="ghost" class="size-6 text-muted-foreground hover:text-foreground"
-					title="Hide dock" @click="docks.toggle('bottom')">
-					<PanelBottomClose :size="14" />
 				</Button>
 			</div>
 		</div>
