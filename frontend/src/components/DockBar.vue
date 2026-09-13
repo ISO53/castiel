@@ -1,6 +1,7 @@
 <script setup>
 import {
 	FolderTree,
+	History,
 	LayoutGrid,
 	MessageSquare,
 	Terminal,
@@ -19,6 +20,7 @@ const DOCK_VIEWS = {
 	],
 	right: [
 		{ id: "chat", label: "Chat", icon: MessageSquare },
+		{ id: "history", label: "Chat history", icon: History },
 	],
 	bottom: [
 		{ id: "processes", label: "Background processes", icon: Terminal },

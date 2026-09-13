@@ -9,11 +9,11 @@
 				<Button
 					variant="ghost"
 					size="icon-sm"
-					:class="{ 'bg-accent text-accent-foreground': chats.historyOpen }"
+					:class="docks.right && docks.rightView === 'history' ? 'bg-accent text-accent-foreground' : ''"
 					:disabled="streaming || !cwd"
 					aria-label="Chat history"
 					:title="!cwd ? 'Open a workspace first to view history' : 'Chat history'"
-					@click="chats.toggleHistory()"
+					@click="docks.toggleView('right', 'history')"
 				>
 					<History class="size-3.5" />
 				</Button>
@@ -294,6 +294,7 @@ import {
 import { useSettingsStore } from "@/stores/settings";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useChatsStore } from "@/stores/chats";
+import { useDocksStore } from "@/stores/docks";
 import { providerLogo } from "@/lib/provider-logos";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
@@ -408,7 +409,7 @@ export default {
 			settings: useSettingsStore(),
 			workspace: useWorkspaceStore(),
 			chats: useChatsStore(),
-			historyOpen: false,
+			docks: useDocksStore(),
 			currentChatId: null,
 			chatTitle: "",
 			providerId: null,
@@ -527,7 +528,6 @@ export default {
 				this.chats.fetchList().catch(() => {});
 			} else {
 				this.chats.chats = [];
-				this.chats.historyOpen = false;
 				this.messages = [];
 				this.currentChatId = null;
 				this.chatTitle = "";
@@ -574,19 +574,6 @@ export default {
 			}
 			return date.toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" });
 		},
-		async toggleHistory() {
-			this.historyOpen = !this.historyOpen;
-			if (this.historyOpen && this.cwd) {
-				this.loadingHistory = true;
-				try {
-					await this.chats.fetchList();
-				} catch (err) {
-					this.error = this.messageFor(err, "Could not load chat history.");
-				} finally {
-					this.loadingHistory = false;
-				}
-			}
-		},
 		async selectChat(chatId) {
 			if (this.streaming) return;
 			this.error = "";
@@ -611,9 +598,6 @@ export default {
 				if (this.providerId) {
 					this.loadProviderModels(this.providerId);
 				}
-
-				// Close history sidebar upon selecting a chat
-				this.historyOpen = false;
 			} catch (err) {
 				this.error = this.messageFor(err, "Could not load chat.");
 			}

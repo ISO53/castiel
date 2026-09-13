@@ -8,9 +8,9 @@
 			<Button
 				variant="ghost"
 				size="icon-sm"
-				aria-label="Close history"
-				title="Close history"
-				@click="chats.historyOpen = false"
+				aria-label="Back to chat"
+				title="Back to chat"
+				@click="docks.openView('right', 'chat')"
 			>
 				<X class="size-3.5" />
 			</Button>
@@ -70,6 +70,7 @@
 import { History, Trash2, X } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useDocksStore } from "@/stores/docks";
 import { useChatsStore } from "@/stores/chats";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { providerLogo } from "@/lib/provider-logos";
@@ -86,6 +87,7 @@ export default {
 	data() {
 		return {
 			chats: useChatsStore(),
+			docks: useDocksStore(),
 			workspace: useWorkspaceStore(),
 		};
 	},
@@ -118,6 +120,8 @@ export default {
 		},
 		async onSelectChat(chatId) {
 			await this.chats.selectChat(chatId);
+			// Selecting a chat returns to the conversation view of the right dock.
+			this.docks.openView('right', 'chat');
 		},
 		async handleDeleteChat(chatId) {
 			await this.chats.deleteChat(chatId);

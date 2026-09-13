@@ -40,22 +40,12 @@
 
 		<!-- Bottom bar -->
 		<DockBar />
-
-		<!-- Chat history opens in a dialog instead of a resizable panel -->
-		<Dialog :open="chats.historyOpen" @update:open="chats.historyOpen = $event">
-			<DialogContent class="h-[70vh] max-h-[85vh] max-w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0 sm:max-w-md"
-				:show-close-button="false">
-				<DialogTitle class="sr-only">Chat History</DialogTitle>
-				<ChatHistoryPanel />
-			</DialogContent>
-		</Dialog>
 	</div>
 </template>
 
 <script>
 import { computed, markRaw } from "vue";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import DockBar from "@/components/DockBar.vue";
 import ChatView from "@/views/ChatView.vue";
 import ChatHistoryPanel from "@/components/ChatHistoryPanel.vue";
@@ -78,6 +68,7 @@ const BOTTOM_DOCK_VIEWS = {
 // Right-dock views; a new view registers here and in the DockBar.
 const RIGHT_DOCK_VIEWS = {
 	chat: markRaw(ChatView),
+	history: markRaw(ChatHistoryPanel),
 };
 
 export default {
@@ -86,9 +77,6 @@ export default {
 		ResizablePanelGroup,
 		ResizablePanel,
 		ResizableHandle,
-		Dialog,
-		DialogContent,
-		DialogTitle,
 		ChatView,
 		ChatHistoryPanel,
 		DockBar,
@@ -100,11 +88,10 @@ export default {
 	},
 	setup() {
 		const docks = useDocksStore();
-		const chats = useChatsStore();
 		// Docks render one registered view at a time.
 		const rightView = computed(() => RIGHT_DOCK_VIEWS[docks.rightView] ?? RIGHT_DOCK_VIEWS.chat);
 		const bottomView = computed(() => BOTTOM_DOCK_VIEWS[docks.bottomView] ?? BOTTOM_DOCK_VIEWS.processes);
-		return { docks, chats, rightView, bottomView };
+		return { docks, rightView, bottomView };
 	},
 	mounted() {
 		// The onboarding tour opens once; it can be reopened from the Help menu.
