@@ -52,6 +52,7 @@ import ChatHistoryPanel from "@/components/ChatHistoryPanel.vue";
 import FileTreeView from "@/components/FileTreeView.vue";
 import McpPanel from "@/components/McpPanel.vue";
 import MenuBar from "@/views/MenuBar.vue";
+import AgentsView from "@/views/AgentsView.vue";
 import ProcessesView from "@/views/ProcessesView.vue";
 import TabbedView from "./views/TabbedView.vue";
 import { useChatsStore } from "@/stores/chats";
@@ -62,6 +63,7 @@ const ONBOARDING_SEEN_KEY = "castiel.onboardingComplete";
 
 // Bottom-dock views; a new view registers here and in the DockBar.
 const BOTTOM_DOCK_VIEWS = {
+	agents: markRaw(AgentsView),
 	processes: markRaw(ProcessesView),
 };
 

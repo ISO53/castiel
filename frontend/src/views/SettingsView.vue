@@ -312,12 +312,114 @@
 					Invalid mcp.json: {{ mcpConfig.error }}
 				</p>
 			</section>
+
+			<section class="space-y-4">
+				<div class="space-y-1">
+					<h2 class="text-sm font-semibold text-foreground">Sub-agents</h2>
+					<p class="text-xs text-muted-foreground">
+						Sub-agents are smaller models the main agent delegates mechanical tasks to
+						(recon, scanning, OSINT, document formatting); it writes each one's role and
+						toolset per task. Pick the model they run on here.
+					</p>
+				</div>
+				<Separator />
+
+				<div class="space-y-4 rounded-lg border border-border p-4">
+					<div class="grid grid-cols-2 gap-3">
+						<div class="flex flex-col gap-1.5">
+							<Label>Worker provider</Label>
+							<Popover v-model:open="workerProviderOpen">
+								<PopoverTrigger as-child>
+									<Button variant="outline" role="combobox" :aria-expanded="workerProviderOpen"
+										class="w-full justify-between font-normal">
+										<span :class="agentWorker.providerId ? '' : 'text-muted-foreground'">
+											{{ agentWorker.providerId || "Select provider..." }}
+										</span>
+										<ChevronsUpDown class="opacity-50" />
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent class="w-(--reka-popover-trigger-width) p-0">
+									<Command>
+										<CommandInput class="h-9" placeholder="Search provider..." />
+										<CommandList>
+											<CommandEmpty>No provider found.</CommandEmpty>
+											<CommandGroup>
+												<CommandItem v-for="id in providerIds" :key="id" :value="id"
+													@select="(ev) => selectWorkerProvider(String(ev.detail.value))">
+													{{ id }}
+													<Check :class="['ml-auto', agentWorker.providerId === id ? 'opacity-100' : 'opacity-0']" />
+												</CommandItem>
+											</CommandGroup>
+										</CommandList>
+									</Command>
+								</PopoverContent>
+							</Popover>
+						</div>
+						<div class="flex flex-col gap-1.5">
+							<Label>Worker model</Label>
+							<Popover v-model:open="workerModelOpen">
+								<PopoverTrigger as-child>
+									<Button variant="outline" role="combobox" :aria-expanded="workerModelOpen"
+										:disabled="!agentWorker.providerId" class="w-full justify-between font-normal">
+										<span :class="agentWorker.modelName ? '' : 'text-muted-foreground'">
+											{{ agentWorker.modelName || "Select model..." }}
+										</span>
+										<ChevronsUpDown class="opacity-50" />
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent class="w-(--reka-popover-trigger-width) p-0">
+									<Command>
+										<CommandInput class="h-9" placeholder="Search model..." />
+										<CommandList>
+											<CommandEmpty>No model found.</CommandEmpty>
+											<CommandGroup>
+												<CommandItem v-for="model in agentModels[agentWorker.providerId] ?? []"
+													:key="model.name" :value="model.name"
+													@select="(ev) => selectWorkerModel(String(ev.detail.value))">
+													{{ model.name }}
+													<Check :class="['ml-auto', agentWorker.modelName === model.name ? 'opacity-100' : 'opacity-0']" />
+												</CommandItem>
+											</CommandGroup>
+										</CommandList>
+									</Command>
+								</PopoverContent>
+							</Popover>
+						</div>
+					</div>
+
+					<div class="flex flex-col gap-1.5">
+						<Label for="agent_max_rounds">Default tool-call rounds</Label>
+						<Input id="agent_max_rounds" v-model.number="agentMaxRounds" type="number" min="2" max="32"
+							placeholder="16" />
+						<p class="text-[11px] text-muted-foreground">
+							Budget for one sub-agent run (2–32). The agent can request more per call, up to 32.
+						</p>
+					</div>
+
+					<div class="flex items-center gap-3">
+						<Button size="sm" :disabled="agentSaving" @click="saveAgents">
+							{{ agentSaving ? "Saving..." : "Save sub-agent settings" }}
+						</Button>
+						<span v-if="agentSaved" class="text-xs text-emerald-500">Saved</span>
+						<span v-if="agentError" class="text-xs text-destructive wrap-break-word">{{ agentError }}</span>
+					</div>
+				</div>
+			</section>
 		</div>
 	</ScrollArea>
 </template>
 
 <script>
 import { Button } from "@/components/ui/button";
+import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
 	Collapsible,
 	CollapsibleContent,
@@ -331,7 +433,7 @@ import { useSettingsStore } from "@/stores/settings";
 import { useMcpStore } from "@/stores/mcp";
 import { useTabsStore } from "@/stores/tabs";
 import { providerLogo } from "@/lib/provider-logos";
-import { ChevronDown } from "@lucide/vue";
+import { Check, ChevronDown, ChevronsUpDown } from "@lucide/vue";
 
 export default {
 	name: "SettingsView",
@@ -345,6 +447,17 @@ export default {
 		ScrollArea,
 		Separator,
 		ChevronDown,
+		Check,
+		ChevronsUpDown,
+		Popover,
+		PopoverContent,
+		PopoverTrigger,
+		Command,
+		CommandEmpty,
+		CommandGroup,
+		CommandInput,
+		CommandItem,
+		CommandList,
 	},
 	data() {
 		return {
@@ -382,7 +495,20 @@ export default {
 			mcp: useMcpStore(),
 			mcpConfig: null,
 			mcpFileError: "",
+			agentWorker: { providerId: "", modelName: "" },
+			workerProviderOpen: false,
+			workerModelOpen: false,
+			agentMaxRounds: 16,
+			agentModels: {},
+			agentSaving: false,
+			agentError: "",
+			agentSaved: false,
 		};
+	},
+	computed: {
+		providerIds() {
+			return Object.keys(useSettingsStore().providers ?? {});
+		},
 	},
 	async mounted() {
 		this.mcp.startFeed();
@@ -412,11 +538,87 @@ export default {
 				apiKey: cline.apiKey ?? "",
 			};
 			this.clineOpen = Boolean(settings.providers.cline);
+			await this.initAgents();
 		} catch (err) {
 			this.error = err instanceof Error ? err.message : String(err);
 		}
 	},
 	methods: { providerLogo,
+		// ---- Sub-agents ---------------------------------------------------------------------
+		async initAgents() {
+			try {
+				const response = await fetch(`${window.location.origin}/api/settings`);
+				if (!response.ok) return;
+				const data = await response.json();
+				const worker = data.workerModel;
+				this.agentWorker = {
+					providerId: worker?.providerId ?? "",
+					modelName: worker?.modelName ?? "",
+				};
+				this.agentMaxRounds = data.defaultMaxRounds ?? 16;
+				if (this.agentWorker.providerId) this.loadAgentModels(this.agentWorker.providerId);
+			} catch {
+				// Non-fatal; the section simply shows defaults.
+			}
+		},
+		async loadAgentModels(providerId) {
+			if (!providerId || this.agentModels[providerId]) return;
+			try {
+				const response = await fetch(
+					`${window.location.origin}/api/settings/providers/${encodeURIComponent(providerId)}/models`,
+				);
+				if (!response.ok) return;
+				this.agentModels[providerId] = await response.json();
+			} catch {
+				// Transient; the select simply stays empty.
+			}
+		},
+		onWorkerProviderChange() {
+			this.agentWorker.modelName = "";
+			if (this.agentWorker.providerId) this.loadAgentModels(this.agentWorker.providerId);
+		},
+		selectWorkerProvider(id) {
+			this.agentWorker.providerId = id;
+			this.workerProviderOpen = false;
+			this.onWorkerProviderChange();
+		},
+		selectWorkerModel(name) {
+			this.agentWorker.modelName = name;
+			this.workerModelOpen = false;
+		},
+		async saveAgents() {
+			this.agentSaving = true;
+			this.agentError = "";
+			this.agentSaved = false;
+			const rounds = Math.trunc(Number(this.agentMaxRounds));
+			const body = {
+				workerModel:
+					this.agentWorker.providerId && this.agentWorker.modelName
+						? { providerId: this.agentWorker.providerId, modelName: this.agentWorker.modelName }
+						: null,
+				defaultMaxRounds: Number.isFinite(rounds) ? rounds : null,
+			};
+			try {
+				const response = await fetch(`${window.location.origin}/api/settings/agents`, {
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(body),
+				});
+				if (!response.ok) {
+					const text = await response.text();
+					throw new Error(text || `HTTP ${response.status}`);
+				}
+				this.agentSaved = true;
+				setTimeout(() => {
+					this.agentSaved = false;
+				}, 2500);
+			} catch (err) {
+				this.agentError = err instanceof Error ? err.message : String(err);
+			} finally {
+				this.agentSaving = false;
+			}
+		},
+		// ---- Providers ----------------------------------------------------------------------
 		async connect() {
 			this.connecting = true;
 			this.error = "";

@@ -53,7 +53,7 @@
 </template>
 
 <script>
-import { Bot, FolderOpen, Plug, Rocket, Sparkles } from "@lucide/vue";
+import { Bot, Cpu, FolderOpen, Plug, Rocket, Sparkles } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -117,6 +117,17 @@ export default {
 				},
 				{
 					step: 4,
+					title: "Sub-agents",
+					icon: Cpu,
+					action: "Open Settings",
+					tab: "settings",
+					body:
+						"The main agent can delegate mechanical tasks like recon or scanning to smaller " +
+						"sub-agent models; it writes each one's role and toolset per task. Under " +
+						"Sub-agents in the settings view, pick the model they run on.",
+				},
+				{
+					step: 5,
 					title: "Workspace",
 					icon: FolderOpen,
 					body:
@@ -125,7 +136,7 @@ export default {
 						"with the agent.",
 				},
 				{
-					step: 5,
+					step: 6,
 					title: "All Set",
 					icon: Rocket,
 					body:

@@ -1,5 +1,6 @@
 <script setup>
 import {
+	Bot,
 	FolderTree,
 	History,
 	LayoutGrid,
@@ -23,6 +24,7 @@ const DOCK_VIEWS = {
 		{ id: "history", label: "Chat history", icon: History },
 	],
 	bottom: [
+		{ id: "agents", label: "Agents", icon: Bot },
 		{ id: "processes", label: "Background processes", icon: Terminal },
 	],
 };
