@@ -77,4 +77,25 @@ public class SettingsController {
 			);
 		}
 	}
+
+	/**
+	 * Replaces the sub-agent settings: the worker model and the default tool-round budget.
+	 * The rest of the settings document is untouched.
+	 */
+	@PutMapping("/agents")
+	public UserSettings putAgents(@RequestBody AgentUpdate body) {
+		if (body == null) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is required");
+		}
+		try {
+			UserSettings current = userSettingsService.get();
+			return userSettingsService.save(new UserSettings(
+				current.providers(), current.activeProviderId(), body.workerModel(), body.defaultMaxRounds()));
+		} catch (IllegalStateException ex) {
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), ex);
+		}
+	}
+
+	/** Request body for {@link #putAgents}; both fields optional, nulls apply defaults. */
+	public record AgentUpdate(AgentModelRef workerModel, Integer defaultMaxRounds) {}
 }

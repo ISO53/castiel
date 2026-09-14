@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Loads and persists {@link UserSettings} as JSON under the OS config directory.
@@ -28,7 +30,7 @@ public class UserSettingsService {
 		.enable(SerializationFeature.INDENT_OUTPUT)
 		.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
-	private volatile UserSettings settings = UserSettings.empty();
+	private volatile UserSettings settings = new UserSettings(null, null, null, null);
 
 	@PostConstruct
 	void loadOnStartup() {
@@ -40,19 +42,19 @@ public class UserSettingsService {
 	}
 
 	public synchronized UserSettings save(UserSettings next) {
-		settings = next != null ? next : UserSettings.empty();
+		settings = next != null ? next : new UserSettings(null, null, null, null);
 		writeToDisk(settings);
 		return settings;
 	}
 
-	/**
-	 * Upserts one provider entry and writes settings to disk.
-	 */
+	// Upserts one provider entry (marking it the UI default) and writes settings to disk.
 	public synchronized UserSettings upsertProvider(String providerId, LlmProviderConfig config) {
 		if (providerId == null || providerId.isBlank()) {
 			throw new IllegalArgumentException("providerId is required");
 		}
-		settings = settings.withProvider(providerId.trim(), config, true);
+		Map<String, LlmProviderConfig> next = new LinkedHashMap<>(settings.providers());
+		next.put(providerId.trim(), config);
+		settings = new UserSettings(next, providerId.trim(), settings.workerModel(), settings.defaultMaxRounds());
 		writeToDisk(settings);
 		return settings;
 	}
@@ -60,14 +62,14 @@ public class UserSettingsService {
 	private UserSettings readFromDisk() {
 		Path file = AppPaths.settingsFile();
 		if (!Files.isRegularFile(file)) {
-			return UserSettings.empty();
+			return new UserSettings(null, null, null, null);
 		}
 		try {
 			UserSettings loaded = objectMapper.readValue(file.toFile(), UserSettings.class);
-			return loaded != null ? loaded : UserSettings.empty();
+			return loaded != null ? loaded : new UserSettings(null, null, null, null);
 		} catch (IOException ex) {
 			log.warn("Could not read settings from {}; using defaults", file, ex);
-			return UserSettings.empty();
+			return new UserSettings(null, null, null, null);
 		}
 	}
 

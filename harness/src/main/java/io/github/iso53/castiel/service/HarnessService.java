@@ -15,6 +15,8 @@ import dev.langchain4j.model.openai.OpenAiTokenUsage;
 import dev.langchain4j.model.output.TokenUsage;
 import dev.langchain4j.service.tool.DefaultToolExecutor;
 import dev.langchain4j.service.tool.ToolExecutor;
+import io.github.iso53.castiel.agent.AgentGuardrails;
+import io.github.iso53.castiel.agent.AgentRunManager;
 import io.github.iso53.castiel.mcp.McpManager;
 import io.github.iso53.castiel.model.*;
 import io.github.iso53.castiel.provider.GenerationOptions;
@@ -54,6 +56,15 @@ public class HarnessService {
 	private static final String SYSTEM_PROMPT_PATH = "prompts/SYSTEM_PROMPT.md";
 	private static final int MAX_TOOL_ROUNDS = 64;
 
+	/** Inject a workspace-sync checkpoint reminder into the model's context every N tool rounds. */
+	private static final int CHECKPOINT_INTERVAL_ROUNDS = 12;
+
+	private static final String CHECKPOINT_REMINDER = """
+		[harness checkpoint] You have made many tool calls without finishing. Before continuing, \
+		synchronize any confirmed findings into the workspace documents now (network.json, web.json, \
+		vulnerabilities.json, evidence.json, tasks.json. Read first, merge, never overwrite existing \
+		entries). Then carry on with your remaining work.""";
+
 	/** Maximum characters kept from a single MCP tool result; larger outputs spill to disk. */
 	private static final int MCP_OUTPUT_CHAR_CAP = 16_384;
 
@@ -66,8 +77,22 @@ public class HarnessService {
 	private final McpManager mcpManager;
 	private final WorkspaceEventBus workspaceEvents;
 	private final WorkspaceSession workspaceSession;
+	private final AgentRunManager agentRunManager;
 	private final List<ToolSpecification> toolSpecifications;
 	private final Map<String, ToolExecutor> toolExecutors;
+
+	/**
+	 * Id of the chat generation whose tool executions are running on this thread, or null.
+	 * Sub-agent tool execution reads it to link spawned runs to the orchestrator's generation
+	 * so a generation cancel can fan out to its sub-agents.
+	 */
+	private static final ThreadLocal<String> CURRENT_GENERATION = new ThreadLocal<>();
+
+	/**
+	 * Filtered toolset handed to a sub-agent: only the specifications and executors whose
+	 * names are allowed. MCP tools whose names pass the filter get a delegating executor.
+	 */
+	public record AgentToolset(List<ToolSpecification> specifications, Map<String, ToolExecutor> executors) {}
 	private final ConcurrentMap<String, GenerationState> generations = new ConcurrentHashMap<>();
 
 	/**
@@ -90,6 +115,7 @@ public class HarnessService {
 		McpManager mcpManager,
 		WorkspaceEventBus workspaceEvents,
 		WorkspaceSession workspaceSession,
+		AgentRunManager agentRunManager,
 		List<ToolProvider> toolProviders
 	) {
 		this.llmClientFactory = llmClientFactory;
@@ -98,6 +124,7 @@ public class HarnessService {
 		this.mcpManager = mcpManager;
 		this.workspaceEvents = workspaceEvents;
 		this.workspaceSession = workspaceSession;
+		this.agentRunManager = agentRunManager;
 
 		UserQuestionTool questionTool = null;
 		this.toolSpecifications = new ArrayList<>();
@@ -242,7 +269,7 @@ public class HarnessService {
 		return Flux.create(sink -> {
 			sink.onDispose(() -> generations.remove(generationId));
 			sink.next(event("start", json(Map.of("id", generationId))));
-			streamRound(provider, modelName, options, messages, sink, state, 0);
+			streamRound(generationId, provider, modelName, options, messages, sink, state, 0);
 		});
 	}
 
@@ -261,6 +288,8 @@ public class HarnessService {
 			return false;
 		}
 		state.cancelled.set(true);
+		// Any sub-agents spawned by this generation stop with it.
+		agentRunManager.cancelByParent(generationId);
 		if (state.recorder != null) {
 			state.recorder.flushPending(); // Keep whatever had already streamed when stopping.
 		}
@@ -277,6 +306,7 @@ public class HarnessService {
 	 * generation's cancelled flag first, so a cancel request stops the stream immediately.
 	 */
 	private void streamRound(
+		String generationId,
 		LlmProvider provider,
 		String modelName,
 		GenerationOptions options,
@@ -375,29 +405,39 @@ public class HarnessService {
 
 					List<ChatMessage> nextMessages = new ArrayList<>(messages);
 					nextMessages.add(message);
-					for (int index = 0; index < message.toolExecutionRequests().size(); index++) {
-						ToolExecutionRequest request = withId(message.toolExecutionRequests().get(index), index);
-						if (recorder != null) recorder.addToolCall(request);
-						String result = executeTool(request, index);
-						if (recorder != null) recorder.completeToolCall(toolCallId(request, index), result);
-						sink.next(
-							event(
-								"tool_result",
-								json(
-									Map.of(
-										"id",
-										toolCallId(request, index),
-										"name",
-										request.name() == null ? "" : request.name(),
-										"result",
-										result
+					CURRENT_GENERATION.set(generationId);
+					try {
+						for (int index = 0; index < message.toolExecutionRequests().size(); index++) {
+							ToolExecutionRequest request = withId(message.toolExecutionRequests().get(index), index);
+							if (recorder != null) recorder.addToolCall(request);
+							String result = executeTool(request, index);
+							if (recorder != null) recorder.completeToolCall(toolCallId(request, index), result);
+							sink.next(
+								event(
+									"tool_result",
+									json(
+										Map.of(
+											"id",
+											toolCallId(request, index),
+											"name",
+											request.name() == null ? "" : request.name(),
+											"result",
+											result
+										)
 									)
 								)
-							)
-						);
-						nextMessages.add(ToolExecutionResultMessage.from(request, result));
+							);
+							nextMessages.add(ToolExecutionResultMessage.from(request, result));
+						}
+					} finally {
+						CURRENT_GENERATION.remove();
 					}
-					streamRound(provider, modelName, options, nextMessages, sink, state, round + 1);
+					// Periodic checkpoint: nudge the model to sync findings into the workspace
+					// instead of stockpiling observations across a long tool-call stretch.
+					if ((round + 1) % CHECKPOINT_INTERVAL_ROUNDS == 0) {
+						nextMessages.add(SystemMessage.from(CHECKPOINT_REMINDER));
+					}
+					streamRound(generationId, provider, modelName, options, nextMessages, sink, state, round + 1);
 				}
 
 				@Override
@@ -450,9 +490,48 @@ public class HarnessService {
 	}
 
 	/**
-	 * Local tools first, then MCP tools; MCP tools whose name collides with an
-	 * already listed tool are skipped.
+	 * Builds a filtered toolset for a sub-agent: the local tools and MCP tools whose names
+	 * are allowed, with forbidden tools (user questions, nesting, edit_file) always removed.
+	 * File-mutating executors keep their workspace-notify decorations.
 	 */
+	public AgentToolset toolsFor(Set<String> allowedNames) {
+		Set<String> allowed = allowedNames == null ? Set.of() : Set.copyOf(allowedNames);
+		Set<String> seen = new HashSet<>();
+		List<ToolSpecification> specifications = new ArrayList<>();
+		Map<String, ToolExecutor> executors = new LinkedHashMap<>();
+		for (ToolSpecification specification : toolSpecifications) {
+			String name = specification.name();
+			if (AgentGuardrails.FORBIDDEN_TOOLS.contains(name) || !allowed.contains(name) || !seen.add(name)) {
+				continue;
+			}
+			ToolExecutor executor = toolExecutors.get(name);
+			if (executor == null) {
+				continue;
+			}
+			specifications.add(specification);
+			executors.put(name, executor);
+		}
+		for (ToolSpecification specification : mcpManager.toolSpecifications()) {
+			String name = specification.name();
+			if (!allowed.contains(name) || !seen.add(name)) {
+				continue;
+			}
+			specifications.add(specification);
+			executors.put(name, (request, memoryId) -> executeMcpTool(request));
+		}
+		return new AgentToolset(List.copyOf(specifications), Map.copyOf(executors));
+	}
+
+	/** Executes one MCP tool with the same output cap the orchestrator loop applies. */
+	public String executeMcpTool(ToolExecutionRequest request) {
+		return capMcpOutput(request.name(), mcpManager.executeTool(request));
+	}
+
+	/** Current chat generation id for tool execution on this thread; used by sub-agent tools. */
+	public static String currentGenerationId() {
+		return CURRENT_GENERATION.get();
+	}
+
 	private List<ToolSpecification> availableTools() {
 		Set<String> names = new HashSet<>();
 		List<ToolSpecification> combined = new ArrayList<>();

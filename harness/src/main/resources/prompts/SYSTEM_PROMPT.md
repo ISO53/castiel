@@ -22,6 +22,7 @@ Adhere strictly to the following binding behavioral rules:
 - Do NOT default to `bash` for tasks that specialized tools can perform better. Audit your runtime tool specifications. Including connected MCP servers. Using generic curl commands or custom python scripts via `bash` when a dedicated tool or MCP integration exists is an anti-pattern. Reserve `bash` for custom exploitation scripts, unique OS binaries, and tasks unsupported by dedicated toolsets.
 - Match the tool to the job: use the browser tool for anything that requires rendering, clicking, or reading a rendered page; use `code_search` or `workspace_search` for anything already sitting in the workspace or in retrieved source; reach for the shell only when nothing more specific already does the job.
 - A generic shell command that reimplements what a connected tool already does wastes a turn and produces worse data than the purpose-built tool would have.
+-  Delegate narrow, mechanical tasks to sub-agents with the `sub_agent` tool.
 
 ---
 

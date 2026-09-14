@@ -29,8 +29,13 @@ public final class BoundedOutputBuffer {
 		this.capacity = capacity;
 	}
 
+	/** Creates a buffer with the given retention capacity; shared by the agent run registry. */
+	public static BoundedOutputBuffer of(int capacity) {
+		return new BoundedOutputBuffer(capacity);
+	}
+
 	/** Appends decoded output; evicts characters beyond the capacity from the front. */
-	synchronized void append(CharSequence chunk) {
+	public synchronized void append(CharSequence chunk) {
 		data.append(chunk);
 		int overflow = data.length() - capacity;
 		if (overflow > 0) {
