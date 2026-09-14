@@ -38,6 +38,12 @@
 	<dependencies>
 
 		<dependency>
+			<groupId>info.picocli</groupId>
+			<artifactId>picocli</artifactId>
+			<version>4.7.7</version>
+		</dependency>
+
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webflux</artifactId>
 		</dependency>
@@ -92,6 +98,9 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<jvmArguments>-Dspring.web.resources.add-mappings=false -Dspring.webflux.static-path-pattern=/unavailable/**</jvmArguments>
+				</configuration>
 			</plugin>
 		</plugins>
 
