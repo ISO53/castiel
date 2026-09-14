@@ -73,11 +73,12 @@ mvn package
 java -jar target/castiel-{version}.jar
 ```
 
-Settings are overridden the standard Spring Boot way:
+Settings are overridden with castiel's own command line flags:
 
 ```sh
-java -jar target/castiel-{version}.jar --server.port=9090   # different port
-java -Dlogging.level.root=DEBUG -jar target/castiel-{version}.jar   # verbose logs
+java -jar target/castiel-{version}.jar --debug     # debug logging for castiel and LLM/MCP traffic
+java -jar target/castiel-{version}.jar --version   # print version and exit
+java -jar target/castiel-{version}.jar --help      # all flags
 ```
 
 ## Usage

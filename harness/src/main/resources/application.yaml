@@ -6,3 +6,17 @@ spring:
     charset: UTF-8
   application:
     name: castiel
+
+---
+# Active when launched with --debug (CastielApplication enables the "debug" profile).
+spring:
+  config:
+    activate:
+      on-profile: debug
+
+logging:
+  level:
+    io.github.iso53.castiel: DEBUG
+    dev.langchain4j: DEBUG # langchain4j core + the MCP client module
+    reactor.netty: WARN # keep the noisy reactive stack quiet even in debug mode
+    reactor.core: WARN
