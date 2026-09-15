@@ -117,7 +117,9 @@ public class ChatPersistenceService {
 				if (existing != null && existing.createdAt() != null) {
 					createdAt = existing.createdAt();
 				}
-			} catch (Exception ignored) {}
+			} catch (Exception ex) {
+				log.warn("Could not preserve original createdAt for chat {}: {}", session.id(), ex.getMessage());
+			}
 		}
 		if (createdAt == null || createdAt.isBlank()) {
 			createdAt = Instant.now().toString();
