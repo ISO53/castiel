@@ -1,0 +1,112 @@
+name: release
+
+# Packaging is automated; releases are handwritten. Publishing a release fires
+# the build on three native runners, and the artifacts are attached to that
+# release without touching its notes. workflow_dispatch re-runs are for repairs:
+# they re-attach (and --clobber overwrites) assets for the given tag.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag of the release to attach assets to'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || github.event.inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
+      - name: Package
+        working-directory: packaging
+        shell: pwsh
+        run: ./package-windows.ps1 -SkipUiBuild
+      - name: Upload release assets (zip + jar)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release upload "$env:TAG" (Get-ChildItem packaging\dist\castiel-*.zip).FullName --clobber
+          gh release upload "$env:TAG" (Get-ChildItem harness\target\castiel-*.jar).FullName --clobber
+
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
+      - name: Package
+        working-directory: packaging
+        run: |
+          chmod +x package-linux.sh
+          ./package-linux.sh --skip-ui-build
+      - name: Upload release asset (tar.gz)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" packaging/dist/castiel-*.tar.gz --clobber
+
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
+      - name: Package
+        working-directory: packaging
+        run: |
+          chmod +x package-macos.sh
+          ./package-macos.sh --skip-ui-build
+      - name: Upload release asset (zip)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" packaging/dist/castiel-*.zip --clobber
