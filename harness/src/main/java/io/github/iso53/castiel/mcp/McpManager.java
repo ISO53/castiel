@@ -56,11 +56,11 @@ public class McpManager {
 
 	@PostConstruct
 	void start() {
+		log.debug("McpManager starting");
 		ensureConfigFile();
+		// applyConfigSet() connects every enabled server it sees for the first
+		// time; an explicit connect loop here would connect each server twice.
 		reloadConfigFile();
-		registeredConfigs.values().stream()
-			.filter(McpServerConfig::enabled)
-			.forEach(config -> Thread.ofVirtual().name("mcp-connect-" + config.id()).start(() -> connect(config)));
 		watchConfigFile();
 	}
 
@@ -88,6 +88,7 @@ public class McpManager {
 	 * the server simply shows as disconnected until it becomes reachable again.
 	 */
 	public void connect(McpServerConfig config) {
+		log.debug("Connecting to MCP server '{}' (thread {})", config.id(), Thread.currentThread());
 		disconnect(config.id());
 		// Construction cannot fail; every connection attempt (handshake included)
 		// happens inside the try, so failures are always caught here.
@@ -294,6 +295,7 @@ public class McpManager {
 	}
 
 	private void applyConfigSet(Map<String, McpServerConfig> loaded) {
+		log.debug("Applying MCP config set with {} server(s): {}", loaded.size(), loaded.keySet());
 		Map<String, McpServerConfig> previous = registeredConfigs;
 		registeredConfigs = loaded;
 		for (String id : previous.keySet()) {

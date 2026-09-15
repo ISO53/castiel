@@ -7,6 +7,13 @@ spring:
   application:
     name: castiel
 
+logging:
+  level:
+    # Harness at INFO, everything else quiet: the default console shows the
+    # banner, MCP connections and the UI line without Spring/Netty chatter.
+    root: WARN
+    io.github.iso53.castiel: INFO
+
 ---
 # Active when launched with --debug (CastielApplication enables the "debug" profile).
 spring:

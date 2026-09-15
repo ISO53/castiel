@@ -234,6 +234,8 @@ public class HarnessService {
 		LlmProvider provider = llmClientFactory.create(config);
 		String modelName = request.modelName().trim();
 		GenerationOptions options = new GenerationOptions(request.reasoningEffort());
+		log.debug("Generation requested: provider={}, model={}, chatId={}",
+			request.providerId(), modelName, request.chatId() == null || request.chatId().isBlank() ? "(stateless)" : request.chatId());
 
 		boolean sessionAware = request.chatId() != null && !request.chatId().isBlank();
 		String chatId = sessionAware ? request.chatId().trim() : null;
@@ -288,6 +290,7 @@ public class HarnessService {
 			return false;
 		}
 		state.cancelled.set(true);
+		log.info("Generation {} cancelled", generationId);
 		// Any sub-agents spawned by this generation stop with it.
 		agentRunManager.cancelByParent(generationId);
 		if (state.recorder != null) {
@@ -320,6 +323,7 @@ public class HarnessService {
 			return;
 		}
 		if (round >= MAX_TOOL_ROUNDS) {
+			log.warn("Generation {} exceeded the {} tool call round limit", generationId, MAX_TOOL_ROUNDS);
 			sink.next(event("error", "The model exceeded " + MAX_TOOL_ROUNDS + " tool call rounds for one message."));
 			sink.complete();
 			return;
@@ -402,6 +406,8 @@ public class HarnessService {
 						sink.complete();
 						return;
 					}
+					log.debug("Generation {} round {} → {} tool call(s)",
+						generationId, round, message.toolExecutionRequests().size());
 
 					List<ChatMessage> nextMessages = new ArrayList<>(messages);
 					nextMessages.add(message);
@@ -449,6 +455,7 @@ public class HarnessService {
 					}
 					// Keep whatever had streamed before the failure, like the UI does.
 					if (state.recorder != null) state.recorder.flushPending();
+					log.warn("Generation {} failed", generationId, error);
 					sink.error(error);
 				}
 			}
@@ -565,6 +572,9 @@ public class HarnessService {
 		try {
 			return executor.execute(request, null);
 		} catch (Exception ex) {
+			// The error is fed back to the model (which may recover); log at DEBUG
+			// so --debug shows what actually failed tool-side.
+			log.debug("Tool {} failed", request.name(), ex);
 			return "Error: " + (ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName());
 		}
 	}
@@ -645,8 +655,11 @@ public class HarnessService {
 		List<ChatTurn> turns;
 		try {
 			turns = new ArrayList<>(toTurns(chatPersistence.loadChat(chatId).messages()));
-		} catch (Exception ex) {
+		} catch (IllegalArgumentException ex) {
 			turns = new ArrayList<>(); // New chat: the session file does not exist yet.
+		} catch (Exception ex) {
+			log.warn("Could not load chat history for {}; continuing with only the new turns", chatId, ex);
+			turns = new ArrayList<>();
 		}
 		for (ChatTurn incoming : request.messages()) {
 			if (!turns.isEmpty() && turns.getLast().equals(incoming)) {
@@ -759,6 +772,7 @@ public class HarnessService {
 		try {
 			return new ClassPathResource(SYSTEM_PROMPT_PATH).getContentAsString(StandardCharsets.UTF_8).trim();
 		} catch (IOException | RuntimeException ex) {
+			log.error("Could not read system prompt from {}; the agent will run without it", SYSTEM_PROMPT_PATH, ex);
 			return "";
 		}
 	}
