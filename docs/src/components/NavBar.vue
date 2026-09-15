@@ -69,15 +69,10 @@ onMounted(async () => {
 					<Star class="nav-star-icon" aria-hidden="true" />
 					<span class="nav-star-count">{{ starCount !== null ? formatCount(starCount) : "Stars" }}</span>
 				</a>
-				<a
-					class="nav-button primary"
-					href="https://github.com/ISO53/castiel/releases"
-					target="_blank"
-					rel="noopener"
-				>
+				<RouterLink to="/#install" class="nav-button primary">
 					<Download class="nav-download-icon" aria-hidden="true" />
 					<span>Download</span>
-				</a>
+				</RouterLink>
 			</div>
 		</nav>
 	</header>

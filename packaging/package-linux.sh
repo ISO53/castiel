@@ -66,7 +66,7 @@ echo "App image: $SCRIPT_DIR/dist/castiel"
 
 # --- 5. tarball -----------------------------------------------------------------------
 if [ "$SKIP_ARCHIVE" = false ]; then
-	TARBALL="$SCRIPT_DIR/dist/castiel-$VERSION-linux-x64.tar.gz"
+	TARBALL="$SCRIPT_DIR/dist/castiel-linux-x64.tar.gz"
 	tar -czf "$TARBALL" -C "$SCRIPT_DIR/dist" castiel
 	echo "Created $TARBALL"
 fi

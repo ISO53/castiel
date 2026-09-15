@@ -7,90 +7,81 @@ import { Check, Copy } from "@lucide/vue";
 const OS_LIST = [
 	{ id: "windows", label: "Windows", shell: "PowerShell" },
 	{ id: "linux", label: "Linux", shell: "bash" },
+	{ id: "macos", label: "macOS", shell: "zsh" },
 ];
 
-const TABS = [
+// Version-less asset names keep these URLs stable across releases.
+const DOWNLOAD_BASE = "https://github.com/ISO53/castiel/releases/latest/download";
+
+const DOWNLOADS = {
+	windows: {
+		label: "Download for Windows",
+		file: "castiel-windows-x64.zip",
+		hint: "Expand-Archive castiel.zip, then run .\\castiel\\castiel.exe",
+	},
+	linux: {
+		label: "Download for Linux",
+		file: "castiel-linux-x64.tar.gz",
+		hint: "tar -xzf castiel-linux-x64.tar.gz, then run ./castiel/castiel",
+	},
+	macos: {
+		label: "Download for macOS",
+		file: "castiel-macos-arm64.zip",
+		hint: "Unzip, then open castiel.app — right-click → Open on first launch (unsigned build).",
+	},
+};
+
+function detectOs() {
+	const ua = navigator.userAgent;
+	if (/Mac/i.test(ua)) return "macos";
+	if (/Linux/i.test(ua) && !/Android/i.test(ua)) return "linux";
+	return "windows";
+}
+
+const BUILD_STEPS = [
 	{
-		id: "download",
-		label: "Download & run",
-		requirements: "Requires Java 25+. No Maven, no npm.",
-		steps: [
-			{
-				title: "Grab the latest JAR",
-				text: "Download castiel.jar from",
-				linkText: "GitHub Releases",
-				trail: ".",
-				href: "https://github.com/ISO53/castiel/releases/latest",
-				commands: {
-					windows: "curl.exe -L -o castiel.jar https://github.com/ISO53/castiel/releases/latest/download/castiel.jar",
-					linux: "wget https://github.com/ISO53/castiel/releases/latest/download/castiel.jar",
-				},
-			},
-			{
-				title: "Run it",
-				text: "Start the harness and open http://localhost:8081 in your browser.",
-				commands: {
-					windows: "java -jar castiel.jar",
-					linux: "java -jar castiel.jar",
-				},
-			},
-		],
+		title: "Clone the repository",
+		text: "The whole project. Harness, UI and website lives in one repo on",
+		linkText: "GitHub",
+		trail: ".",
+		href: "https://github.com/ISO53/castiel",
+		commands: {
+			windows: "git clone https://github.com/ISO53/castiel.git",
+			linux: "git clone https://github.com/ISO53/castiel.git",
+			macos: "git clone https://github.com/ISO53/castiel.git",
+		},
 	},
 	{
-		id: "build",
-		label: "Build from source",
-		requirements: "Requires Java 25+, Maven and Node.js 22+.",
-		steps: [
-			{
-				title: "Clone the repository",
-				text: "The whole project. Harness, UI and website lives in one repo on",
-				linkText: "GitHub",
-				trail: ".",
-				href: "https://github.com/ISO53/castiel",
-				commands: {
-					windows: "git clone https://github.com/ISO53/castiel.git",
-					linux: "git clone https://github.com/ISO53/castiel.git",
-				},
-			},
-			{
-				title: "Build the Vue UI",
-				text: "Bundle the frontend into the static assets the harness serves.",
-				commands: {
-					windows: "cd castiel/frontend; npm install; npm run build",
-					linux: "cd castiel/frontend && npm install && npm run build",
-				},
-			},
-			{
-				title: "Package the harness",
-				text: "Maven wraps the built UI and the backend into one runnable JAR.",
-				commands: {
-					windows: "cd ../harness; mvn package",
-					linux: "cd ../harness && mvn package",
-				},
-			},
-			{
-				title: "Run your build",
-				text: "Same entry point as the release JAR. Open http://localhost:8081 and start working.",
-				commands: {
-					windows: "java -jar target/castiel-{version}.jar",
-					linux: "java -jar target/castiel-{version}.jar",
-				},
-			},
-		],
+		title: "Run the packaging script for your OS",
+		text: "Builds the UI, packages the harness and produces a self-contained app image (launcher + bundled runtime) in packaging/dist.",
+		commands: {
+			windows: "cd castiel/packaging; .\\package-windows.ps1",
+			linux: "cd castiel/packaging && chmod +x package-linux.sh && ./package-linux.sh",
+			macos: "cd castiel/packaging && chmod +x package-macos.sh && ./package-macos.sh",
+		},
+	},
+	{
+		title: "Run your build",
+		text: "Open http://localhost:8081 and start working.",
+		commands: {
+			windows: ".\\dist\\castiel\\castiel.exe",
+			linux: "./dist/castiel/castiel",
+			macos: "open dist/castiel/castiel.app",
+		},
 	},
 ];
 
-const activeId = ref("download");
+const activeOs = ref(detectOs());
+const buildOs = ref(detectOs());
 const activeStep = ref(0);
-const activeOs = ref("windows");
 const copied = ref(false);
 
-const activeTab = computed(() => TABS.find((tab) => tab.id === activeId.value));
+const activeDownload = computed(() => DOWNLOADS[activeOs.value]);
 const currentCommand = computed(
-	() => activeTab.value.steps[activeStep.value]?.commands[activeOs.value] ?? "",
+	() => BUILD_STEPS[activeStep.value]?.commands[buildOs.value] ?? "",
 );
 const currentShell = computed(
-	() => OS_LIST.find((entry) => entry.id === activeOs.value)?.shell ?? "",
+	() => OS_LIST.find((entry) => entry.id === buildOs.value)?.shell ?? "",
 );
 
 let copiedTimer = null;
@@ -106,11 +97,6 @@ async function copyCommands() {
 	}
 }
 
-function selectTab(id) {
-	activeId.value = id;
-	activeStep.value = 0;
-}
-
 onBeforeUnmount(() => clearTimeout(copiedTimer));
 </script>
 
@@ -118,29 +104,48 @@ onBeforeUnmount(() => clearTimeout(copiedTimer));
 	<section id="install" class="install container">
 		<div class="install-header">
 			<h2 class="install-title">Install</h2>
-			<p class="install-sub">One JAR, one command, or build it yourself.</p>
+			<p class="install-sub">Download, extract, run. No Java, no Maven, no npm.</p>
 		</div>
 
-		<div class="install-tabs" role="tablist" aria-label="Installation method">
+		<div class="install-tabs" role="tablist" aria-label="Operating system">
 			<button
-				v-for="tab in TABS"
-				:key="tab.id"
+				v-for="entry in OS_LIST"
+				:key="entry.id"
 				type="button"
 				role="tab"
 				class="install-tab"
-				:class="{ active: tab.id === activeId }"
-				:aria-selected="tab.id === activeId"
-				@click="selectTab(tab.id)"
+				:class="{ active: entry.id === activeOs }"
+				:aria-selected="entry.id === activeOs"
+				@click="activeOs = entry.id"
 			>
-				{{ tab.label }}
+				{{ entry.label }}
 			</button>
+		</div>
+
+		<div class="download-actions">
+			<a
+				class="download-button"
+				:href="`${DOWNLOAD_BASE}/${activeDownload.file}`"
+				target="_blank"
+				rel="noopener"
+			>
+				{{ activeDownload.label }}
+			</a>
+			<p class="download-hint">{{ activeDownload.hint }}</p>
+		</div>
+	</section>
+
+	<section id="build" class="build container">
+		<div class="install-header">
+			<h2 class="install-title">Build locally</h2>
+			<p class="install-sub">Build it yourself from source.</p>
 		</div>
 
 		<div class="install-grid">
 			<div class="install-steps">
 				<ol>
 					<li
-						v-for="(step, index) in activeTab.steps"
+						v-for="(step, index) in BUILD_STEPS"
 						:key="step.title"
 						class="install-step"
 						:class="{ active: index === activeStep }"
@@ -157,7 +162,7 @@ onBeforeUnmount(() => clearTimeout(copiedTimer));
 						</div>
 					</li>
 				</ol>
-				<p class="install-requirements">{{ activeTab.requirements }}</p>
+				<p class="install-requirements">Requires Java 25+, Maven and Node.js 22+.</p>
 			</div>
 
 			<div class="install-terminal">
@@ -170,9 +175,9 @@ onBeforeUnmount(() => clearTimeout(copiedTimer));
 							:key="entry.id"
 							type="button"
 							class="terminal-os-btn"
-							:class="{ active: entry.id === activeOs }"
-							:aria-pressed="entry.id === activeOs"
-							@click="activeOs = entry.id"
+							:class="{ active: entry.id === buildOs }"
+							:aria-pressed="entry.id === buildOs"
+							@click="buildOs = entry.id"
 						>
 							{{ entry.label }}
 						</button>
@@ -193,6 +198,39 @@ onBeforeUnmount(() => clearTimeout(copiedTimer));
 .install {
 	margin-block: 0 6rem;
 	scroll-margin-top: 5rem;
+	text-align: center;
+}
+
+.build {
+	margin-block: 0 6rem;
+	scroll-margin-top: 5rem;
+}
+
+.download-actions {
+	margin-top: 1.5rem;
+}
+
+.download-button {
+	display: inline-block;
+	padding: 0.85rem 2.25rem;
+	border-radius: 8px;
+	background: var(--fg);
+	color: var(--bg);
+	font-size: 0.95rem;
+	font-weight: 500;
+	font-family: inherit;
+	text-decoration: none;
+	transition: background-color 0.15s ease;
+}
+
+.download-button:hover {
+	background: #ffffff;
+}
+
+.download-hint {
+	margin: 0.75rem 0 0;
+	font-size: 0.8rem;
+	color: var(--faint);
 }
 
 .install-header {
