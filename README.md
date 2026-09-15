@@ -29,22 +29,14 @@ The human stays in charge. You define the target and scope, decide when to move 
 
 ## Getting started
 
-Requirements: Java 25+ and Maven, plus Node.js 22+ (with npm) for the frontend.
+Requirements: only for building from source — Java 25+ and Maven, plus Node.js 22+ (with npm) for the frontend. The released packages need nothing but the OS.
 
 ### Install
 
-Grab the latest release JAR from [GitHub Releases](https://github.com/ISO53/castiel/releases). Only Java 25+ is needed, no Maven or npm.
+Grab the archive for your OS from the [GitHub Releases](https://github.com/ISO53/castiel/releases) page, extract it, and run the launcher inside — no Java, no Maven, no npm:
 
-```sh
-# Windows PowerShell
-curl.exe -L -o castiel.jar https://github.com/ISO53/castiel/releases/latest/download/castiel.jar
-
-# Linux/macOS
-wget https://github.com/ISO53/castiel/releases/latest/download/castiel.jar
-
-# Run
-java -jar castiel.jar
-```
+- **Windows:** `castiel\castiel.exe`
+- **Linux:** `castiel/castiel`
 
 Open http://localhost:8081 and start working.
 
@@ -76,9 +68,19 @@ java -jar target/castiel-{version}.jar
 Settings are overridden with castiel's own command line flags:
 
 ```sh
-java -jar target/castiel-{version}.jar --debug     # debug logging for castiel and LLM/MCP traffic
-java -jar target/castiel-{version}.jar --version   # print version and exit
-java -jar target/castiel-{version}.jar --help      # all flags
+castiel --debug     # debug logging for castiel and LLM/MCP traffic
+castiel --version   # print version and exit
+castiel --help      # all flags
+```
+
+### Package
+
+Turns the built app into the release bundles: a self-contained app image (launcher + private runtime) plus a zip/tar.gz, one per OS, from `packaging/dist/`:
+
+```sh
+cd packaging
+./package-windows.ps1     # Windows: needs a JDK with jpackage (JAVA_HOME or C:\Program Files\Java\*)
+./package-linux.sh        # Linux
 ```
 
 ## Usage
