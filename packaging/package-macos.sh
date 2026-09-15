@@ -67,7 +67,7 @@ echo "App image: $SCRIPT_DIR/dist/castiel"
 # --- 5. zip (ditto preserves macOS metadata) -----------------------------------------
 ARCH="$(uname -m)"
 if [ "$SKIP_ARCHIVE" = false ]; then
-	ZIP="$SCRIPT_DIR/dist/castiel-$VERSION-macos-$ARCH.zip"
+	ZIP="$SCRIPT_DIR/dist/castiel-macos-$ARCH.zip"
 	ditto -c -k --keepParent "$SCRIPT_DIR/dist/castiel/castiel.app" "$ZIP"
 	echo "Created $ZIP"
 fi

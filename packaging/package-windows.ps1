@@ -77,7 +77,7 @@ Write-Host "App image: $imageDir"
 
 # --- 5. zip -----------------------------------------------------------------------
 if (-not $SkipArchive) {
-	$zip = Join-Path $packagingDir "dist\castiel-$version-windows-x64.zip"
+	$zip = Join-Path $packagingDir 'dist\castiel-windows-x64.zip'
 	Compress-Archive -Path $imageDir -DestinationPath $zip -Force
 	Write-Host "Created $zip"
 }

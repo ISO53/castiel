@@ -26,14 +26,9 @@ const heroDoc = heroPreset.doc;
 					get started.
 				</p>
 				<div class="hero-actions">
-					<a
-						class="hero-button primary"
-						href="https://github.com/ISO53/castiel/releases"
-						target="_blank"
-						rel="noopener"
-					>
+					<RouterLink to="/#install" class="hero-button primary">
 						Download
-					</a>
+					</RouterLink>
 					<a
 						class="hero-button ghost"
 						href="https://github.com/ISO53/castiel#readme"
