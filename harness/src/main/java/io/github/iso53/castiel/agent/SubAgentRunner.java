@@ -340,6 +340,7 @@ public class SubAgentRunner {
 		try {
 			return executor.execute(request, null);
 		} catch (Exception ex) {
+			log.debug("Sub-agent tool {} failed with arguments: {}", request.name(), request.arguments(), ex);
 			return "Error: " + (ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName());
 		}
 	}
