@@ -110,7 +110,7 @@ public class McpConnection implements AutoCloseable {
 			return DefaultMcpClient.builder()
 				.key(config.id())
 				.clientName("castiel")
-				.pingTimeout(Duration.ofSeconds(5))
+				.pingTimeout(Duration.ofSeconds(15))
 				.transport(transport)
 				.build();
 		} catch (Exception ex) {

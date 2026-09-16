@@ -272,6 +272,16 @@ public class SubAgentRunner {
 	// Result of one model round: the (possibly tool-calling) message and its token usage.
 	private record Round(AiMessage message, TokenUsage usage) {}
 
+	// Minimum spacing between UI change pings triggered by fresh transcript text, per run.
+	private static final long TRANSCRIPT_PING_INTERVAL_MS = 1_000;
+
+	// Ping the UI periodically while the model streams, so the transcript pane updates lively.
+	private void claimTranscriptPing(AgentRunManager.AgentRun run) {
+		if (run.tryClaimTranscriptPing(TRANSCRIPT_PING_INTERVAL_MS)) {
+			runs.notifyChange();
+		}
+	}
+
 	/**
 	 * Runs one streaming model round and waits for it. Streaming chunks flow into the run's
 	 * live transcript buffer while the round is in flight, so the dock pane shows progress.
@@ -297,6 +307,7 @@ public class SubAgentRunner {
 							run.transcript().append("\n[thinking]\n");
 						}
 						run.transcript().append(partialThinking.text());
+						claimTranscriptPing(run);
 					}
 				}
 
@@ -308,6 +319,7 @@ public class SubAgentRunner {
 							run.transcript().append("\n[/thinking]\n\n");
 						}
 						run.transcript().append(partialResponse.text());
+						claimTranscriptPing(run);
 					}
 				}
 
@@ -340,6 +352,7 @@ public class SubAgentRunner {
 		try {
 			return executor.execute(request, null);
 		} catch (Exception ex) {
+			log.debug("Sub-agent tool {} failed with arguments: {}", request.name(), request.arguments(), ex);
 			return "Error: " + (ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName());
 		}
 	}

@@ -14,7 +14,7 @@
 
 	<groupId>io.github.iso53</groupId>
 	<artifactId>castiel</artifactId>
-	<version>0.7.1</version>
+	<version>0.7.6</version>
 	<name>castiel</name>
 	<description>AI powered pentesting harness</description>
 	<url>https://iso53.github.io/castiel</url>
@@ -64,19 +64,19 @@
 		<dependency>
 		    <groupId>dev.langchain4j</groupId>
 		    <artifactId>langchain4j-open-ai</artifactId>
-		    <version>1.19.0</version>
+		    <version>1.20.0</version>
 		</dependency>
 
 		<dependency>
 		    <groupId>dev.langchain4j</groupId>
 		    <artifactId>langchain4j</artifactId>
-		    <version>1.19.0</version>
+		    <version>1.20.0</version>
 		</dependency>
 
 		<dependency>
 		    <groupId>dev.langchain4j</groupId>
 		    <artifactId>langchain4j-ollama</artifactId>
-		    <version>1.19.0</version>
+		    <version>1.20.0</version>
 		</dependency>
 
 		<dependency>
@@ -88,7 +88,7 @@
 		<dependency>
 		    <groupId>org.jsoup</groupId>
 		    <artifactId>jsoup</artifactId>
-		    <version>1.21.2</version>
+		    <version>1.23.2</version>
 		</dependency>
 
 	</dependencies>

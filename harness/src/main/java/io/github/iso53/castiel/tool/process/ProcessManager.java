@@ -36,6 +36,9 @@ public class ProcessManager {
 	/** Per-process output retention; older output is evicted from the front. */
 	static final int OUTPUT_CAPACITY_CHARS = 256 * 1024;
 
+	/** Minimum spacing between UI change pings triggered by fresh output, per process. */
+	private static final long OUTPUT_PING_INTERVAL_MS = 1_000;
+
 
 	// A prefix that let's agent know the process is started by the user.
 	public static final String USER_START_PREFIX = "[user-started] ";
@@ -202,7 +205,7 @@ public class ProcessManager {
 	}
 
 	/** Reads decoded output chunks and appends them to the shared bounded buffer. */
-	private static void drain(ManagedProcess entry, boolean errorStream) {
+	private void drain(ManagedProcess entry, boolean errorStream) {
 		try (Reader reader = new InputStreamReader(
 				errorStream ? entry.underlying().getErrorStream() : entry.underlying().getInputStream(),
 				StandardCharsets.UTF_8)) {
@@ -210,6 +213,10 @@ public class ProcessManager {
 			int read = reader.read(chunk);
 			while (read > 0) {
 				entry.output().append(new String(chunk, 0, read));
+				// Ping the UI periodically while the model streams, so the transcript pane updates lively.
+				if (entry.tryClaimOutputPing(OUTPUT_PING_INTERVAL_MS)) {
+					notifyChange();
+				}
 				read = reader.read(chunk);
 			}
 		} catch (IOException ex) {

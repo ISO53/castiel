@@ -556,6 +556,7 @@ public class HarnessService {
 	}
 
 	private String executeTool(ToolExecutionRequest request, int index) {
+		log.debug("Tool call: {} args={}", request.name(), request.arguments());
 		if (UserQuestionTool.NAME.equals(request.name())) {
 			// Interactive tool: block this round until the frontend answers via
 			// POST /api/chat/questions/{toolCallId}/answer, then feed the answer back to the model.
@@ -574,7 +575,7 @@ public class HarnessService {
 		} catch (Exception ex) {
 			// The error is fed back to the model (which may recover); log at DEBUG
 			// so --debug shows what actually failed tool-side.
-			log.debug("Tool {} failed", request.name(), ex);
+			log.debug("Tool {} failed with arguments: {}", request.name(), request.arguments(), ex);
 			return "Error: " + (ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName());
 		}
 	}

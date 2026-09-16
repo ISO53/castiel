@@ -10,12 +10,25 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useProcessesStore } from "@/stores/processes";
 import { useWorkspaceStore } from "@/stores/workspace";
+import { dotClass, dotTitle } from "@/lib/dock-dots";
 
 const store = useProcessesStore();
 const workspace = useWorkspaceStore();
 
-onMounted(() => store.startFeed());
-onUnmounted(() => store.stopFeed());
+// One-second clock so live rows recompute their runtime without server polling.
+const nowSeconds = ref(Math.floor(Date.now() / 1000));
+let ticker = null;
+
+onMounted(() => {
+	store.startFeed();
+	ticker = setInterval(() => {
+		nowSeconds.value = Math.floor(Date.now() / 1000);
+	}, 1000);
+});
+onUnmounted(() => {
+	store.stopFeed();
+	clearInterval(ticker);
+});
 
 watch(
 	() => workspace.cwd,
@@ -72,17 +85,13 @@ async function startUserProcess() {
 	}
 }
 
-function stateDotClass(state) {
-	switch (state) {
-		case "RUNNING":
-			return "bg-emerald-400";
-		case "EXITED":
-			return "bg-zinc-500";
-		case "KILLED":
-			return "bg-red-400";
-		default:
-			return "bg-zinc-600";
-	}
+// Live runs show elapsed time computed from the harness-provided start timestamp
+function runtimeDisplay(row) {
+	const seconds =
+		row.state === "RUNNING" && row.startedAt
+			? Math.max(0, nowSeconds.value - Math.floor(row.startedAt / 1000))
+			: row.runtimeSeconds;
+	return formatRuntime(seconds);
 }
 
 function formatRuntime(seconds) {
@@ -150,18 +159,16 @@ function shortCommand(command) {
 							:class="row.id === store.selectedId ? 'bg-zinc-900' : ''"
 							:title="row.id === store.selectedId ? 'Click to close' : ''" @click="store.select(row.id)">
 							<td class="w-4 px-3 py-1.5">
-								<span class="inline-block size-1.5 rounded-full" :class="stateDotClass(row.state)"
-									:title="row.state.toLowerCase()" />
+								<span class="inline-block size-1.5 rounded-full" :class="dotClass(row.state)"
+									:title="dotTitle(row.state)" />
 							</td>
 							<td class="px-3 py-1.5 font-mono">
 								<span class="block max-w-[16ch] truncate" :title="row.id">{{ shortId(row.id) }}</span>
 							</td>
 							<td class="px-3 py-1.5 font-mono text-zinc-400">{{ row.pid }}</td>
 							<td class="whitespace-nowrap px-3 py-1.5 tabular-nums text-zinc-300">{{
-								formatRuntime(row.runtimeSeconds) }}</td>
+								runtimeDisplay(row) }}</td>
 							<td class="max-w-[40ch] truncate px-3 py-1.5 text-zinc-300" :title="row.purpose">
-								<span v-if="row.unread"
-									class="mr-1 inline-block size-1.5 rounded-full align-middle bg-amber-400" />
 								{{ shortCommand(row.purpose) }}
 							</td>
 							<td class="max-w-[50ch] truncate px-3 py-1.5 font-mono text-zinc-400" :title="row.command">

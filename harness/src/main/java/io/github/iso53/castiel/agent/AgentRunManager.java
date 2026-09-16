@@ -9,6 +9,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -53,6 +54,7 @@ public class AgentRunManager {
 
 		private final BoundedOutputBuffer transcript = BoundedOutputBuffer.of(TRANSCRIPT_CAPACITY_CHARS);
 		private final AtomicBoolean cancelled = new AtomicBoolean(false);
+		private final AtomicLong lastTranscriptPingAt = new AtomicLong(0);
 
 		private volatile State state = State.QUEUED;
 		private volatile TokenUsage totalUsage = new TokenUsage(0, 0, 0);
@@ -97,6 +99,20 @@ public class AgentRunManager {
 		// Live transcript buffer; readers track their own cursor.
 		public BoundedOutputBuffer transcript() {
 			return transcript;
+		}
+
+		/**
+		 * Claims the right to emit one UI change ping for fresh transcript text; true at
+		 * most once per {@code intervalMs} per run, so token-level streaming cannot flood
+		 * the SSE feed.
+		 */
+		public boolean tryClaimTranscriptPing(long intervalMs) {
+			long now = System.currentTimeMillis();
+			long last = lastTranscriptPingAt.get();
+			if (now - last < intervalMs) {
+				return false;
+			}
+			return lastTranscriptPingAt.compareAndSet(last, now);
 		}
 
 		public AtomicBoolean cancelled() {

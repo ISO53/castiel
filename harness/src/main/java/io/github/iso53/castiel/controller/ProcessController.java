@@ -83,7 +83,7 @@ public class ProcessController {
 		row.put("state", entry.state().name());
 		row.put("exitCode", entry.exitCode());
 		row.put("runtimeSeconds", entry.runtime().toSeconds());
-		row.put("unread", !entry.isRunning() && !entry.isSeenByAgent());
+		row.put("startedAt", entry.startedAt().toEpochMilli());
 		return row;
 	}
 

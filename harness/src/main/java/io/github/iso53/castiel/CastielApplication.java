@@ -29,6 +29,7 @@ public class CastielApplication {
 
 		SpringApplication application = new SpringApplication(CastielApplication.class);
 		if (cli.debug) {
+			System.setProperty("spring.profiles.active", "debug");
 			application.setAdditionalProfiles("debug");
 		}
 

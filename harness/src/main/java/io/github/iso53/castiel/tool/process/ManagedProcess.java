@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Registry entry for one agent-spawned background process.
@@ -37,6 +38,7 @@ public final class ManagedProcess {
 	private final ConcurrentLinkedQueue<String> pendingInput = new ConcurrentLinkedQueue<>();
 	private final AtomicBoolean inputOpen = new AtomicBoolean(true);
 	private final AtomicBoolean killRequested = new AtomicBoolean(false);
+	private final AtomicLong lastOutputPingAt = new AtomicLong(0);
 
 	private volatile State state = State.RUNNING;
 	private volatile Integer exitCode;
@@ -110,6 +112,19 @@ public final class ManagedProcess {
 
 	public BoundedOutputBuffer output() {
 		return output;
+	}
+
+	/**
+	 * Claims the right to emit one UI change ping for fresh output; true at most once
+	 * per {@code intervalMs} per process, so a chatty process cannot flood the SSE feed.
+	 */
+	public boolean tryClaimOutputPing(long intervalMs) {
+		long now = System.currentTimeMillis();
+		long last = lastOutputPingAt.get();
+		if (now - last < intervalMs) {
+			return false;
+		}
+		return lastOutputPingAt.compareAndSet(last, now);
 	}
 
 	/** How long the process ran (or has been running). */
