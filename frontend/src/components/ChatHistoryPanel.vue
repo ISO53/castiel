@@ -119,9 +119,10 @@ export default {
 			return date.toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" });
 		},
 		async onSelectChat(chatId) {
-			await this.chats.selectChat(chatId);
-			// Selecting a chat returns to the conversation view of the right dock.
+			// Mount ChatView before loading: it consumes chats.selectedSession via
+			// a watcher, so the session must change while the view is alive
 			this.docks.openView('right', 'chat');
+			await this.chats.selectChat(chatId);
 		},
 		async handleDeleteChat(chatId) {
 			await this.chats.deleteChat(chatId);
