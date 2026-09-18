@@ -24,7 +24,7 @@
 					</tr>
 				</thead>
 				<tbody>
-					<tr v-for="row in table.getRowModel().rows" :key="row.id" class="hover:bg-muted/40">
+					<tr v-for="row in table.getRowModel().rows" :key="row.id" class="hover:bg-muted/40" @click="emit('row-click', row.original)">
 						<td v-for="cell in row.getVisibleCells()" :key="cell.id"
 							class="border-b border-border/40 px-2.5 py-1.5 align-top text-foreground">
 							<slot v-if="$slots['cell-' + cell.column.id]" :name="'cell-' + cell.column.id"
@@ -66,6 +66,8 @@ const props = defineProps({
 	searchPlaceholder: { type: String, default: "Filter…" },
 	emptyMessage: { type: String, default: "No entries yet." },
 });
+
+const emit = defineEmits(["row-click"]);
 
 const sorting = ref([]);
 const globalFilter = ref("");
