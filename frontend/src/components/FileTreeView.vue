@@ -66,7 +66,6 @@ import {
 	FolderOpen,
 	Globe,
 	Image as ImageIcon,
-	ListChecks,
 	Network,
 	RotateCw,
 } from "@lucide/vue";
@@ -82,7 +81,6 @@ const DOC_ICONS = {
 	web: Globe,
 	vulnerabilities: Bug,
 	evidence: ImageIcon,
-	tasks: ListChecks,
 };
 
 /** Extracts the harness error message from a failed response. */

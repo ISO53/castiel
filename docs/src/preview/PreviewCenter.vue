@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch } from "vue";
-import { Network as NetworkIcon, Globe, Bug, Image, ListChecks, Server } from "@lucide/vue";
+import { Network as NetworkIcon, Globe, Bug, Image, Server } from "@lucide/vue";
 import { DOCUMENTS } from "./data.js";
 
 const props = defineProps({
@@ -8,7 +8,7 @@ const props = defineProps({
 	topologyReady: { type: Boolean, default: false },
 });
 
-const DOC_ICONS = { network: NetworkIcon, web: Globe, vulnerabilities: Bug, evidence: Image, tasks: ListChecks };
+const DOC_ICONS = { network: NetworkIcon, web: Globe, vulnerabilities: Bug, evidence: Image };
 
 const SUBTABS = [
 	{ id: "topology", label: "Topology" },

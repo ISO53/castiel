@@ -63,7 +63,7 @@ public class HarnessService {
 	private static final String CHECKPOINT_REMINDER = """
 		[harness checkpoint] You have made many tool calls without finishing. Before continuing, \
 		synchronize any confirmed findings into the workspace documents now (network.json, web.json, \
-		vulnerabilities.json, evidence.json, tasks.json. Read first, merge, never overwrite existing \
+		vulnerabilities.json, evidence.json. Read first, merge, never overwrite existing \
 		entries). Then carry on with your remaining work.""";
 
 	/** Arguments preset substituted for tool calls whose streamed arguments arrived truncated. */

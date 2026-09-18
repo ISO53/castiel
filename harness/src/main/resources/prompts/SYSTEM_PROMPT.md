@@ -102,9 +102,8 @@ Everything durable you discover goes into structured JSON documents in the works
     - `discovered_by` and `discovered_at` - the standard provenance pair - plus `last_seen` so the user knows the finding is still fresh.
     - `notes` - leave empty; the user may write here, never overwrite it.
 
-  Do NOT put non-vulnerabilities here. Leads and untested suspicions go to `tasks.json`. Target observations (WAF present, header hygiene, rate limiting) go to `web.json` or `network.json`. Captured loot (credentials, tokens, keys, dumps) goes to `evidence.json`. If it has a severity and a remediation, it belongs here.
+  Do NOT put non-vulnerabilities here. Target observations (WAF present, header hygiene, rate limiting) go to `web.json` or `network.json`. Captured loot (credentials, tokens, keys, dumps) goes to `evidence.json`. If it has a severity and a remediation, it belongs here.
 - `evidence.json` - an index of raw artifacts saved in the `evidence/` folder.
-- `tasks.json` - your own plan and progress for the engagement.
 
 How to structure the data:
 
