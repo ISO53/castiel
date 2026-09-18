@@ -7,22 +7,24 @@ import dev.langchain4j.model.openai.OpenAiChatRequestParameters;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import io.github.iso53.castiel.model.LlmProviderConfig;
 import io.github.iso53.castiel.model.ModelInfo;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 /**
  * Any server speaking the OpenAI REST dialect ({@code /v1/models}, {@code /v1/chat/completions}):
- * OpenAI itself, LM Studio, llama-server, vLLM, and friends. Generation options map onto
- * the standard {@code reasoning_effort} request parameter; servers that do not implement
- * it simply ignore the field.
+ * OpenAI itself, llama.cpp, vLLM, LM Studio, OpenRouter, and friends. Reasoning levels are
+ * detected per model at listing time (see {@link #thinkingLevels}) and mapped onto the
+ * {@code reasoning_effort} request parameter.
  */
 public class OpenAiCompatibleProvider implements LlmProvider {
 
@@ -61,14 +63,107 @@ public class OpenAiCompatibleProvider implements LlmProvider {
 		if (name == null || name.isBlank() || "null".equals(name)) {
 			return null;
 		}
-		return new ModelInfo(name, firstNumber(entry, "context_length", "max_model_len", "max_input_tokens"));
+		return new ModelInfo(
+			name,
+			firstNumber(entry, "context_length", "max_model_len", "max_input_tokens"),
+			thinkingLevels(name, entry)
+		);
 	}
 
 	/**
-	 * Fetches and parses {@code GET /models} directly instead of going through
-	 * LangChain4j's catalog: aggregators like OpenRouter return richer fields than the
-	 * standard OpenAI shape (e.g. {@code context_length}), which we surface as the model's
-	 * context window. Falls back through known alternative field names.
+	 * Reasoning levels controllable for this model, detected at listing time. Publishing
+	 * catalogs (OpenRouter) are authoritative; bare catalogs fall back to well-known
+	 * OpenAI ids; everything else gets none. Claiming levels a server ignores is worse
+	 * than hiding the knob.
+	 */
+	private static List<String> thinkingLevels(String name, Map<?, ?> entry) {
+		if (!(entry.get("supported_parameters") instanceof List<?> parameters)) {
+			return openAiIdLevels(name);
+		}
+		if (!parameters.contains("reasoning_effort")) {
+			// Cannot be controlled via the one parameter this transport can send.
+			return List.of();
+		}
+		if (!(entry.get("reasoning") instanceof Map<?, ?> reasoning) || !reasoning.containsKey("supported_efforts")) {
+			// Omitted supported_efforts: no effort selection (OpenRouter docs).
+			return List.of();
+		}
+		if (reasoning.get("supported_efforts") == null) {
+			// Explicit null: every gateway effort value is accepted.
+			return mandatoryAware(reasoning, ALL_EFFORT_LEVELS);
+		}
+		if (!(reasoning.get("supported_efforts") instanceof List<?> efforts)) {
+			return List.of();
+		}
+		return mandatoryAware(
+			reasoning,
+			orderLevels(
+				efforts
+					.stream()
+					.map(level -> (String) level)
+					.toList()
+			)
+		);
+	}
+
+	// Every gateway effort value, cheapest to deepest; accepted when supported_efforts is null.
+	private static final List<String> ALL_EFFORT_LEVELS = List.of(
+		"none",
+		"minimal",
+		"low",
+		"medium",
+		"high",
+		"xhigh",
+		"max"
+	);
+
+	/** Drops {@code none} for models that reject disabling reasoning ({@code mandatory: true}). */
+	private static List<String> mandatoryAware(Map<?, ?> reasoning, List<String> levels) {
+		return Boolean.TRUE.equals(reasoning.get("mandatory"))
+			? levels
+					.stream()
+					.filter(level -> !"none".equals(level))
+					.toList()
+			: levels;
+	}
+
+	/**
+	 * Levels for well-known OpenAI ids on bare catalogs. Only bare ids qualify;
+	 * provider-prefixed ids on proxy catalogs (Cline, ...) must not inherit OpenAI's
+	 * documented defaults.
+	 */
+	private static List<String> openAiIdLevels(String name) {
+		if (name.contains("/")) {
+			return List.of();
+		}
+		String id = name.toLowerCase(Locale.ROOT);
+		if (id.startsWith("gpt-5")) {
+			return List.of("minimal", "low", "medium", "high");
+		}
+		if (Pattern.compile("^o[134]([.-].*)?$").matcher(id).find()) {
+			return List.of("low", "medium", "high");
+		}
+		return List.of();
+	}
+
+	/** Canonical display/request order for effort levels, cheapest to deepest. */
+	private static List<String> orderLevels(List<String> levels) {
+		List<String> canonical = List.of("none", "minimal", "low", "medium", "high", "xhigh", "max");
+		return levels
+			.stream()
+			.sorted(
+				Comparator.comparingInt(level -> {
+					int index = canonical.indexOf(level);
+					return index < 0 ? canonical.size() : index;
+				})
+			)
+			.toList();
+	}
+
+	/**
+	 * Fetches {@code GET /models} directly instead of going through LangChain4j's catalog:
+	 * aggregators like OpenRouter return richer fields (e.g. {@code context_length}) than
+	 * the standard OpenAI shape.
 	 */
 	private Map<String, Object> fetchModels() {
 		HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl() + "models"))

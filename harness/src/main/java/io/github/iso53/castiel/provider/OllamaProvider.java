@@ -2,6 +2,7 @@ package io.github.iso53.castiel.provider;
 
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.ollama.OllamaModel;
+import dev.langchain4j.model.ollama.OllamaModelCard;
 import dev.langchain4j.model.ollama.OllamaModels;
 import dev.langchain4j.model.ollama.OllamaStreamingChatModel;
 import io.github.iso53.castiel.model.LlmProviderConfig;
@@ -11,16 +12,21 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Ollama backend. Reasoning effort maps onto Ollama's boolean {@code think} parameter.
- * {@code off} disables thinking, every other level enables it (Ollama has no levels).
+ * Ollama backend. Ollama exposes thinking as a boolean {@code think} parameter, so the
+ * advertised levels per model are {@code on}/{@code off} (detected from the model card's
+ * {@code thinking} capability) and nothing otherwise. {@code null} (model default) is
+ * handled by omitting the parameter entirely, letting hybrid models behave as trained.
  */
 public class OllamaProvider implements LlmProvider {
 
 	private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(120);
 	/** Model metadata ({@code POST /api/show} via {@link OllamaModels}) may load from disk on first call. */
 	private static final Duration SHOW_TIMEOUT = Duration.ofSeconds(10);
+	/** {@code /api/show} is slow on first hit (can load GGUFs from disk); cache cards per model. */
+	private final Map<String, OllamaModelCard> cardCache = new ConcurrentHashMap<>();
 
 	private final LlmProviderConfig config;
 
@@ -46,29 +52,48 @@ public class OllamaProvider implements LlmProvider {
 			if (name == null || name.isBlank()) {
 				continue;
 			}
-			models.add(new ModelInfo(name, contextLength(ollama, name)));
+			OllamaModelCard card = modelCard(ollama, name);
+			models.add(new ModelInfo(name, contextLength(card), thinkingLevels(card)));
 		}
 		return models;
 	}
 
 	@Override
 	public StreamingChatModel chatModel(String modelName, GenerationOptions options) {
-		return OllamaStreamingChatModel.builder()
+		OllamaStreamingChatModel.OllamaStreamingChatModelBuilder builder = OllamaStreamingChatModel.builder()
 			.baseUrl(rootUrl())
 			.modelName(modelName)
 			// Honor the user-configured runtime context window; otherwise Ollama
 			// silently truncates history at its own default (~2-4k tokens).
 			.numCtx(config.contextWindow())
-			.think(reasoningEnabled(options))
 			.returnThinking(true)
 			.timeout(REQUEST_TIMEOUT)
 			.logRequests(false)
-			.logResponses(false)
-			.build();
+			.logResponses(false);
+		if (options.reasoningEffort() != null) {
+			builder.think(!options.isReasoningOff());
+		}
+		return builder.build();
 	}
 
-	private static boolean reasoningEnabled(GenerationOptions options) {
-		return options.reasoningEffort() != null && !options.isReasoningOff();
+	/**
+	 * Thinking is controllable only for models whose card advertises the {@code thinking}
+	 * capability (DeepSeek R1, Qwen3, gpt-oss, ...).
+	 */
+	private static List<String> thinkingLevels(OllamaModelCard card) {
+		List<String> capabilities = card == null ? null : card.getCapabilities();
+		return capabilities != null && capabilities.contains("thinking") ? List.of("on", "off") : List.of();
+	}
+
+	/** Cached {@code /api/show} lookup; best-effort, returns {@code null} when unavailable. */
+	private OllamaModelCard modelCard(OllamaModels ollama, String modelName) {
+		return cardCache.computeIfAbsent(modelName, name -> {
+			try {
+				return ollama.modelCard(name).content();
+			} catch (RuntimeException ex) {
+				return null;
+			}
+		});
 	}
 
 	/**
@@ -77,13 +102,11 @@ public class OllamaProvider implements LlmProvider {
 	 * {@code llama.context_length}). Best-effort: returns {@code null} when unavailable,
 	 * so that model listing keeps working.
 	 */
-	private Integer contextLength(OllamaModels ollama, String modelName) {
-		Map<String, Object> modelInfo;
-		try {
-			modelInfo = ollama.modelCard(modelName).content().getModelInfo();
-		} catch (RuntimeException ex) {
+	private static Integer contextLength(OllamaModelCard card) {
+		if (card == null) {
 			return null;
 		}
+		Map<String, Object> modelInfo = card.getModelInfo();
 		if (modelInfo == null) {
 			return null;
 		}

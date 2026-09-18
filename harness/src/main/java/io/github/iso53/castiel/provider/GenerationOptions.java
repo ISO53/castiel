@@ -8,8 +8,15 @@ import java.util.Objects;
  * {@link LlmProvider} translates these into its native request parameters.
  * Levels that a provider cannot express degrade gracefully there.
  *
- * @param reasoningEffort {@code "off"}, {@code "low"}, {@code "medium"}, {@code "high"} or
- *                        {@code null} for the provider default.
+ * <p>The valid level tokens are provider- and model-specific; they are advertised
+ * per model by {@link LlmProvider#listModels()} (see
+ * {@link io.github.iso53.castiel.model.ModelInfo#thinkingLevels()}). The only
+ * universally meaningful values are {@code null} (model default, no parameter sent)
+ * and {@code off} (suppress thinking where the provider can express it).
+ *
+ * @param reasoningEffort a level token as advertised by the provider (e.g. {@code on},
+ *                        {@code off}, {@code low}, {@code medium}, {@code high},
+ *                        {@code minimal}) or {@code null} for the model default.
  */
 public record GenerationOptions(String reasoningEffort) {
 	public GenerationOptions {
