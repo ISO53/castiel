@@ -192,7 +192,7 @@
 								</ContextContent>
 							</Context>
 
-							<DropdownMenu>
+							<DropdownMenu v-if="reasoningOptions.length">
 								<DropdownMenuTrigger as-child>
 									<Button variant="outline" size="sm" :disabled="!ready || streaming">
 										<Brain class="size-3.5" />
@@ -466,13 +466,29 @@ export default {
 		contextWindow() {
 			return this.selectedModel?.contextWindow ?? 128000;
 		},
+		// Thinking levels advertised by the selected model (ModelInfo.thinkingLevels; empty
+		// = thinking not controllable on this model, the button is hidden). "Default" is
+		// not a real level — it always exists and sends no parameter, so the harness
+		// prepends it instead of the providers advertising it.
 		reasoningOptions() {
+			const levels = this.selectedModel?.thinkingLevels ?? [];
+			if (!levels.length) {
+				return [];
+			}
+			const labels = {
+				none: "None",
+				minimal: "Minimal",
+				low: "Low",
+				medium: "Medium",
+				high: "High",
+				xhigh: "Extra High",
+				max: "Max",
+				on: "On",
+				off: "Off",
+			};
 			return [
 				{ value: null, label: "Default" },
-				{ value: "off", label: "Off" },
-				{ value: "low", label: "Low" },
-				{ value: "medium", label: "Medium" },
-				{ value: "high", label: "High" },
+				...levels.map((level) => ({ value: level, label: labels[level] ?? level })),
 			];
 		},
 		reasoningLabel() {
@@ -520,6 +536,12 @@ export default {
 		// Reset the search so reopening starts from the full (capped) list.
 		modelSelectorOpen(open) {
 			if (!open) this.modelSearch = "";
+		},
+		// Keep the reasoning level valid for the selected model. Covers both switching models
+		// and a session restore whose catalog arrives after reasoningEffort was applied;
+		// unsupported levels are clamped back to the model default.
+		selectedModel() {
+			this.clampReasoningEffort();
 		},
 		"chats.selectedSession"(session) {
 			if (!session) return;
@@ -1061,6 +1083,13 @@ export default {
 		selectModel(name) {
 			this.modelName = name;
 			this.modelSelectorOpen = false;
+		},
+		// Clamps saved reasoning levels to valid model limits, pausing until the catalog loads.
+		clampReasoningEffort() {
+			const levels = this.selectedModel?.thinkingLevels;
+			if (levels && this.reasoningEffort != null && !levels.includes(this.reasoningEffort)) {
+				this.reasoningEffort = null;
+			}
 		},
 		async readEventStream(stream, onEvent) {
 			const reader = stream.getReader();

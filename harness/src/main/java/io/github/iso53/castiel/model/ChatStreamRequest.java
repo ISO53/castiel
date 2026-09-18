@@ -12,7 +12,9 @@ import java.util.List;
  *                        the thread from the persisted session. Without {@code chatId} this
  *                        must be the full thread in chronological order
  *                        ({@code user}/{@code assistant}).
- * @param reasoningEffort Optional reasoning level ({@code off}/{@code low}/{@code medium}/{@code high});
+ * @param reasoningEffort Optional reasoning level token, as advertised by the selected model
+ *                        ({@link ModelInfo#thinkingLevels()}; e.g. {@code on}/{@code off} for Ollama,
+ *                        {@code low}/{@code medium}/{@code high} for OpenAI-style effort).
  *                        {@code null} uses the model default.
  * @param chatId          Optional persisted chat session id; {@code null} behaves as before.
  */
