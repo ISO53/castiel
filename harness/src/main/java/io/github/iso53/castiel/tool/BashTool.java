@@ -17,8 +17,8 @@ import java.util.regex.Pattern;
 @Service
 public class BashTool implements ToolProvider {
 
-	private static final long DEFAULT_TIMEOUT_MS = 120_000;
-	private static final long MAX_TIMEOUT_MS = 600_000;
+	private static final long DEFAULT_TIMEOUT_MS = 20_000;
+	private static final long MAX_TIMEOUT_MS = 60_000;
 	private static final int MAX_OUTPUT_CHARS = 50_000;
 
 	// Marker line PowerShell emits before a CLIXML-serialized stream.
@@ -53,7 +53,7 @@ public class BashTool implements ToolProvider {
 	)
 	public String runCommand(
 		@P("The command to execute") String command,
-		@P("Optional timeout in milliseconds between 1000 and 600000; default is 120000") Integer timeoutMs
+		@P("Optional timeout in milliseconds between 1000 and 60_000; default is 20_000") Integer timeoutMs
 	) {
 		if (command == null || command.isBlank()) {
 			return "Error: command is required";
@@ -81,6 +81,7 @@ public class BashTool implements ToolProvider {
 				return (
 					"Error: command timed out after " +
 					timeout +
+					"Try using background processes for longer tasks" +
 					" ms\n--- output so far ---\n" +
 					capOutput(cleanStdout(stdout.toString()), cleanStderr(stderr.toString()))
 				);

@@ -12,6 +12,7 @@ import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.*;
 import dev.langchain4j.model.openai.OpenAiTokenUsage;
+import dev.langchain4j.model.output.FinishReason;
 import dev.langchain4j.model.output.TokenUsage;
 import dev.langchain4j.service.tool.DefaultToolExecutor;
 import dev.langchain4j.service.tool.ToolExecutor;
@@ -64,6 +65,14 @@ public class HarnessService {
 		synchronize any confirmed findings into the workspace documents now (network.json, web.json, \
 		vulnerabilities.json, evidence.json, tasks.json. Read first, merge, never overwrite existing \
 		entries). Then carry on with your remaining work.""";
+
+	/** Arguments preset substituted for tool calls whose streamed arguments arrived truncated. */
+	private static final String FAULTY_TOOL_CALL_ARGUMENTS = "{}";
+
+	/** Result fed back for faulty tool calls so the model re-issues them with complete arguments. */
+	private static final String FAULTY_TOOL_CALL_RESULT =
+		"[harness: this tool call was discarded. Its arguments arrived truncated (not valid JSON), "
+			+ "so it was not executed. Re-issue it with complete arguments.]";
 
 	/** Maximum characters kept from a single MCP tool result; larger outputs spill to disk. */
 	private static final int MCP_OUTPUT_CHAR_CAP = 16_384;
@@ -207,6 +216,7 @@ public class HarnessService {
 	 *   <li>{@code tool_call} - JSON {@code {id, name, arguments}} when the model calls a tool</li>
 	 *   <li>{@code tool_result} - JSON {@code {id, name, result}} once the tool has run</li>
 	 *   <li>{@code usage} - JSON token usage totals accumulated across all model rounds so far</li>
+	 *   <li>{@code warning} - plain text non-fatal notice (e.g. output truncated by the token limit)</li>
 	 *   <li>{@code error} - plain text error message</li>
 	 * </ul>
 	 */
@@ -391,6 +401,7 @@ public class HarnessService {
 				@Override
 				public void onCompleteResponse(ChatResponse response) {
 					emitUsage(state, response, sink);
+					reportFinishReason(generationId, round, response, sink);
 
 					if (inThinking.compareAndSet(true, false)) {
 						sink.next(data("\n</think>\n\n"));
@@ -409,14 +420,29 @@ public class HarnessService {
 					log.debug("Generation {} round {} → {} tool call(s)",
 						generationId, round, message.toolExecutionRequests().size());
 
+					// Replace malformed tool calls with valid presets to prevent 400 errors.
+					List<ToolExecutionRequest> original = message.toolExecutionRequests();
+					List<ToolExecutionRequest> requests = new ArrayList<>();
+					for (ToolExecutionRequest request : original) {
+						if (isParsableJsonObject(request.arguments())) {
+							requests.add(request);
+						} else {
+							log.warn("Generation {} round {}: {} tool call had truncated arguments: {}",
+								generationId, round, request.name(), request.arguments());
+							requests.add(request.toBuilder().arguments(FAULTY_TOOL_CALL_ARGUMENTS).build());
+						}
+					}
 					List<ChatMessage> nextMessages = new ArrayList<>(messages);
-					nextMessages.add(message);
+					nextMessages.add(new AiMessage(message.text(), requests));
 					CURRENT_GENERATION.set(generationId);
 					try {
-						for (int index = 0; index < message.toolExecutionRequests().size(); index++) {
-							ToolExecutionRequest request = withId(message.toolExecutionRequests().get(index), index);
+						// Execute first, persist second. Only if it has valid arguments and a result.
+						for (int index = 0; index < requests.size(); index++) {
+							ToolExecutionRequest request = withId(requests.get(index), index);
+							String result = isParsableJsonObject(original.get(index).arguments())
+								? executeTool(request, index)
+								: FAULTY_TOOL_CALL_RESULT;
 							if (recorder != null) recorder.addToolCall(request);
-							String result = executeTool(request, index);
 							if (recorder != null) recorder.completeToolCall(toolCallId(request, index), result);
 							sink.next(
 								event(
@@ -577,6 +603,40 @@ public class HarnessService {
 			// so --debug shows what actually failed tool-side.
 			log.debug("Tool {} failed with arguments: {}", request.name(), request.arguments(), ex);
 			return "Error: " + (ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName());
+		}
+	}
+
+	/**
+	 * Logs the provider's finish reason for the round and warns the UI when the output was
+	 * truncated: {@code length} means the output token budget ran out mid-generation, which
+	 * can amputate an answer mid-sentence or a tool call's arguments mid-JSON.
+	 */
+	private void reportFinishReason(String generationId, int round, ChatResponse response,
+		FluxSink<ServerSentEvent<String>> sink) {
+		FinishReason finishReason = response.metadata() == null ? null : response.metadata().finishReason();
+		if (finishReason == null) {
+			return;
+		}
+		log.debug("Generation {} round {} finishReason={}", generationId, round, finishReason);
+		if (finishReason == FinishReason.LENGTH) {
+			try {
+				sink.next(event("warning",
+					"Output was cut off by the model's output token limit; the answer or tool call may be incomplete."));
+			} catch (RuntimeException ex) {
+				// Warnings are best-effort; never fail the stream over one.
+				log.debug("Could not deliver truncation warning for generation {}", generationId, ex);
+			}
+		}
+	}
+
+	private static boolean isParsableJsonObject(String value) {
+		if (value == null || value.isBlank()) {
+			return false;
+		}
+		try {
+			return JSON.readTree(value).isObject();
+		} catch (IOException | RuntimeException ex) {
+			return false;
 		}
 	}
 

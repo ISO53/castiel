@@ -166,6 +166,7 @@
 						</Conversation>
 
 		<div class="shrink-0 border-t p-3">
+			<p v-if="notice" class="mb-2 text-xs text-amber-500">{{ notice }}</p>
 			<p v-if="error" class="mb-2 text-xs text-destructive">{{ error }}</p>
 			<PromptInput class="w-full" @submit="handlePromptSubmit">
 				<PromptInputTextarea :disabled="!ready || streaming" :placeholder="composerPlaceholder"
@@ -426,6 +427,7 @@ export default {
 			loadingHistory: false,
 			streaming: false,
 			error: "",
+			notice: "",
 		};
 	},
 	computed: {
@@ -844,6 +846,7 @@ export default {
 			}
 
 			this.error = "";
+			this.notice = "";
 			this.messages.push(this.createMessage("user", text));
 			this.messages.push(this.createMessage("assistant", ""));
 			// Read the item back from Vue's reactive array so each incoming token repaints immediately.
@@ -889,6 +892,11 @@ export default {
 
 				await this.readEventStream(response.body, (event, data) => {
 					if (event === "error") throw new Error(data || "The model could not complete the response.");
+					if (event === "warning") {
+						// Non-fatal harness notice (e.g. output truncated by the token limit).
+						this.notice = data || "";
+						return;
+					}
 					if (event === "start") {
 						this.generationId = JSON.parse(data).id ?? null;
 						return;
