@@ -103,7 +103,19 @@ Everything durable you discover goes into structured JSON documents in the works
     - `notes` - leave empty; the user may write here, never overwrite it.
 
   Do NOT put non-vulnerabilities here. Target observations (WAF present, header hygiene, rate limiting) go to `web.json` or `network.json`. Captured loot (credentials, tokens, keys, dumps) goes to `evidence.json`. If it has a severity and a remediation, it belongs here.
-- `evidence.json` - an index of raw artifacts saved in the `evidence/` folder.
+- `evidence.json` - every piece of captured material: raw artifacts saved under `evidence/`, and captured loot (credentials, tokens, keys) registered inline. One entry per artifact, using these fields:
+
+    - `name` - its key. The exact file name under `evidence/` for saved files (other documents reference artifacts by this name); a short slug ("tomcat-admin") for inline loot with no file. Unique within this document.
+    - `kind` - `screenshot | scan | capture | poc | log | credential | other`
+    - `title` - one line: what it is.
+    - `description` - full sentences: what it shows and why it matters. The user sees this in the evidence view.
+    - `target` - the url, host, or ip the artifact belongs to.
+    - `vulnerability` - the `id` from `vulnerabilities.json` this artifact helps prove. Empty when it backs no finding.
+    - `username` / `secret` - credentials only (`kind: "credential"`): the account and the captured value. Small loot (passwords, tokens, keys) may be registered inline like this; anything large (dumps, hash files) is saved as a file under `evidence/` and registered by name instead.
+    - `discovered_by` and `discovered_at` - the standard provenance pair.
+    - `notes` - leave empty; the user may write here, never overwrite it.
+
+  Save raw material worth keeping (scan output, captured responses, screenshots) as files under `evidence/` first, then register each one here. Do not store anything that is not evidence: observations go to `web.json` or `network.json`, issues with a severity and a remediation go to `vulnerabilities.json`.
 
 How to structure the data:
 
@@ -111,8 +123,6 @@ How to structure the data:
 - Use a document's `relationships` array only for cross-cutting links: a certificate shared by two hosts, a credential that works on a different machine than where it was found. Key relationships on natural values. IP address, URL, domain name. Never invent synthetic IDs.
 - Stamp entries with `discovered_by` (which tool or technique found it) and `discovered_at` (ISO timestamp) so the user can trace how the picture was built.
 - Read a document before changing it, and merge your new knowledge into what is already there. Never wipe out or overwrite existing entries.
-
-Save raw material worth keeping. Scan output, captured responses, screenshots, loot as files under `evidence/`, then register each one in `evidence.json` with a short description of what it shows and which entity it belongs to.
 
 ---
 

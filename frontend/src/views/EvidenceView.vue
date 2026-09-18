@@ -1,114 +1,155 @@
 <template>
-	<DocumentShell doc-id="evidence" v-slot="{ data }">
-		<div class="flex h-full min-h-0 flex-col gap-2 bg-card">
-			<div v-if="(data?.artifacts ?? []).length > 0" class="relative shrink-0">
-				<Search class="absolute left-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground" />
-				<input v-model="filter"
-					class="h-7 w-full border-b bg-cart pl-7 pr-2 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-ring"
-					placeholder="Filter artifacts…" />
-			</div>
-
-			<div v-if="filtered(data).length > 0"
-				class="grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3 lg:grid-cols-4">
-				<article v-for="artifact in filtered(data)" :key="artifact.path"
-					class="group flex flex-col overflow-hidden rounded-md border bg-background"
-					:class="isDirectory(artifact) ? '' : 'cursor-pointer hover:border-ring'"
-					@click="openArtifact(artifact)">
-					<div class="flex h-24 items-center justify-center overflow-hidden bg-muted/40">
-						<img v-if="isImage(artifact)" :src="rawUrl(artifact.path)"
-							:alt="artifact.description ?? fileName(artifact.path)" class="h-full w-full object-cover"
-							loading="lazy" />
-						<Folder v-else-if="isDirectory(artifact)" class="size-6 text-muted-foreground/50" />
-						<FileText v-else class="size-6 text-muted-foreground/50" />
-					</div>
-					<div class="min-w-0 p-1.5">
-						<p class="truncate font-mono text-[10px] text-muted-foreground"
-							:title="fileName(artifact.path)">
-							{{ fileName(artifact.path) }}
-						</p>
-						<p v-if="artifact.description"
-							class="mt-0.5 line-clamp-2 text-[11px] leading-snug text-foreground">
-							{{ artifact.description }}
-						</p>
-					</div>
-				</article>
-			</div>
-
-			<EmptyHint v-else-if="(data?.artifacts ?? []).length === 0" :icon="ImageIcon"
+	<DocumentShell doc-id="evidence" v-slot="{ data, persist }">
+		<div class="flex h-full min-h-0 flex-col">
+			<EmptyHint
+				v-if="artifactsOf(data).length === 0"
+				:icon="ImageIcon"
 				message="No evidence captured yet."
-				hint="Artifacts registered in evidence.json appear here; binaries stay on disk under evidence/." />
-			<p v-else class="px-2 py-2 text-xs text-muted-foreground">No artifacts match the filter.</p>
+				hint="Artifacts registered in evidence.json appear here; binaries stay on disk under evidence/."
+			/>
+			<DataTable
+				v-else
+				:columns="columns"
+				:data="artifactsOf(data)"
+				search-placeholder="Filter artifacts…"
+				empty-message="No artifacts match the filter."
+				@row-click="(row) => (selected = row)"
+			>
+				<template #cell-name="{ row, value }">
+					<span class="flex items-center gap-1.5">
+						<component :is="kindIcon(row.kind)" class="size-3 shrink-0 text-muted-foreground" />
+						<span class="font-mono text-[11px]" :title="value">{{ value }}</span>
+					</span>
+				</template>
+				<template #cell-kind="{ value }">
+					<span class="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{{ value || "other" }}</span>
+				</template>
+				<template #cell-title="{ value }">
+					<span class="block max-w-[36ch] truncate" :title="value">{{ value || "—" }}</span>
+				</template>
+				<template #cell-target="{ value }">
+					<span class="block max-w-[28ch] truncate font-mono text-[11px]" :title="value">{{ value || "—" }}</span>
+				</template>
+				<template #cell-vulnerability="{ value }">
+					<span v-if="value" class="font-mono text-[11px] text-sky-400" :title="value">{{ value }}</span>
+					<span v-else class="text-muted-foreground">—</span>
+				</template>
+				<template #cell-secret="{ row }">
+					<span v-if="row.secret" class="flex items-center gap-1 font-mono text-[11px]">
+						{{ maskSecret(row.secret) }}
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							class="size-5"
+							:aria-label="copiedName === row.name ? 'Copied' : 'Copy secret'"
+							@click.stop="copySecret(row)"
+						>
+							<Check v-if="copiedName === row.name" class="text-emerald-400" />
+							<Copy v-else class="text-muted-foreground" />
+						</Button>
+					</span>
+					<span v-else class="text-muted-foreground">—</span>
+				</template>
+				<template #cell-discoveredBy="{ value }">
+					{{ value || "—" }}
+				</template>
+				<template #cell-discoveredAt="{ value }">
+					<span class="whitespace-nowrap tabular-nums text-muted-foreground">{{ relative(value) }}</span>
+				</template>
+			</DataTable>
+			<ArtifactDetailDialog :artifact="selected" :persist="persist" @close="selected = null" />
 		</div>
 	</DocumentShell>
 </template>
 
 <script setup>
-import { FileText, Folder, Image as ImageIcon, Search } from "@lucide/vue";
+import { Check, Copy, FileText, Image as ImageIcon, Key, ScrollText, TerminalSquare } from "@lucide/vue";
 import { ref } from "vue";
+import ArtifactDetailDialog from "@/components/views/panels/ArtifactDetailDialog.vue";
+import DataTable from "@/components/views/DataTable.vue";
 import DocumentShell from "@/components/views/DocumentShell.vue";
 import EmptyHint from "@/components/views/EmptyHint.vue";
-import { joinWorkspacePath } from "@/lib/documents";
-import { useTabsStore } from "@/stores/tabs";
-import { useWorkspaceStore } from "@/stores/workspace";
+import { Button } from "@/components/ui/button";
+import { maskSecret, normalizeArtifact } from "@/lib/evidence";
 
-const FILES_API = `${window.location.origin}/api/files`;
+const selected = ref(null);
+const copiedName = ref("");
+let copiedTimer = null;
 
-const tabs = useTabsStore();
-const workspace = useWorkspaceStore();
-const filter = ref("");
+const KIND_ICONS = {
+	screenshot: ImageIcon,
+	scan: TerminalSquare,
+	capture: TerminalSquare,
+	poc: FileText,
+	log: ScrollText,
+	credential: Key,
+	other: FileText,
+};
 
-const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif"]);
-
-function fileName(path) {
-	return path.split(/[\\/]/).pop() ?? path;
+function kindIcon(kind) {
+	return KIND_ICONS[kind] ?? FileText;
 }
 
-function extension(path) {
-	return fileName(path).split(".").pop()?.toLowerCase() ?? "";
-}
-
-function isImage(artifact) {
-	return IMAGE_EXTENSIONS.has(extension(artifact.path));
-}
-
-function rawUrl(path) {
-	return `${FILES_API}/raw?path=${encodeURIComponent(joinWorkspacePath(workspace.cwd ?? "", path))}`;
-}
-
-function isDirectory(artifact) {
-	return artifact.path.endsWith("/") || artifact.path.endsWith("\\");
-}
-
-function filtered(data) {
-	const artifacts = (data?.artifacts ?? [])
+function artifactsOf(data) {
+	return (data?.artifacts ?? [])
+		.map(normalizeArtifact)
+		.filter((artifact) => artifact?.name)
 		.map((artifact) => ({
 			...artifact,
-			path: artifact.path ?? artifact.file ?? artifact.location ?? "",
-			description: artifact.description ?? artifact.note ?? "",
-			entity: artifact.related_to ?? artifact.entity ?? "",
-		}))
-		.filter((artifact) => artifact?.path);
-	const needle = filter.value.trim().toLowerCase();
-	if (!needle) return artifacts;
-	return artifacts.filter((artifact) =>
-		`${artifact.path} ${artifact.description} ${artifact.entity}`.toLowerCase().includes(needle),
-	);
+			// Raw ISO value for DataTable sorting; the cell renders it as relative time.
+			discoveredAt: artifact.discovered_at ?? "",
+		}));
 }
 
-async function openArtifact(artifact) {
-	if (isDirectory(artifact)) return;
-	if (!isImage(artifact)) {
-		const path = joinWorkspacePath(workspace.cwd ?? "", artifact.path);
-		tabs.openTab({ value: `file:${path}`, label: fileName(artifact.path), component: "FileEditorView", path });
-		return;
-	}
-
-	// Lightbox over every visible image so users can swipe through evidence.
-	const [{ default: PhotoSwipe }] = await Promise.all([import("photoswipe"), import("photoswipe/dist/photoswipe.css")]);
-	const slides = filtered({ artifacts: [artifact] }).map((entry) => ({ src: rawUrl(entry.path), title: entry.description }));
-	new PhotoSwipe({
-		dataSource: slides,
-		showHideAnimationType: "zoom",
-	}).init();
+async function copySecret(artifact) {
+	await navigator.clipboard.writeText(artifact.secret ?? "");
+	copiedName.value = artifact.name;
+	clearTimeout(copiedTimer);
+	copiedTimer = setTimeout(() => {
+		copiedName.value = "";
+	}, 1500);
 }
+
+function relative(timestamp) {
+	const time = Date.parse(timestamp ?? "");
+	if (!Number.isFinite(time)) return "—";
+	const seconds = Math.floor((Date.now() - time) / 1000);
+	if (seconds < 60) return "just now";
+	if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+	if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+	return `${Math.floor(seconds / 86400)}d ago`;
+}
+
+const columns = [
+	{ accessorKey: "name", header: "Name" },
+	{ accessorKey: "kind", header: "Kind" },
+	{ accessorKey: "title", header: "Title" },
+	{
+		id: "target",
+		accessorFn: (row) => row.target,
+		header: "Target",
+	},
+	{
+		id: "vulnerability",
+		accessorFn: (row) => row.vulnerability,
+		header: "Vulnerability",
+	},
+	{
+		id: "secret",
+		accessorFn: (row) => row.secret,
+		header: "Secret",
+		enableSorting: false,
+	},
+	{
+		id: "discoveredBy",
+		accessorFn: (row) => row.discovered_by,
+		header: "Captured By",
+		enableSorting: false,
+	},
+	{
+		id: "discoveredAt",
+		accessorFn: (row) => row.discoveredAt,
+		header: "Found",
+	},
+];
 </script>
