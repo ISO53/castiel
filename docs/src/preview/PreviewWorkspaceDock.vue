@@ -9,13 +9,12 @@ import {
 	Globe,
 	Bug,
 	Image,
-	ListChecks,
 	Plug,
 	RefreshCw,
 } from "@lucide/vue";
 import { DOCUMENTS, MCP_SERVERS, WORKSPACE_NAME } from "./data.js";
 
-const ICONS = { network: Network, web: Globe, vulnerabilities: Bug, evidence: Image, tasks: ListChecks };
+const ICONS = { network: Network, web: Globe, vulnerabilities: Bug, evidence: Image };
 
 defineProps({
 	activeDocId: { type: String, default: "network" },

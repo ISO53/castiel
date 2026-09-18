@@ -33,13 +33,6 @@ export const ENGAGEMENT_DOCUMENTS = [
 		component: "EvidenceView",
 		description: "Captured artifacts gallery",
 	},
-	{
-		id: "tasks",
-		file: "tasks.json",
-		label: "Tasks",
-		component: "TasksView",
-		description: "Engagement plan & progress",
-	},
 ];
 
 /** Resolves a registry entry by document file name. */

@@ -43,15 +43,6 @@ export const DOCUMENTS = [
 			hint: "Screenshots, banners and artifacts land here during the engagement.",
 		},
 	},
-	{
-		id: "tasks",
-		file: "tasks.json",
-		label: "Tasks",
-		empty: {
-			message: "No tasks planned yet.",
-			hint: "The engagement plan and its progress will show up here.",
-		},
-	},
 ];
 
 /** Mirrors frontend/src/components/McpPanel.vue. */
@@ -90,7 +81,7 @@ export const DEMO_SCRIPT = [
 	{
 		t: "reasoning",
 		seconds: 3,
-		text: "Scope is limited to the internal segment. Check the workspace scaffold, record the scope and rules of engagement in tasks.json, then start host discovery before any enumeration.",
+		text: "Scope is limited to the internal segment. Check the workspace scaffold, record the scope and rules of engagement in engagement.json, then start host discovery before any enumeration.",
 	},
 	{
 		t: "text",
@@ -100,8 +91,8 @@ export const DEMO_SCRIPT = [
 		t: "tool",
 		name: "write file",
 		seconds: 1.2,
-		input: "tasks.json",
-		output: "tasks.json written — scope, rules of engagement and phase checklist recorded",
+		input: "engagement.json",
+		output: "engagement.json written — scope, rules of engagement and phase recorded",
 	},
 	{ t: "pause", ms: 400 },
 	{

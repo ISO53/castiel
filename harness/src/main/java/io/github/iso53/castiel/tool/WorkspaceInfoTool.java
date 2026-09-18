@@ -24,8 +24,7 @@ public class WorkspaceInfoTool implements ToolProvider {
 		"network.json",
 		"web.json",
 		"vulnerabilities.json",
-		"evidence.json",
-		"tasks.json"
+		"evidence.json"
 	);
 
 	private final WorkspaceSession workspace;

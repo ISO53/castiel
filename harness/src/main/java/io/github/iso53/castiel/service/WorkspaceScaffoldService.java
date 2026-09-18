@@ -106,12 +106,6 @@ public class WorkspaceScaffoldService {
 			}
 			""");
 
-		scaffolds.put("tasks.json", """
-			{
-			  "tasks": []
-			}
-			""");
-
 		return Map.copyOf(scaffolds);
 	}
 }

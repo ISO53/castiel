@@ -8,7 +8,7 @@
 	<div class="fchat" aria-hidden="true">
 		<div class="fchat-panel">
 			<p class="fchat-msg user">Start a pentest on 10.0.0.0/24 — recon first, keep everything documented.</p>
-			<p class="fchat-msg assistant">Scope recorded in <strong>tasks.json</strong> — sweeping the segment for live hosts now.</p>
+			<p class="fchat-msg assistant">Scope recorded in <strong>engagement.json</strong> — sweeping the segment for live hosts now.</p>
 			<div class="fchat-tool">
 				<span class="fchat-tool-name">http request</span>
 				<span class="fchat-tool-badge">completed</span>

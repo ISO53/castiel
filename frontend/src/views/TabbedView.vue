@@ -29,7 +29,6 @@
 				<WebAppView v-else-if="tab.component === 'WebAppView'" />
 				<VulnerabilitiesView v-else-if="tab.component === 'VulnerabilitiesView'" />
 				<EvidenceView v-else-if="tab.component === 'EvidenceView'" />
-				<TasksView v-else-if="tab.component === 'TasksView'" />
 			</div>
 		</div>
 	</div>
@@ -51,7 +50,6 @@ const NetworkView = defineAsyncComponent(() => import("@/views/NetworkView.vue")
 const WebAppView = defineAsyncComponent(() => import("@/views/WebAppView.vue"));
 const VulnerabilitiesView = defineAsyncComponent(() => import("@/views/VulnerabilitiesView.vue"));
 const EvidenceView = defineAsyncComponent(() => import("@/views/EvidenceView.vue"));
-const TasksView = defineAsyncComponent(() => import("@/views/TasksView.vue"));
 import { useTabsStore } from "@/stores/tabs";
 
 const tabsStore = useTabsStore();
