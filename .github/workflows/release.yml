@@ -85,34 +85,31 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "$TAG" packaging/dist/castiel-*.tar.gz --clobber
 
-  # Disabled until 1.x.x: the macos build needs an app-version that does not
-  # start with 0 (Apple's CFBundleVersion rule rejects 0.x). Stupid rule.
-  # Re-enable with the first stable (1.x.x) release.
-  # macos:
-  #   runs-on: macos-latest
-  #   timeout-minutes: 30
-  #   env:
-  #     TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
-  #   steps:
-  #     - uses: actions/checkout@v5
-  #     - uses: actions/setup-java@v5
-  #       with:
-  #         distribution: temurin
-  #         java-version: '25'
-  #     - uses: actions/setup-node@v5
-  #       with:
-  #         node-version: '22'
-  #     - name: Build frontend
-  #       working-directory: frontend
-  #       run: |
-  #         npm install
-  #         npm run build
-  #     - name: Package
-  #       working-directory: packaging
-  #       run: |
-  #         chmod +x package-macos.sh
-  #         ./package-macos.sh --skip-ui-build
-  #     - name: Upload release asset (zip)
-  #       env:
-  #         GH_TOKEN: ${{ github.token }}
-  #       run: gh release upload "$TAG" packaging/dist/castiel-*.zip --clobber
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
+      - name: Package
+        working-directory: packaging
+        run: |
+          chmod +x package-macos.sh
+          ./package-macos.sh --skip-ui-build
+      - name: Upload release asset (zip)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" packaging/dist/castiel-*.zip --clobber
