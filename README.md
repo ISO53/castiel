@@ -24,9 +24,6 @@ castiel is an AI-assisted penetration testing harness. You open a project folder
 
 The human stays in charge. You define the target and scope, decide when to move between engagement phases, and approve how far things go. The model does the hands-on technical work and keeps its findings recorded in the workspace.
 
-> [!WARNING]
-> This app is still under heavy development. Expect bugs, incomplete features and breaking changes.
-
 ## Getting started
 
 Requirements: only for building from source. Java 25+ and Maven, plus Node.js 22+ (with npm) for the frontend. The released packages need nothing but the OS.
