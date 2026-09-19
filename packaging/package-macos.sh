@@ -62,13 +62,18 @@ cp "target/castiel-$VERSION.jar" "$STAGE/"
 	--input "$STAGE" \
 	--main-jar "castiel-$VERSION.jar" \
 	--dest "$SCRIPT_DIR/dist"
-echo "App image: $SCRIPT_DIR/dist/castiel"
+echo "App image: $SCRIPT_DIR/dist/castiel.app"
 
 # --- 5. zip (ditto preserves macOS metadata) -----------------------------------------
+# jpackage drops castiel.app directly under dist/ on macOS (no intermediate
+# folder); nest it inside a castiel/ folder so the archive layout matches the
+# Linux and Windows bundles.
 ARCH="$(uname -m)"
 if [ "$SKIP_ARCHIVE" = false ]; then
 	ZIP="$SCRIPT_DIR/dist/castiel-macos-$ARCH.zip"
-	ditto -c -k --keepParent "$SCRIPT_DIR/dist/castiel/castiel.app" "$ZIP"
+	mkdir -p "$SCRIPT_DIR/dist/castiel"
+	mv "$SCRIPT_DIR/dist/castiel.app" "$SCRIPT_DIR/dist/castiel/"
+	ditto -c -k --keepParent "$SCRIPT_DIR/dist/castiel" "$ZIP"
 	echo "Created $ZIP"
 fi
 
