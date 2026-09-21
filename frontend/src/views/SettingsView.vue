@@ -1,4 +1,4 @@
-﻿<template>
+<template>
 	<ScrollArea class="h-full bg-card">
 		<div class="mx-auto flex max-w-2xl flex-col gap-8 p-6">
 			<div class="space-y-1">
@@ -282,6 +282,52 @@
 								</div>
 							</div>
 
+							<Separator />
+
+							<div class="space-y-2 text-xs text-muted-foreground leading-relaxed">
+								<p>
+									Or skip the API key and sign in with your Cline account instead. A browser
+									window opens to authorize castiel, and tokens refresh automatically
+									afterwards.
+								</p>
+							</div>
+
+							<template v-if="clineAccount">
+								<div class="flex items-center gap-2 text-xs">
+									<span class="size-2 rounded-full bg-emerald-500" aria-hidden="true" />
+									<span class="text-muted-foreground">Signed in as {{ clineAccount }}</span>
+								</div>
+								<div class="flex items-center gap-3">
+									<Button size="sm" variant="outline" :disabled="disconnectingCline"
+										@click="disconnectClineRequest">
+										{{ disconnectingCline ? "Disconnecting..." : "Disconnect" }}
+									</Button>
+								</div>
+							</template>
+
+							<template v-else>
+								<div v-if="clineSignIn" class="space-y-2">
+									<div class="flex flex-col gap-1.5">
+										<Label>Device code</Label>
+										<div class="flex items-center gap-2">
+											<code class="rounded bg-muted px-2 py-1 text-sm tracking-widest">{{ clineSignIn.userCode }}</code>
+											<Button size="sm" variant="outline" @click="openClineVerification">
+												Open browser
+											</Button>
+										</div>
+									</div>
+									<div class="flex items-center gap-2 text-xs text-muted-foreground">
+										<Spinner class="size-3" />
+										<span>{{ clineSignInStatus || "Waiting for authorization..." }}</span>
+									</div>
+								</div>
+								<div v-else class="flex items-center gap-3">
+									<Button size="sm" :disabled="connectingClineSignIn" @click="startClineSignInRequest">
+										{{ connectingClineSignIn ? "Starting..." : "Sign in with Cline" }}
+									</Button>
+								</div>
+							</template>
+
 							<p v-if="clineError" class="text-xs text-destructive wrap-break-word">
 								{{ clineError }}
 							</p>
@@ -429,6 +475,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
 import { useSettingsStore } from "@/stores/settings";
 import { useMcpStore } from "@/stores/mcp";
 import { useTabsStore } from "@/stores/tabs";
@@ -446,6 +493,7 @@ export default {
 		Label,
 		ScrollArea,
 		Separator,
+		Spinner,
 		ChevronDown,
 		Check,
 		ChevronsUpDown,
@@ -492,6 +540,12 @@ export default {
 			clineForm: {
 				apiKey: "",
 			},
+			clineAccount: null,
+			clineSignIn: null,
+			clineSignInStatus: "",
+			connectingClineSignIn: false,
+			disconnectingCline: false,
+			clinePollTimer: null,
 			mcp: useMcpStore(),
 			mcpConfig: null,
 			mcpFileError: "",
@@ -509,6 +563,9 @@ export default {
 		providerIds() {
 			return Object.keys(useSettingsStore().providers ?? {});
 		},
+	},
+	beforeUnmount() {
+		if (this.clinePollTimer) clearTimeout(this.clinePollTimer);
 	},
 	async mounted() {
 		this.mcp.startFeed();
@@ -538,6 +595,7 @@ export default {
 				apiKey: cline.apiKey ?? "",
 			};
 			this.clineOpen = Boolean(settings.providers.cline);
+			this.clineAccount = cline.auth?.email ?? null;
 			await this.initAgents();
 		} catch (err) {
 			this.error = err instanceof Error ? err.message : String(err);
@@ -669,6 +727,72 @@ export default {
 				this.clineError = err instanceof Error ? err.message : String(err);
 			} finally {
 				this.connectingCline = false;
+			}
+		},
+		// ---- Cline account sign-in -------------------------------------------------
+		async startClineSignInRequest() {
+			const settings = useSettingsStore();
+			this.connectingClineSignIn = true;
+			this.clineError = '';
+			try {
+				this.clineSignIn = await settings.startClineSignIn();
+				this.clineSignInStatus = "Waiting for authorization...";
+				this.openClineVerification();
+				this.pollClineSignIn();
+			} catch (err) {
+				this.clineError = err instanceof Error ? err.message : String(err);
+			} finally {
+				this.connectingClineSignIn = false;
+			}
+		},
+		openClineVerification() {
+			if (this.clineSignIn?.verificationUrl) {
+				window.open(this.clineSignIn.verificationUrl, "_blank", "noopener");
+			}
+		},
+		async pollClineSignIn() {
+			const settings = useSettingsStore();
+			try {
+				const result = await settings.pollClineSignIn();
+				if (result.status === "PENDING") {
+					this.clineSignInStatus = result.message || "Waiting for authorization...";
+					this.clinePollTimer = setTimeout(() => this.pollClineSignIn(), 4000);
+				} else if (result.status === "AUTHORIZED") {
+					this.clineAccount = result.email ?? null;
+					this.clineHealth = result.health ?? null;
+					this.clineSignIn = null;
+					this.clineSignInStatus = "";
+				} else if (result.status === "EXPIRED") {
+					this.clineSignIn = null;
+					this.clineSignInStatus = "";
+					this.clineError = "Sign-in code expired. Start again.";
+				} else if (result.status === "DENIED") {
+					this.clineSignIn = null;
+					this.clineSignInStatus = "";
+					this.clineError = "Authorization was denied.";
+				} else {
+					// IDLE: the flow was restarted server-side.
+					this.clineSignIn = null;
+					this.clineSignInStatus = "";
+				}
+			} catch (err) {
+				this.clineError = err instanceof Error ? err.message : String(err);
+				this.clineSignIn = null;
+				this.clineSignInStatus = "";
+			}
+		},
+		async disconnectClineRequest() {
+			const settings = useSettingsStore();
+			this.disconnectingCline = true;
+			this.clineError = '';
+			try {
+				await settings.disconnectCline();
+				this.clineAccount = null;
+				this.clineHealth = null;
+			} catch (err) {
+				this.clineError = err instanceof Error ? err.message : String(err);
+			} finally {
+				this.disconnectingCline = false;
 			}
 		},
 		// Opens mcp.json in the built-in file editor; saving it triggers a live reload.

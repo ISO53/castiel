@@ -159,5 +159,38 @@ export const useSettingsStore = defineStore("settings", {
 				apiKey: form.apiKey ?? "",
 			});
 		},
+		/** Starts a Cline account sign-in: returns { userCode, verificationUrl, expiresAt }. */
+		async startClineSignIn() {
+			const response = await fetch(`${API_BASE_URL}/providers/cline/oauth/start`, { method: "POST" });
+			if (!response.ok) {
+				throw new Error(await readError(response));
+			}
+			return await response.json();
+		},
+		/** Advances the Cline sign-in flow; returns { status, email?, settings?, health?, message? }. */
+		async pollClineSignIn() {
+			const response = await fetch(`${API_BASE_URL}/providers/cline/oauth/status`);
+			if (!response.ok) {
+				throw new Error(await readError(response));
+			}
+			const data = await response.json();
+			if (data.settings) {
+				this.providers = data.settings.providers ?? this.providers;
+				this.activeProviderId = data.settings.activeProviderId ?? this.activeProviderId;
+				this.loaded = true;
+			}
+			return data;
+		},
+		/** Signs out of the Cline account (removes the OAuth-backed provider entry). */
+		async disconnectCline() {
+			const response = await fetch(`${API_BASE_URL}/providers/cline/oauth/disconnect`, { method: "POST" });
+			if (!response.ok) {
+				throw new Error(await readError(response));
+			}
+			const data = await response.json();
+			this.providers = data.providers ?? {};
+			this.loaded = true;
+			return data;
+		},
 	},
 });

@@ -6,16 +6,19 @@ package io.github.iso53.castiel.model;
  * @param type           LangChain4j client family to use.
  * @param apiUrl         Provider root URL as entered in the UI (e.g. {@code http://localhost:8080}).
  *                       For {@link ProviderType#OPENAI_COMPATIBLE} the harness appends {@code /v1}.
- * @param apiKey         Optional API key; blank when the server does not require one.
+ * @param apiKey         API key; for OAuth-backed providers this is the current access token
+ *                       rendered as a key (e.g. {@code workos:<token>}) and is refreshed in place.
  * @param contextWindow  Optional context window hint in tokens.
+ * @param auth           OAuth credentials when the provider is account-backed (e.g. Cline sign-in),
+ *                       or {@code null} for plain API-key providers.
  */
 public record LlmProviderConfig(
 	ProviderType type,
 	String apiUrl,
 	String apiKey,
-	Integer contextWindow
+	Integer contextWindow,
+	ProviderOAuthCredentials auth
 ) {
-
 	public static final int DEFAULT_CONTEXT_WINDOW = 8192;
 
 	public LlmProviderConfig {

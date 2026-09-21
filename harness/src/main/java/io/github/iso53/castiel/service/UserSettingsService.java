@@ -7,15 +7,14 @@ import io.github.iso53.castiel.model.LlmProviderConfig;
 import io.github.iso53.castiel.model.UserSettings;
 import io.github.iso53.castiel.util.AppPaths;
 import jakarta.annotation.PostConstruct;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
 /**
  * Loads and persists {@link UserSettings} as JSON under the OS config directory.
@@ -55,6 +54,37 @@ public class UserSettingsService {
 		Map<String, LlmProviderConfig> next = new LinkedHashMap<>(settings.providers());
 		next.put(providerId.trim(), config);
 		settings = new UserSettings(next, providerId.trim(), settings.workerModel(), settings.defaultMaxRounds());
+		writeToDisk(settings);
+		return settings;
+	}
+
+	// Replaces an existing provider entry without changing the active provider (used by background token refreshes).
+	public synchronized UserSettings replaceProvider(String providerId, LlmProviderConfig config) {
+		if (providerId == null || providerId.isBlank()) {
+			throw new IllegalArgumentException("providerId is required");
+		}
+		Map<String, LlmProviderConfig> next = new LinkedHashMap<>(settings.providers());
+		next.put(providerId.trim(), config);
+		settings = new UserSettings(
+			next,
+			settings.activeProviderId(),
+			settings.workerModel(),
+			settings.defaultMaxRounds()
+		);
+		writeToDisk(settings);
+		return settings;
+	}
+
+	// Removes a provider entry entirely and writes settings to disk.
+	public synchronized UserSettings removeProvider(String providerId) {
+		if (providerId == null || providerId.isBlank()) {
+			throw new IllegalArgumentException("providerId is required");
+		}
+		Map<String, LlmProviderConfig> next = new LinkedHashMap<>(settings.providers());
+		next.remove(providerId.trim());
+		// Do not leave the UI default pointing at a removed provider.
+		String activeId = providerId.trim().equals(settings.activeProviderId()) ? null : settings.activeProviderId();
+		settings = new UserSettings(next, activeId, settings.workerModel(), settings.defaultMaxRounds());
 		writeToDisk(settings);
 		return settings;
 	}
