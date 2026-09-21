@@ -6,21 +6,19 @@
 			</div>
 
 			<div class="flex items-center gap-1">
-				<Button
-					variant="ghost"
-					size="icon-sm"
+				<Button variant="ghost" size="icon-sm"
 					:class="docks.right && docks.rightView === 'history' ? 'bg-accent text-accent-foreground' : ''"
-					:disabled="streaming || !cwd"
-					aria-label="Chat history"
+					:disabled="streaming || !cwd" aria-label="Chat history"
 					:title="!cwd ? 'Open a workspace first to view history' : 'Chat history'"
-					@click="docks.toggleView('right', 'history')"
-				>
+					@click="docks.toggleView('right', 'history')">
 					<History class="size-3.5" />
 				</Button>
 
 				<DropdownMenu>
 					<DropdownMenuTrigger as-child>
-						<Button variant="ghost" size="icon-sm" :disabled="streaming || !cwd" aria-label="Start a new chat" :title="!cwd ? 'Open a workspace first to start a chat' : 'New chat'">
+						<Button variant="ghost" size="icon-sm" :disabled="streaming || !cwd"
+							aria-label="Start a new chat"
+							:title="!cwd ? 'Open a workspace first to start a chat' : 'New chat'">
 							<Plus class="size-3.5" />
 						</Button>
 					</DropdownMenuTrigger>
@@ -40,130 +38,125 @@
 			</div>
 		</header>
 
-			<Conversation class="min-h-0 flex-1" aria-label="Chat messages">
-				<ConversationContent class="gap-4 px-3 py-4">
-					<EmptyState v-if="!cwd"
-						text="Please open or create a workspace from the Home tab or File menu to start chatting.">
-						<MessageSquare />
-					</EmptyState>
-					<div v-else-if="!providerId"
-						class="m-auto max-w-56 text-center text-xs leading-relaxed text-muted-foreground">
-						Start a new chat and choose one of your configured providers.
-					</div>
-					<div v-else-if="loadingModels"
-						class="m-auto flex items-center gap-2 text-xs text-muted-foreground">
-						<Spinner class="size-3" /> Loading models…
-					</div>
-					<div v-else-if="!models.length && !error"
-						class="m-auto max-w-56 text-center text-xs leading-relaxed text-muted-foreground">
-						This provider did not report any available models.
-					</div>
-					<div v-else-if="!modelName"
-						class="m-auto max-w-56 text-center text-xs leading-relaxed text-muted-foreground">
-						Choose a model below to start chatting.
-					</div>
+		<Conversation class="min-h-0 flex-1" aria-label="Chat messages">
+			<ConversationContent class="gap-4 px-3 py-4">
+				<EmptyState v-if="!cwd"
+					text="Please open or create a workspace from the Home tab or File menu to start chatting.">
+					<MessageSquare />
+				</EmptyState>
+				<div v-else-if="!providerId"
+					class="m-auto max-w-56 text-center text-xs leading-relaxed text-muted-foreground">
+					Start a new chat and choose one of your configured providers.
+				</div>
+				<div v-else-if="loadingModels" class="m-auto flex items-center gap-2 text-xs text-muted-foreground">
+					<Spinner class="size-3" /> Loading models…
+				</div>
+				<div v-else-if="!models.length && !error"
+					class="m-auto max-w-56 text-center text-xs leading-relaxed text-muted-foreground">
+					This provider did not report any available models.
+				</div>
+				<div v-else-if="!modelName"
+					class="m-auto max-w-56 text-center text-xs leading-relaxed text-muted-foreground">
+					Choose a model below to start chatting.
+				</div>
 
-							<Message v-for="message in messages" :key="message.id"
-								:align="message.role === 'user' ? 'end' : 'start'">
-								<MessageContent>
-									<div v-if="message.role === 'user'"
-										class="max-w-[90%] self-end whitespace-pre-wrap rounded-lg bg-primary px-3 py-2 text-xs leading-relaxed text-primary-foreground">
-										{{ messageText(message) }}
-									</div>
-									<template v-for="(part, partIndex) in message.parts" v-else :key="partIndex">
-										<!-- Thinking/reasoning segment -->
-										<Reasoning v-if="part.type === 'thinking'" class="w-full self-start"
-											:is-streaming="streaming && message.isThinking
-												&& partIndex === message.parts.length - 1">
-											<ReasoningTrigger />
-											<ReasoningContent :content="part.text"
-												class="text-xs leading-relaxed opacity-60" />
-										</Reasoning>
+				<Message v-for="message in messages" :key="message.id"
+					:align="message.role === 'user' ? 'end' : 'start'">
+					<MessageContent>
+						<div v-if="message.role === 'user'"
+							class="max-w-[90%] self-end whitespace-pre-wrap rounded-lg bg-primary px-3 py-2 text-xs leading-relaxed text-primary-foreground">
+							{{ messageText(message) }}
+						</div>
+						<template v-for="(part, partIndex) in message.parts" v-else :key="partIndex">
+							<!-- Thinking/reasoning segment -->
+							<Reasoning v-if="part.type === 'thinking'" class="w-full self-start" :is-streaming="streaming && message.isThinking
+								&& partIndex === message.parts.length - 1">
+								<ReasoningTrigger />
+								<ReasoningContent :content="part.text" class="text-xs leading-relaxed opacity-60" />
+							</Reasoning>
 
-										<!-- Tool call segment -->
-										<template v-else-if="part.type === 'tool'">
-											<Tool v-if="!isPendingQuestion(part)" v-model:open="part.open"
-												class="w-full self-start">
-												<ToolHeader :state="toolState(part)" :title="part.name"
-													:type="`tool-${part.name}`" />
-												<ToolContent>
-													<ToolInput :input="toolInput(part)" />
-													<ToolOutput v-if="part.result !== null" :output="part.result" />
-												</ToolContent>
-											</Tool>
+							<!-- Tool call segment -->
+							<template v-else-if="part.type === 'tool'">
+								<Tool v-if="!isPendingQuestion(part)" v-model:open="part.open"
+									class="w-full self-start">
+									<ToolHeader :state="toolState(part)" :title="part.name"
+										:type="`tool-${part.name}`" />
+									<ToolContent>
+										<ToolInput :input="toolInput(part)" />
+										<ToolOutput v-if="part.result !== null" :output="part.result" />
+									</ToolContent>
+								</Tool>
 
-											<Sources v-if="!isPendingQuestion(part) && sourcesFor(part).length"
-												class="w-full self-start">
-												<SourcesTrigger :count="sourcesFor(part).length" />
-												<SourcesContent>
-													<Source v-for="source in sourcesFor(part)" :key="source.href"
-														:href="source.href" :title="source.title" class="text-xs" />
-												</SourcesContent>
-											</Sources>
+								<Sources v-if="!isPendingQuestion(part) && sourcesFor(part).length"
+									class="w-full self-start">
+									<SourcesTrigger :count="sourcesFor(part).length" />
+									<SourcesContent>
+										<Source v-for="source in sourcesFor(part)" :key="source.href"
+											:href="source.href" :title="source.title" class="text-xs" />
+									</SourcesContent>
+								</Sources>
 
-											<Questionnaire v-if="isPendingQuestion(part)"
-												class="w-full max-w-md self-start py-1" default-item="q"
-												:items="questionnaireItems(part)" shortcuts="letters"
-												@submit="submitAnswer($event, part)">
-												<QuestionnaireProgress />
-												<QuestionnaireItem name="q" required :multiple="part.multiSelect">
-													<QuestionnaireTitle>{{ part.question }}</QuestionnaireTitle>
-													<QuestionnaireDescription>
-														Choose an answer{{ part.multiSelect ? " (multiple allowed)" : "" }},
-														or type your own under Other.
-													</QuestionnaireDescription>
-													<QuestionnaireChoices v-if="part.options && part.options.length">
-														<QuestionnaireChoice v-for="option in part.options" :key="option"
-															:value="option">
-															<span class="font-medium">{{ option }}</span>
-														</QuestionnaireChoice>
-													</QuestionnaireChoices>
-													<p v-else class="text-[11px] leading-relaxed text-muted-foreground">
-														No answer options arrived — type your answer below.
-													</p>
-													<div class="flex flex-col gap-1.5 pt-1">
-														<p class="text-[11px] font-medium">Other</p>
-														<QuestionnaireInput placeholder="Type a custom answer�" />
-													</div>
-													<QuestionnaireError />
-												</QuestionnaireItem>
-												<QuestionnaireActions>
-													<Button variant="outline" size="sm" @click="dismissQuestion(part)">
-														Dismiss
-													</Button>
-													<QuestionnaireSubmit>Send answer</QuestionnaireSubmit>
-												</QuestionnaireActions>
-											</Questionnaire>
-										</template>
-
-										<!-- Assistant text segment (markdown + code blocks) -->
-										<div v-else
-											class="flex min-w-0 max-w-[90%] flex-col items-start gap-2 self-start text-foreground">
-											<template v-for="(segment, segmentIndex) in contentSegments(part.text)"
-												:key="segmentIndex">
-												<div v-if="segment.type === 'text'" class="typeset typeset-docs w-full"
-													v-html="segment.html" />
-												<CodeBlock v-else class="w-full" :code="segment.code"
-													:language="segment.language">
-													<CodeBlockHeader>
-														<CodeBlockTitle>
-															<CodeBlockFilename>{{ segment.filename }}</CodeBlockFilename>
-														</CodeBlockTitle>
-														<CodeBlockActions>
-															<CodeBlockCopyButton />
-														</CodeBlockActions>
-													</CodeBlockHeader>
-												</CodeBlock>
-											</template>
+								<Questionnaire v-if="isPendingQuestion(part)" class="w-full max-w-md self-start py-1"
+									default-item="q" :items="questionnaireItems(part)" shortcuts="letters"
+									@submit="submitAnswer($event, part)">
+									<QuestionnaireProgress />
+									<QuestionnaireItem name="q" required :multiple="part.multiSelect">
+										<QuestionnaireTitle>{{ part.question }}</QuestionnaireTitle>
+										<QuestionnaireDescription>
+											Choose an answer{{ part.multiSelect ? " (multiple allowed)" : "" }},
+											or type your own under Other.
+										</QuestionnaireDescription>
+										<QuestionnaireChoices v-if="part.options && part.options.length">
+											<QuestionnaireChoice v-for="option in part.options" :key="option"
+												:value="option">
+												<span class="font-medium">{{ option }}</span>
+											</QuestionnaireChoice>
+										</QuestionnaireChoices>
+										<p v-else class="text-[11px] leading-relaxed text-muted-foreground">
+											No answer options arrived — type your answer below.
+										</p>
+										<div class="flex flex-col gap-1.5 pt-1">
+											<p class="text-[11px] font-medium">Other</p>
+											<QuestionnaireInput placeholder="Type a custom answer�" />
 										</div>
-									</template>
-								</MessageContent>
-							</Message>
+										<QuestionnaireError />
+									</QuestionnaireItem>
+									<QuestionnaireActions>
+										<Button variant="outline" size="sm" @click="dismissQuestion(part)">
+											Dismiss
+										</Button>
+										<QuestionnaireSubmit>Send answer</QuestionnaireSubmit>
+									</QuestionnaireActions>
+								</Questionnaire>
+							</template>
 
-							<Loader v-if="assistantIdle" class="mx-auto" />
-							</ConversationContent>
-							<ConversationScrollButton />
-						</Conversation>
+							<!-- Assistant text segment (markdown + code blocks) -->
+							<div v-else
+								class="flex min-w-0 max-w-[90%] flex-col items-start gap-2 self-start text-foreground">
+								<template v-for="(segment, segmentIndex) in contentSegments(part.text)"
+									:key="segmentIndex">
+									<div v-if="segment.type === 'text'" class="typeset typeset-docs w-full"
+										v-html="segment.html" />
+									<CodeBlock v-else class="w-full" :code="segment.code" :language="segment.language">
+										<CodeBlockHeader>
+											<CodeBlockTitle>
+												<CodeBlockFilename>{{ segment.filename }}</CodeBlockFilename>
+											</CodeBlockTitle>
+											<CodeBlockActions>
+												<CodeBlockCopyButton />
+											</CodeBlockActions>
+										</CodeBlockHeader>
+									</CodeBlock>
+								</template>
+							</div>
+						</template>
+					</MessageContent>
+				</Message>
+
+				<Loader v-if="assistantIdle" class="mx-auto" />
+			</ConversationContent>
+			<ConversationScrollButton />
+		</Conversation>
 
 		<div class="shrink-0 border-t p-3">
 			<p v-if="notice" class="mb-2 text-xs text-amber-500">{{ notice }}</p>
@@ -174,8 +167,8 @@
 				<PromptInputFooter class="mt-2 items-center justify-between gap-2 border-none">
 					<PromptInputTools class="min-w-0 flex-1">
 						<div class="flex min-w-0 items-center gap-2">
-							<Context v-if="lastUsage" :used-tokens="lastUsage.totalTokens ?? 0" :max-tokens="contextWindow"
-								:usage="lastUsage">
+							<Context v-if="lastUsage" :used-tokens="lastUsage.totalTokens ?? 0"
+								:max-tokens="contextWindow" :usage="lastUsage">
 								<ContextTrigger />
 								<ContextContent class="w-64">
 									<ContextContentHeader />
@@ -202,7 +195,8 @@
 								<DropdownMenuContent align="start">
 									<DropdownMenuItem v-for="option in reasoningOptions"
 										:key="option.value ?? 'default'" @select="reasoningEffort = option.value">
-										<Check v-if="(reasoningEffort ?? null) === option.value" class="size-3.5 shrink-0" />
+										<Check v-if="(reasoningEffort ?? null) === option.value"
+											class="size-3.5 shrink-0" />
 										<span v-else class="size-3.5 shrink-0" />
 										{{ option.label }}
 									</DropdownMenuItem>
@@ -215,13 +209,15 @@
 										:disabled="!providerId || loadingModels || !models.length || streaming">
 										<img v-if="providerLogo(providerId)" :src="providerLogo(providerId)"
 											class="size-3.5 shrink-0" alt="" aria-hidden="true" />
-										<span class="min-w-0 max-w-56 truncate">{{ selectedModel?.name ?? "Select model" }}</span>
+										<span class="min-w-0 max-w-56 truncate">{{ selectedModel?.name ?? "Select model"
+											}}</span>
 									</Button>
 								</ModelSelectorTrigger>
 								<ModelSelectorContent title="Select model" class="sm:max-w-xl">
 									<ModelSelectorInput v-model="modelSearch" placeholder="Search models…" />
 									<ModelSelectorList>
-										<ModelSelectorEmpty v-if="!visibleModels.length">No models found.</ModelSelectorEmpty>
+										<ModelSelectorEmpty v-if="!visibleModels.length">No models found.
+										</ModelSelectorEmpty>
 										<ModelSelectorGroup :heading="providerId ?? 'Models'">
 											<ModelSelectorItem v-for="model in visibleModels" :key="model.name"
 												:value="model.name" @select="selectModel(model.name)">
@@ -519,7 +515,7 @@ export default {
 	async mounted() {
 		window.addEventListener("keydown", this.handleWindowKeydown);
 		if (this.cwd) {
-			this.chats.fetchList().catch(() => {});
+			this.chats.fetchList().catch(() => { });
 		}
 		if (!this.settings.loaded) {
 			try {
@@ -549,7 +545,7 @@ export default {
 		},
 		cwd(newCwd) {
 			if (newCwd) {
-				this.chats.fetchList().catch(() => {});
+				this.chats.fetchList().catch(() => { });
 			} else {
 				this.chats.chats = [];
 				this.messages = [];
@@ -888,13 +884,13 @@ export default {
 					toolCalls:
 						userMessage.role === "assistant"
 							? userMessage.parts
-									.filter((part) => part.type === "tool")
-									.map(({ id, name, arguments: args, result }) => ({
-										id,
-										name,
-										arguments: args,
-										result: result ?? "",
-									}))
+								.filter((part) => part.type === "tool")
+								.map(({ id, name, arguments: args, result }) => ({
+									id,
+									name,
+									arguments: args,
+									result: result ?? "",
+								}))
 							: [],
 				};
 				const response = await fetch(CHAT_API, {
