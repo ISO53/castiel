@@ -1,6 +1,6 @@
 <template>
 	<Menubar class="relative">
-		<h1 class="app-name">Castiel</h1>
+		<h1 class="app-name">castiel</h1>
 		<MenubarMenu>
 			<MenubarTrigger>File</MenubarTrigger>
 			<MenubarContent>
@@ -37,7 +37,7 @@
 				<MenubarItem @click="requestFeature">Request Feature</MenubarItem>
 				<MenubarItem @click="fileIssue">File Issue</MenubarItem>
 				<MenubarSeparator />
-				<MenubarItem @click="aboutOpen = true">About Castiel</MenubarItem>
+				<MenubarItem @click="aboutOpen = true">About castiel</MenubarItem>
 			</MenubarContent>
 		</MenubarMenu>
 

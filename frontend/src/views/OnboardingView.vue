@@ -2,7 +2,7 @@
 	<ScrollArea class="h-full bg-card">
 		<div class="mx-auto flex max-w-2xl flex-col gap-8 p-6">
 			<div class="space-y-1">
-				<h1 class="text-xl font-semibold tracking-tight text-foreground">Welcome to Castiel</h1>
+				<h1 class="text-xl font-semibold tracking-tight text-foreground">Welcome to castiel</h1>
 				<p class="text-xs text-muted-foreground">
 					A short tour of the things to set up before your first engagement.
 				</p>
@@ -89,7 +89,7 @@ export default {
 					title: "Welcome p3ntester",
 					icon: Sparkles,
 					body:
-						"Castiel is an AI-powered pentesting harness built to give AI agents a powerful set of " +
+						"castiel is an AI-powered pentesting harness built to give AI agents a powerful set of " +
 						"tools. It helps uncover vulnerabilities, investigate targets, and automate the tedious " +
 						"parts of pentesting. Fast, capable, and built to go where other tools stop."
 				},
@@ -100,7 +100,7 @@ export default {
 					action: "Open Settings",
 					tab: "settings",
 					body:
-						"Castiel needs a language model to talk to. Open the settings view and connect one of " +
+						"castiel needs a language model to talk to. Open the settings view and connect one of " +
 						"the supported providers under LLM Providers."
 				},
 				{
@@ -112,7 +112,7 @@ export default {
 					body:
 						"MCP servers give the agent extra tools such as a headless browser or proxy access. " +
 						"Start them yourself, then register them in the settings view under MCP Servers. " +
-						"Castiel highly recommends adding the Obscura and Caido MCP servers for a better " +
+						"castiel highly recommends adding the Obscura and Caido MCP servers for a better " +
 						"pentesting environment.",
 				},
 				{

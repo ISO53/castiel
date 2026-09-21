@@ -11,7 +11,7 @@ defineProps({
 	<!-- Replica of the app's menu bar with the centered engagement phase stepper
 	     (styles ported from frontend/src/views/MenuBar.vue). -->
 	<header class="pv-menubar">
-		<span class="pv-app-name">Castiel</span>
+		<span class="pv-app-name">castiel</span>
 		<button v-for="menu in ['File', 'Window', 'Help']" :key="menu" type="button" class="pv-menu-item">
 			{{ menu }}
 		</button>

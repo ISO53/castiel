@@ -31,11 +31,6 @@
 					:class="server.enabled ? '' : 'opacity-50'"
 					:title="server.enabled ? `${server.target} - ${server.tools.length} tool(s)` : `${server.name} is disabled`"
 				>
-					<span
-						class="size-2 shrink-0 rounded-full"
-						:class="server.enabled ? (server.connected ? 'bg-emerald-500' : 'bg-destructive') : 'bg-muted-foreground/40'"
-						aria-hidden="true"
-					/>
 					<span class="min-w-0 flex-1 truncate text-xs text-foreground">{{ server.name }}</span>
 					<span class="shrink-0 font-mono text-[10px] text-muted-foreground">{{ server.tools.length }}</span>
 					<Switch
