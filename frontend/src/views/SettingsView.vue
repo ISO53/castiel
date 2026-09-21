@@ -4,7 +4,7 @@
 			<div class="space-y-1">
 				<h1 class="text-xl font-semibold tracking-tight text-foreground">Settings</h1>
 				<p class="text-xs text-muted-foreground">
-					Configure Castiel for your machine. Changes are stored on this PC.
+					Configure castiel for your machine. Changes are stored on this PC.
 				</p>
 			</div>
 
@@ -45,7 +45,7 @@
 									</li>
 									<li>Start the server in router mode: <code
 											class="text-foreground">llama-server</code></li>
-									<li>Click Connect below to start using llama.cpp in Castiel</li>
+									<li>Click Connect below to start using llama.cpp in castiel</li>
 								</ul>
 								<p>
 									Alternatively, connect to a remote llama.cpp server by specifying its URL and
@@ -122,7 +122,7 @@
 									</li>
 									<li>Pull a model: <code class="text-foreground">ollama pull llama3.2</code></li>
 									<li>The server starts automatically on port 11434</li>
-									<li>Click Connect below to start using Ollama in Castiel</li>
+									<li>Click Connect below to start using Ollama in castiel</li>
 								</ul>
 								<p>
 									Alternatively, connect to a remote Ollama server by specifying its URL:
@@ -194,9 +194,9 @@
 										<a class="underline underline-offset-2 hover:text-foreground"
 											href="https://openrouter.ai/settings/byok" target="_blank"
 											rel="noreferrer">OpenRouter BYOK settings</a>
-										Castiel only ever needs the single OpenRouter key.
+										castiel only ever needs the single OpenRouter key.
 									</li>
-									<li>Click Connect below to start using OpenRouter in Castiel</li>
+									<li>Click Connect below to start using OpenRouter in castiel</li>
 								</ul>
 							</div>
 
@@ -255,7 +255,7 @@
 											href="https://app.cline.bot" target="_blank" rel="noreferrer">app.cline.bot</a>
 										under Settings &gt; API Keys
 									</li>
-									<li>Click Connect below to start using Cline in Castiel</li>
+									<li>Click Connect below to start using Cline in castiel</li>
 								</ul>
 							</div>
 
@@ -342,7 +342,7 @@
 					<h2 class="text-sm font-semibold text-foreground">MCP Servers</h2>
 					<p class="text-xs text-muted-foreground">
 						MCP servers are configured in the mcp.json settings file. Edit and save it.
-						Castiel reloads the servers automatically.
+						castiel reloads the servers automatically.
 					</p>
 				</div>
 				<Separator />

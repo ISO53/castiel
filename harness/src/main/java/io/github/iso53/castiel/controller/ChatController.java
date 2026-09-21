@@ -76,6 +76,6 @@ public class ChatController {
 	 */
 	@GetMapping("/health")
 	public Mono<Map<String, String>> health() {
-		return Mono.just(Map.of("status", "UP", "service", "Castiel Harness AI Streaming"));
+		return Mono.just(Map.of("status", "UP", "service", "castiel Harness AI Streaming"));
 	}
 }

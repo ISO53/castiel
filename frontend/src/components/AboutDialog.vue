@@ -5,7 +5,7 @@
 				<pre
 					class="max-h-56 overflow-hidden font-mono text-[6px] leading-[1.1] tracking-tighter text-primary/80 select-none dark:text-primary"
 				>{{ CASTIEL_ASCII }}</pre>
-				<DialogTitle class="text-2xl font-bold tracking-tight">Castiel</DialogTitle>
+				<DialogTitle class="text-2xl font-bold tracking-tight">castiel</DialogTitle>
 				<DialogDescription>AI powered penetration testing harness</DialogDescription>
 			</DialogHeader>
 

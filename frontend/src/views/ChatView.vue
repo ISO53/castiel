@@ -459,7 +459,7 @@ export default {
 			if (!this.cwd) return "Open a workspace to start chatting";
 			if (!this.providerId) return "Choose a provider to start a chat";
 			if (!this.modelName) return "Choose a model to start chatting";
-			return "Message Castiel…";
+			return "Message castiel…";
 		},
 		// Advertised input limit of the selected model; sensible fallback when the
 		// provider catalog does not report one (e.g. Ollama).

@@ -145,7 +145,7 @@ function renderInline(text) {
 			<textarea
 				v-model="draft"
 				class="pv-textarea"
-				placeholder="Message Castiel..."
+				placeholder="Message castiel..."
 				rows="2"
 				@keydown.enter.exact.prevent="send"
 			></textarea>

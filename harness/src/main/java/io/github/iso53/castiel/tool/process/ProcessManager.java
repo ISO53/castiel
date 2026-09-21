@@ -175,7 +175,7 @@ public class ProcessManager {
 		return kill(id, "the agent");
 	}
 
-	/** Last-resort cleanup so closing Castiel never leaves scans running headless. */
+	/** Last-resort cleanup so closing castiel never leaves scans running headless. */
 	@PreDestroy
 	public void killAllOnShutdown() {
 		for (ManagedProcess entry : processes.values()) {

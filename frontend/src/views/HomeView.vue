@@ -12,7 +12,7 @@
 			<div class="flex flex-col items-center md:items-start text-center md:text-left space-y-6 max-w-md">
 				<div class="space-y-2">
 					<h1 class="text-3xl font-bold tracking-tight text-foreground">
-						Castiel
+						castiel
 					</h1>
 					<p class="text-sm font-medium text-muted-foreground">
 						AI powered penetration testing harness

@@ -3,7 +3,7 @@ package io.github.iso53.castiel.util;
 import java.nio.file.Path;
 
 /**
- * Resolves OS-appropriate application data directories for Castiel.
+ * Resolves OS-appropriate application data directories for castiel.
  */
 public final class AppPaths {
 
