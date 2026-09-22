@@ -126,6 +126,9 @@ public class SubAgentRunner {
 		long startNanos = System.nanoTime();
 		run.setState(AgentRunManager.State.RUNNING);
 		runs.notifyChange();
+		// Tool shells spawned by this run register under the run id, so cancelling the
+		// run (from the dock, or via the orchestrator's cancel fan-out) tree-kills them.
+		HarnessService.setCurrentGenerationId(run.id());
 		try {
 			StreamingChatModel model = resolveModel();
 			List<ChatMessage> messages = buildMessages(spec);
@@ -156,6 +159,7 @@ public class SubAgentRunner {
 			run.setState(AgentRunManager.State.FAILED);
 			return new SubAgentOutcome("failed", "Error: " + message, run.transcriptPath(), run.totalUsage(), -1);
 		} finally {
+			HarnessService.setCurrentGenerationId(null);
 			runs.notifyChange();
 			log.info(
 				"Sub-agent run {} finished in {} ms",

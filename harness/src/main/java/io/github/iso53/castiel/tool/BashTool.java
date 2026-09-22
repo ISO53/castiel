@@ -2,7 +2,9 @@ package io.github.iso53.castiel.tool;
 
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
+import io.github.iso53.castiel.service.HarnessService;
 import io.github.iso53.castiel.service.WorkspaceSession;
+import io.github.iso53.castiel.tool.process.ProcessManager;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -34,9 +36,11 @@ public class BashTool implements ToolProvider {
 	private static final Pattern EXCESS_BLANKS = Pattern.compile("\n{3,}");
 
 	private final WorkspaceSession workspace;
+	private final ProcessManager processManager;
 
-	BashTool(WorkspaceSession workspace) {
+	BashTool(WorkspaceSession workspace, ProcessManager processManager) {
 		this.workspace = workspace;
+		this.processManager = processManager;
 	}
 
 	@Tool(
@@ -68,23 +72,61 @@ public class BashTool implements ToolProvider {
 			: new ProcessBuilder("bash", "-c", command);
 		builder.directory(workspace.root().map(Path::toFile).orElse(null));
 
+		Process process;
 		try {
-			Process process = builder.start();
+			process = builder.start();
+		} catch (IOException ex) {
+			return "Error: could not start the command: " + ex.getMessage();
+		}
+		// Interactive prompts must hit a closed stdin (EOF) instead of a pipe nobody writes
+		// to. Password prompts that read the controlling TTY are handled by the timeout +
+		// tree kill below.
+		try {
+			process.getOutputStream().close();
+		} catch (IOException ignored) {
+			// Pipe already gone.
+		}
+		// Register under the owning generation so a cancel (or app shutdown) can tree-kill
+		// this shell even while the tool call is still blocked.
+		String owner = HarnessService.currentGenerationId() != null
+			? HarnessService.currentGenerationId()
+			: "shell-" + process.pid();
+		processManager.registerForeground(owner, process);
+		try {
 			StringBuilder stdout = new StringBuilder();
 			StringBuilder stderr = new StringBuilder();
+			// Both streams drain on their own threads: the caller goes straight to
+			// waitFor(timeout), so a child that withholds output can never hide the
+			// timeout from the harness.
+			Thread stdoutReader = Thread.ofVirtual().start(() -> drain(process.getInputStream(), stdout));
 			Thread errorReader = Thread.ofVirtual().start(() -> drain(process.getErrorStream(), stderr));
-			drain(process.getInputStream(), stdout);
-			errorReader.join(5_000);
 
-			if (!process.waitFor(timeout, TimeUnit.MILLISECONDS)) {
-				process.destroyForcibly();
-				return (
-					"Error: command timed out after " +
-					timeout +
-					"Try using background processes for longer tasks" +
-					" ms\n--- output so far ---\n" +
-					capOutput(cleanStdout(stdout.toString()), cleanStderr(stderr.toString()))
-				);
+			boolean finished;
+			try {
+				finished = process.waitFor(timeout, TimeUnit.MILLISECONDS);
+			} catch (InterruptedException ex) {
+				Thread.currentThread().interrupt();
+				processManager.killTree(process);
+				return "Error: interrupted while running the command";
+			}
+			if (!finished) {
+				// Tree kill, not just the shell: children like sudo survive a plain destroy.
+				processManager.killTree(process);
+			}
+			// The kill (or a plain exit) closed the pipes; give the readers a moment to
+			// flush their tails before the response is assembled.
+			try {
+				stdoutReader.join(1_000);
+				errorReader.join(1_000);
+			} catch (InterruptedException ex) {
+				Thread.currentThread().interrupt();
+			}
+
+			if (!finished) {
+				return "Error: command timed out after "
+						+ timeout
+						+ " ms and was killed. Use bg_* tools for longer or interactive work.\n--- output so far ---\n"
+					+ capOutput(cleanStdout(stdout.toString()), cleanStderr(stderr.toString()));
 			}
 
 			return (
@@ -93,11 +135,8 @@ public class BashTool implements ToolProvider {
 				"\n" +
 				capOutput(cleanStdout(stdout.toString()), cleanStderr(stderr.toString()))
 			).stripTrailing();
-		} catch (IOException ex) {
-			return "Error: could not start the command: " + ex.getMessage();
-		} catch (InterruptedException ex) {
-			Thread.currentThread().interrupt();
-			return "Error: interrupted while running the command";
+		} finally {
+			processManager.unregisterForeground(owner, process);
 		}
 	}
 

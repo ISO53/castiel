@@ -2,6 +2,7 @@ package io.github.iso53.castiel.agent;
 
 import dev.langchain4j.model.output.TokenUsage;
 import io.github.iso53.castiel.tool.process.BoundedOutputBuffer;
+import io.github.iso53.castiel.tool.process.ProcessManager;
 import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.time.Instant;
@@ -33,6 +34,12 @@ public class AgentRunManager {
 	private static final int MAX_RUNS = 100;
 
 	private static final SecureRandom ID_RANDOM = new SecureRandom();
+
+	private final ProcessManager processes;
+
+	public AgentRunManager(ProcessManager processes) {
+		this.processes = processes;
+	}
 
 	// Lifecycle of one sub-agent run.
 	public enum State {
@@ -209,6 +216,8 @@ public class AgentRunManager {
 			return false;
 		}
 		run.cancelled().set(true);
+		// Kill any foreground shells this run's tool calls left behind.
+		processes.killByGeneration(id);
 		return true;
 	}
 
@@ -225,6 +234,7 @@ public class AgentRunManager {
 			AgentRun run = runs.get(id);
 			if (run != null && !run.isFinished()) {
 				run.cancelled().set(true);
+				processes.killByGeneration(id);
 			}
 		}
 	}

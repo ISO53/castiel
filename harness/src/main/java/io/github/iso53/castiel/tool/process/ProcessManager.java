@@ -175,6 +175,64 @@ public class ProcessManager {
 		return kill(id, "the agent");
 	}
 
+	// generationId or sub-agent run id -> foreground tool shells spawned by that generation.
+	private final Map<String, Set<Process>> foreground = new ConcurrentHashMap<>();
+
+	/**
+	 * Registers a foreground tool shell under the generation that spawned it, so a cancel
+	 * (or app shutdown) can tree-kill it even while the tool call is still blocked.
+	 */
+	public void registerForeground(String generationId, Process process) {
+		foreground.computeIfAbsent(generationId, key -> ConcurrentHashMap.newKeySet()).add(process);
+		process.onExit().thenRun(() -> unregisterForeground(generationId, process));
+	}
+
+	/** Drops the registration; called by the tool once its call returns. */
+	public void unregisterForeground(String generationId, Process process) {
+		Set<Process> shells = foreground.get(generationId);
+		if (shells == null) {
+			return;
+		}
+		shells.remove(process);
+		if (shells.isEmpty()) {
+			foreground.remove(generationId, shells);
+		}
+	}
+
+	/**
+	 * Tree-kills every foreground shell registered under {@code generationId}; used when
+	 * the user cancels a generation while one of its tool calls is still running.
+	 */
+	public void killByGeneration(String generationId) {
+		Set<Process> shells = foreground.remove(generationId);
+		if (shells == null) {
+			return;
+		}
+		int killed = 0;
+		for (Process process : shells) {
+			if (process.isAlive()) {
+				try {
+					destroyTree(process.toHandle());
+					killed++;
+				} catch (RuntimeException ex) {
+					LOG.warn("Failed to kill foreground shell on cancel: {}", ex.getMessage());
+				}
+			}
+		}
+		if (killed > 0) {
+			LOG.info("Killed {} foreground shell process(es) on cancel of generation {}", killed, generationId);
+		}
+	}
+
+	/** Tree-kills one foreground shell; used when its tool call hits the timeout. */
+	public void killTree(Process process) {
+		try {
+			destroyTree(process.toHandle());
+		} catch (RuntimeException ex) {
+			LOG.warn("Foreground shell tree kill failed: {}", ex.getMessage());
+		}
+	}
+
 	/** Last-resort cleanup so closing castiel never leaves scans running headless. */
 	@PreDestroy
 	public void killAllOnShutdown() {
@@ -189,6 +247,18 @@ public class ProcessManager {
 				}
 			}
 		}
+		for (Set<Process> shells : foreground.values()) {
+			for (Process process : shells) {
+				if (process.isAlive()) {
+					try {
+						destroyTree(process.toHandle());
+					} catch (RuntimeException ex) {
+						LOG.warn("Failed to kill foreground shell on shutdown: {}", ex.getMessage());
+					}
+				}
+			}
+		}
+		foreground.clear();
 	}
 
 	private void complete(ManagedProcess entry) {
@@ -272,7 +342,7 @@ public class ProcessManager {
 	 *
 	 * @return description lines of every signaled descendant, best effort.
 	 */
-	private List<String> destroyTree(ProcessHandle root) {
+	public List<String> destroyTree(ProcessHandle root) {
 		List<String> victims = new ArrayList<>();
 		try {
 			for (int pass = 0; pass < 25 && root.isAlive(); pass++) {
