@@ -77,15 +77,9 @@
 
 							<!-- Tool call segment -->
 							<template v-else-if="part.type === 'tool'">
-								<Tool v-if="!isPendingQuestion(part)" v-model:open="part.open"
-									class="w-full self-start">
-									<ToolHeader :state="toolState(part)" :title="part.name"
-										:type="`tool-${part.name}`" />
-									<ToolContent>
-										<ToolInput :input="toolInput(part)" />
-										<ToolOutput v-if="part.result !== null" :output="part.result" />
-									</ToolContent>
-								</Tool>
+								<ToolCall v-if="!isPendingQuestion(part)" v-model:open="part.open"
+									class="w-full self-start" :name="part.name"
+									:arguments="part.arguments" :result="part.result" />
 
 								<Sources v-if="!isPendingQuestion(part) && sourcesFor(part).length"
 									class="w-full self-start">
@@ -158,10 +152,10 @@
 			<ConversationScrollButton />
 		</Conversation>
 
-		<div class="shrink-0 border-t p-3">
+		<div>
 			<p v-if="notice" class="mb-2 text-xs text-amber-500">{{ notice }}</p>
 			<p v-if="error" class="mb-2 text-xs text-destructive">{{ error }}</p>
-			<PromptInput class="w-full" @submit="handlePromptSubmit">
+			<PromptInput class="w-full rounded-none" @submit="handlePromptSubmit">
 				<PromptInputTextarea :disabled="!ready || streaming" :placeholder="composerPlaceholder"
 					class="min-h-16" />
 				<PromptInputFooter class="mt-2 items-center justify-between gap-2 border-none">
@@ -261,8 +255,8 @@ import {
 } from "@/components/ai-elements/prompt-input";
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "@/components/ai-elements/sources";
-import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "@/components/ai-elements/tool";
-import { Brain, Check, ChevronDown, MessageSquare, History, Plus, Trash2, X } from "@lucide/vue";
+import { ToolCall } from "@/components/ai-elements/tool";
+import { Brain, Check, History, MessageSquare, Plus } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
 import EmptyState from "@/components/EmptyState.vue";
 import {
@@ -326,7 +320,6 @@ export default {
 		Brain,
 		Button,
 		Check,
-		ChevronDown,
 		EmptyState,
 		CodeBlock,
 		CodeBlockActions,
@@ -392,13 +385,7 @@ export default {
 		SourcesContent,
 		SourcesTrigger,
 		Spinner,
-		Tool,
-		ToolContent,
-		ToolHeader,
-		ToolInput,
-		ToolOutput,
-		Trash2,
-		X,
+		ToolCall,
 	},
 
 	data() {
@@ -727,9 +714,6 @@ export default {
 			const language = LANGUAGE_ALIASES[tag?.toLowerCase()] ?? tag?.toLowerCase() ?? "text";
 			return { type: "code", code, language, filename: rest.join(" ") || language };
 		},
-		toolState(call) {
-			return call.result === null ? "input-available" : "output-available";
-		},
 		// Maps the harness `usage` SSE payload onto the AI SDK usage shape the
 		// Context component expects; only keeps fields the provider reported.
 		applyUsage(usage) {
@@ -745,13 +729,6 @@ export default {
 				if (typeof value === "number") mapped[key] = value;
 			}
 			this.lastUsage = mapped;
-		},
-		toolInput(call) {
-			try {
-				return JSON.parse(call.arguments || "{}");
-			} catch {
-				return call.arguments ? { input: call.arguments } : {};
-			}
 		},
 		// web_search results arrive as "[1] title\nurl\nsnippet" blocks; turn them into
 		// link sources for the Sources component. Anything unparsable renders nothing.

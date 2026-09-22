@@ -136,7 +136,9 @@ function onSubmit(e: Event) {
       @dragover.prevent="handleDragOver"
       @drop.prevent.stop="handleDrop"
     >
-      <InputGroup class="overflow-hidden">
+      <InputGroup
+        class="overflow-hidden border-0 border-t border-border has-[[data-slot=input-group-control]:focus-visible]:border-border has-[[data-slot=input-group-control]:focus-visible]:ring-0"
+      >
         <slot />
       </InputGroup>
     </form>

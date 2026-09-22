@@ -87,7 +87,7 @@ provide(ReasoningKey, {
 <template>
   <Collapsible
     v-model:open="isOpen"
-    :class="cn('not-prose mb-4', props.class)"
+    :class="cn('not-prose group/reasoning', props.class)"
   >
     <slot />
   </Collapsible>
