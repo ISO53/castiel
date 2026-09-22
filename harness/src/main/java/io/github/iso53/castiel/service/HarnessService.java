@@ -23,6 +23,7 @@ import io.github.iso53.castiel.model.*;
 import io.github.iso53.castiel.provider.GenerationOptions;
 import io.github.iso53.castiel.provider.LlmProvider;
 import io.github.iso53.castiel.tool.*;
+import io.github.iso53.castiel.tool.process.ProcessManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
@@ -87,6 +88,7 @@ public class HarnessService {
 	private final WorkspaceEventBus workspaceEvents;
 	private final WorkspaceSession workspaceSession;
 	private final AgentRunManager agentRunManager;
+	private final ProcessManager processManager;
 	private final List<ToolSpecification> toolSpecifications;
 	private final Map<String, ToolExecutor> toolExecutors;
 
@@ -125,6 +127,7 @@ public class HarnessService {
 		WorkspaceEventBus workspaceEvents,
 		WorkspaceSession workspaceSession,
 		AgentRunManager agentRunManager,
+		ProcessManager processManager,
 		List<ToolProvider> toolProviders
 	) {
 		this.llmClientFactory = llmClientFactory;
@@ -134,6 +137,7 @@ public class HarnessService {
 		this.workspaceEvents = workspaceEvents;
 		this.workspaceSession = workspaceSession;
 		this.agentRunManager = agentRunManager;
+		this.processManager = processManager;
 
 		UserQuestionTool questionTool = null;
 		this.toolSpecifications = new ArrayList<>();
@@ -303,6 +307,8 @@ public class HarnessService {
 		log.info("Generation {} cancelled", generationId);
 		// Any sub-agents spawned by this generation stop with it.
 		agentRunManager.cancelByParent(generationId);
+		// Foreground tool shells (bash etc.) spawned by this generation die with it too.
+		processManager.killByGeneration(generationId);
 		if (state.recorder != null) {
 			state.recorder.flushPending(); // Keep whatever had already streamed when stopping.
 		}
@@ -563,6 +569,14 @@ public class HarnessService {
 	/** Current chat generation id for tool execution on this thread; used by sub-agent tools. */
 	public static String currentGenerationId() {
 		return CURRENT_GENERATION.get();
+	}
+
+	/**
+	 * Overrides the current chat generation id on this thread; sub-agent runs use it so
+	 * their tool shells register under the run id and die when the run is cancelled.
+	 */
+	public static void setCurrentGenerationId(String generationId) {
+		CURRENT_GENERATION.set(generationId);
 	}
 
 	private List<ToolSpecification> availableTools() {
