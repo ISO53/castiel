@@ -29,30 +29,32 @@ const thinkingMessage = computed(() => {
 <template>
   <CollapsibleTrigger
     :class="cn(
-      'flex w-full items-center gap-2 text-muted-foreground text-xs transition-colors hover:text-foreground',
+      'flex w-full items-center gap-2 text-left text-muted-foreground text-xs transition-colors hover:text-foreground',
       props.class,
     )"
   >
     <slot>
-      <BrainIcon class="size-3.5" />
+      <BrainIcon class="size-3.5 shrink-0" />
 
-      <template v-if="thinkingMessage === 'thinking'">
-        <Shimmer :duration="1">
-          Thinking...
-        </Shimmer>
-      </template>
+      <span class="min-w-0 truncate">
+        <template v-if="thinkingMessage === 'thinking'">
+          <Shimmer as="span" :duration="1">
+            Thinking...
+          </Shimmer>
+        </template>
 
-      <template v-else-if="thinkingMessage === 'default_done'">
-        <p>Thought for a few seconds</p>
-      </template>
+        <template v-else-if="thinkingMessage === 'default_done'">
+          Thought for a few seconds
+        </template>
 
-      <template v-else>
-        <p>Thought for {{ duration }} seconds</p>
-      </template>
+        <template v-else>
+          Thought for {{ duration }} seconds
+        </template>
+      </span>
 
       <ChevronDownIcon
         :class="cn(
-          'size-4 transition-transform',
+          'size-3.5 shrink-0 transition-all',
           isOpen ? 'rotate-180' : 'rotate-0',
         )"
       />
