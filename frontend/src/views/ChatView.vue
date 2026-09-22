@@ -152,10 +152,10 @@
 			<ConversationScrollButton />
 		</Conversation>
 
-		<div class="shrink-0 border-t p-3">
+		<div>
 			<p v-if="notice" class="mb-2 text-xs text-amber-500">{{ notice }}</p>
 			<p v-if="error" class="mb-2 text-xs text-destructive">{{ error }}</p>
-			<PromptInput class="w-full" @submit="handlePromptSubmit">
+			<PromptInput class="w-full rounded-none" @submit="handlePromptSubmit">
 				<PromptInputTextarea :disabled="!ready || streaming" :placeholder="composerPlaceholder"
 					class="min-h-16" />
 				<PromptInputFooter class="mt-2 items-center justify-between gap-2 border-none">
