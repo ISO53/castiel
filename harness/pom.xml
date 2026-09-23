@@ -14,7 +14,7 @@
 
 	<groupId>io.github.iso53</groupId>
 	<artifactId>castiel</artifactId>
-	<version>1.2.0</version>
+	<version>1.3.0</version>
 	<name>castiel</name>
 	<description>AI powered pentesting harness</description>
 	<url>https://iso53.github.io/castiel</url>
@@ -89,6 +89,12 @@
 		    <groupId>org.jsoup</groupId>
 		    <artifactId>jsoup</artifactId>
 		    <version>1.23.2</version>
+		</dependency>
+
+		<dependency>
+			<groupId>us.springett</groupId>
+			<artifactId>cvss-calculator</artifactId>
+			<version>1.5.1</version>
 		</dependency>
 
 	</dependencies>

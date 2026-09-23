@@ -451,7 +451,33 @@
 					</div>
 				</div>
 			</section>
-		</div>
+			<section class="space-y-4">
+				<div class="space-y-1">
+					<h2 class="text-sm font-semibold text-foreground">Vulnerability scoring</h2>
+					<p class="text-xs text-muted-foreground">
+						Findings are scored by the harness with both CVSS v4.0 and v3.1 vectors. Pick
+						which version the vulnerabilities view displays; the choice applies to every workspace you open.
+					</p>
+				</div>
+				<Separator />
+			
+				<div class="flex flex-col gap-1.5">
+					<Label for="cvss_version">CVSS version</Label>
+					<select
+						id="cvss_version"
+						class="h-7 w-44 rounded-md border bg-muted px-2 text-xs text-foreground"
+						:value="settingsStore.cvssVersion"
+						@change="settingsStore.setCvssVersion($event.target.value)"
+					>
+						<option value="4.0">CVSS v4.0</option>
+						<option value="3.1">CVSS v3.1</option>
+					</select>
+					<p class="text-[11px] text-muted-foreground">
+						Severity bands are identical in both versions; only the shown scores and vectors change.
+					</p>
+				</div>
+			</section>
+			</div>
 	</ScrollArea>
 </template>
 
@@ -547,6 +573,7 @@ export default {
 			disconnectingCline: false,
 			clinePollTimer: null,
 			mcp: useMcpStore(),
+			settingsStore: useSettingsStore(),
 			mcpConfig: null,
 			mcpFileError: "",
 			agentWorker: { providerId: "", modelName: "" },

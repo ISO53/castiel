@@ -10,6 +10,7 @@ public final class AgentGuardrails {
 		"ask_user_question",
 		"sub_agent",
 		"edit_file",
+		"cvss_score",
 		"bg_start",
 		"bg_list",
 		"bg_read",
