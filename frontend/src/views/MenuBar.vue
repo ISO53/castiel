@@ -12,8 +12,6 @@
 					<FolderOpen />
 					<span>Open Workspace</span>
 				</MenubarItem>
-				<MenubarSeparator />
-				<MenubarItem inset>Close App</MenubarItem>
 			</MenubarContent>
 		</MenubarMenu>
 
