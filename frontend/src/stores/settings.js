@@ -69,6 +69,7 @@ export const useSettingsStore = defineStore("settings", {
 		providers: {},
 		activeProviderId: null,
 		loaded: false,
+		cvssVersion: localStorage.getItem("castiel:cvssVersion") ?? "4.0",
 	}),
 	getters: {
 		llamaCpp(state) {
@@ -158,7 +159,12 @@ export const useSettingsStore = defineStore("settings", {
 				apiUrl: CLINE_API_URL,
 				apiKey: form.apiKey ?? "",
 			});
-		},
+	},
+	/** Sets the CVSS version scores are displayed in; persisted for all workspaces. */
+	setCvssVersion(version) {
+		this.cvssVersion = version === "3.1" ? "3.1" : "4.0";
+		localStorage.setItem("castiel:cvssVersion", this.cvssVersion);
+	},
 		/** Starts a Cline account sign-in: returns { userCode, verificationUrl, expiresAt }. */
 		async startClineSignIn() {
 			const response = await fetch(`${API_BASE_URL}/providers/cline/oauth/start`, { method: "POST" });

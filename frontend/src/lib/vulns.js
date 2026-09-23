@@ -1,7 +1,11 @@
 /**
- * CVSS v3.1 severity bands shared by the vulnerabilities view. Severity is never
- * stored on a finding — it is derived from the CVSS score, so agent and UI can
- * never disagree about it. Info (0) is a real band, not an exclusion.
+ * CVSS scoring helpers shared by the vulnerabilities view.
+ *
+ * Findings recorded through the harness's cvss_score tool carry per-version
+ * assessments: `cvss: { "4.0": { vector, score }, "3.1": { vector, score } }`.
+ * Severity is never stored on a finding — it is derived from the score, so
+ * agent and UI can never disagree about it. Info (0) is a real band, not an
+ * exclusion.
  */
 export const VULN_BANDS = [
 	{ id: "critical", label: "Critical", min: 9, max: 10, color: "#ef4444" },
@@ -12,21 +16,39 @@ export const VULN_BANDS = [
 ];
 
 /**
- * Numerically scores a finding. Accepts `cvss` as a bare number or `{score}`;
- * missing or unparseable values count as informational (0).
+ * Returns a finding's stored assessment for a version ({ vector, score }) or
+ * null when the finding has none for it.
  */
-export function scoreOf(finding) {
-	const raw = typeof finding?.cvss === "number" ? finding.cvss : Number(finding?.cvss?.score);
-	return Number.isFinite(raw) ? Math.min(10, Math.max(0, raw)) : 0;
+function cvssEntryOf(finding, version) {
+	const entry = finding?.cvss?.[version];
+	return entry && Number.isFinite(Number(entry.score)) ? entry : null;
 }
 
-/** Resolves a finding's severity band from its CVSS score. */
-export function bandOf(finding) {
-	const score = scoreOf(finding);
+/**
+ * Numerically scores a finding for the requested CVSS version. Falls back to
+ * the legacy shapes (a bare `cvss` number, or `cvss.score`) written before the
+ * per-version assessments existed; missing values count as informational (0).
+ */
+export function scoreOf(finding, version = "4.0") {
+	const entry = cvssEntryOf(finding, version);
+	if (entry) {
+		return clamp(Number(entry.score));
+	}
+	const raw = typeof finding?.cvss === "number" ? finding.cvss : Number(finding?.cvss?.score);
+	return clamp(Number.isFinite(raw) ? raw : 0);
+}
+
+/** Resolves a finding's severity band from its CVSS score for a version. */
+export function bandOf(finding, version = "4.0") {
+	const score = scoreOf(finding, version);
 	return (
 		VULN_BANDS.find((band) => score >= band.min && (score < band.max || (band.id === "critical" && score <= band.max))) ??
 		VULN_BANDS[VULN_BANDS.length - 1]
 	);
+}
+
+function clamp(raw) {
+	return Math.min(10, Math.max(0, raw));
 }
 
 /** Tailwind classes for the POTENTIAL/PROVED proof badge. */
