@@ -4,40 +4,71 @@
 		<MenubarMenu>
 			<MenubarTrigger>File</MenubarTrigger>
 			<MenubarContent>
-				<MenubarItem @click="newWorkspace">New Workspace</MenubarItem>
-				<MenubarItem @click="openWorkspace">Open Workspace</MenubarItem>
+				<MenubarItem @click="newWorkspace">
+					<FolderPlus />
+					<span>New Workspace</span>
+				</MenubarItem>
+				<MenubarItem @click="openWorkspace">
+					<FolderOpen />
+					<span>Open Workspace</span>
+				</MenubarItem>
 				<MenubarSeparator />
-				<MenubarItem>Close App</MenubarItem>
+				<MenubarItem inset>Close App</MenubarItem>
 			</MenubarContent>
 		</MenubarMenu>
 
 		<MenubarMenu>
 			<MenubarTrigger>Window</MenubarTrigger>
 			<MenubarContent>
-				<MenubarItem @click="docks.openView('left', 'files')">File tree</MenubarItem>
-				<MenubarItem @click="docks.openView('left', 'views')">Engagement views</MenubarItem>
-				<MenubarItem @click="docks.openView('right', 'chat')">Chat</MenubarItem>
-				<MenubarItem @click="docks.openView('right', 'history')">Chat history</MenubarItem>
-				<MenubarItem @click="docks.openView('bottom', 'processes')">Background processes</MenubarItem>
+				<MenubarItem @click="docks.openView('left', 'files')">
+					<FolderTree />
+					<span>File Tree</span>
+				</MenubarItem>
+				<MenubarItem @click="docks.openView('left', 'views')">
+					<LayoutGrid />
+					<span>Engagement Views</span>
+				</MenubarItem>
+				<MenubarItem @click="docks.openView('right', 'chat')">
+					<MessageSquare />
+					<span>Chat</span>
+				</MenubarItem>
+				<MenubarItem @click="docks.openView('right', 'history')">
+					<History />
+					<span>Chat History</span>
+				</MenubarItem>
+				<MenubarItem @click="docks.openView('bottom', 'processes')">
+					<Terminal />
+					<span>Background Processes</span>
+				</MenubarItem>
+				<MenubarItem @click="docks.openView('bottom', 'agents')">
+					<Bot />
+					<span>Sub Agents</span>
+				</MenubarItem>
 				<MenubarSeparator />
-				<MenubarItem @click="docks.toggle('left')">Toggle left dock</MenubarItem>
-				<MenubarItem @click="docks.toggle('right')">Toggle right dock</MenubarItem>
-				<MenubarItem @click="docks.toggle('bottom')">Toggle bottom dock</MenubarItem>
+				<MenubarItem inset @click="docks.toggle('left')">Toggle left dock</MenubarItem>
+				<MenubarItem inset @click="docks.toggle('right')">Toggle right dock</MenubarItem>
+				<MenubarItem inset @click="docks.toggle('bottom')">Toggle bottom dock</MenubarItem>
 			</MenubarContent>
 		</MenubarMenu>
 
 		<MenubarMenu>
 			<MenubarTrigger>Help</MenubarTrigger>
 			<MenubarContent>
-				<MenubarItem @click="openSettings">Settings</MenubarItem>
+				<MenubarItem @click="openSettings">
+					<Settings />
+					<span>Settings</span>
+				</MenubarItem>
 				<MenubarSeparator />
-				<MenubarItem @click="showOnboarding">Show Onboarding</MenubarItem>
-				<MenubarItem @click="showWelcome">Show Welcome</MenubarItem>
+				<MenubarItem inset @click="showOnboarding">Show Onboarding</MenubarItem>
+				<MenubarItem inset @click="showWelcome">Show Welcome</MenubarItem>
 				<MenubarSeparator />
-				<MenubarItem @click="requestFeature">Request Feature</MenubarItem>
-				<MenubarItem @click="fileIssue">File Issue</MenubarItem>
+				<MenubarItem inset @click="requestFeature">Request Feature</MenubarItem>
+				<MenubarItem inset @click="fileIssue">File Issue</MenubarItem>
 				<MenubarSeparator />
-				<MenubarItem @click="aboutOpen = true">About castiel</MenubarItem>
+				<MenubarItem @click="aboutOpen = true">
+					<Info />
+					<span>About castiel</span>
+				</MenubarItem>
 			</MenubarContent>
 		</MenubarMenu>
 
@@ -72,7 +103,19 @@
 </template>
 
 <script>
-import { Check } from "@lucide/vue";
+import {
+	Bot,
+	Check,
+	FolderOpen,
+	FolderPlus,
+	FolderTree,
+	History,
+	Info,
+	LayoutGrid,
+	MessageSquare,
+	Settings,
+	Terminal,
+} from "@lucide/vue";
 import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarSeparator, MenubarTrigger } from "@/components/ui/menubar";
 import { ENGAGEMENT_PHASES, useEngagementStore } from "@/stores/engagement";
 import { useDocksStore } from "@/stores/docks";
@@ -86,14 +129,24 @@ const GITHUB_REPO = "https://github.com/iso53/castiel";
 export default {
 	name: "AppMenu",
 	components: {
+		AboutDialog,
+		Bot,
 		Check,
+		FolderOpen,
+		FolderPlus,
+		FolderTree,
+		History,
+		Info,
+		LayoutGrid,
 		Menubar,
 		MenubarContent,
 		MenubarItem,
 		MenubarMenu,
 		MenubarSeparator,
 		MenubarTrigger,
-		AboutDialog,
+		MessageSquare,
+		Settings,
+		Terminal,
 		WorkspaceDialog,
 	},
 	data() {
