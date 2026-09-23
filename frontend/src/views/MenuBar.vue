@@ -12,6 +12,11 @@
 					<FolderOpen />
 					<span>Open Workspace</span>
 				</MenubarItem>
+				<MenubarSeparator />
+				<MenubarItem @click="openMcpSettings">
+					<Plug />
+					<span>Open MCP Settings File</span>
+				</MenubarItem>
 			</MenubarContent>
 		</MenubarMenu>
 
@@ -111,12 +116,14 @@ import {
 	Info,
 	LayoutGrid,
 	MessageSquare,
+	Plug,
 	Settings,
 	Terminal,
 } from "@lucide/vue";
 import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarSeparator, MenubarTrigger } from "@/components/ui/menubar";
 import { ENGAGEMENT_PHASES, useEngagementStore } from "@/stores/engagement";
 import { useDocksStore } from "@/stores/docks";
+import { useMcpStore } from "@/stores/mcp";
 import { useTabsStore } from "@/stores/tabs";
 import { useWorkspaceStore } from "@/stores/workspace";
 import AboutDialog from "@/components/AboutDialog.vue";
@@ -143,6 +150,7 @@ export default {
 		MenubarSeparator,
 		MenubarTrigger,
 		MessageSquare,
+		Plug,
 		Settings,
 		Terminal,
 		WorkspaceDialog,
@@ -153,6 +161,7 @@ export default {
 			tabs: useTabsStore(),
 			engagement: useEngagementStore(),
 			workspace: useWorkspaceStore(),
+			mcp: useMcpStore(),
 			docks: useDocksStore(),
 			workspaceDialogOpen: false,
 			workspaceMode: "open",
@@ -176,6 +185,19 @@ export default {
 		openWorkspace() {
 			this.workspaceMode = "open";
 			this.workspaceDialogOpen = true;
+		},
+		async openMcpSettings() {
+			try {
+				const config = await this.mcp.fetchConfig();
+				this.tabs.openTab({
+					value: `file:${config.path}`,
+					label: "mcp.json",
+					component: "FileEditorView",
+					path: config.path,
+				});
+			} catch (err) {
+				console.error("Failed to open MCP settings file:", err);
+			}
 		},
 		showOnboarding() {
 			this.tabs.openTab({
