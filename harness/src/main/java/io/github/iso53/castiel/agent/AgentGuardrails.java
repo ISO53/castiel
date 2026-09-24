@@ -11,7 +11,6 @@ public final class AgentGuardrails {
 		"sub_agent",
 		"edit_file",
 		"cvss_score",
-		"bg_start",
 		"bg_list",
 		"bg_read",
 		"bg_send",

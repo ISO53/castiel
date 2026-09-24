@@ -56,7 +56,8 @@ public class SubAgentTool implements ToolProvider {
 			"minimal set the task needs. Use it for high-volume work like enumeration, scanning,",
 			"OSINT, or document formatting; keep critical reasoning, decisions, exploitation, and",
 			"anything needing judgment for yourself. Sub-agents cannot ask the user questions,",
-			"spawn further sub-agents, edit files, or use the bg_* background-process tools.",
+			"spawn further sub-agents, edit files, or monitor background processes (but they can",
+			"start background processes for you to look at.)",
 		}
 	)
 	public String runSubAgent(

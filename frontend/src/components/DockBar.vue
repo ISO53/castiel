@@ -7,10 +7,14 @@ import {
 	MessageSquare,
 	Terminal,
 } from "@lucide/vue";
+import { ref } from "vue";
 import { Button } from "@/components/ui/button";
 import { useDocksStore } from "@/stores/docks";
+import kaliLogo from "@/assets/kali.svg";
+import KaliToolsDialog from "@/components/KaliToolsDialog.vue";
 
 const docks = useDocksStore();
+const kaliDialogOpen = ref(false);
 
 // One entry per selectable view, grouped by host dock. Adding a view
 // (e.g. agents in the bottom dock) is a single registration here.
@@ -51,6 +55,19 @@ function isViewActive(dock, entry) {
 			>
 				<component :is="entry.icon" class="size-3.5" />
 			</Button>
+
+			<div class="mx-0.5 h-4 w-px shrink-0 bg-border" aria-hidden="true" />
+
+			<Button
+				variant="ghost"
+				size="icon-sm"
+				class="active:translate-y-0!"
+				aria-label="Kali Linux Tools"
+				title="Kali Linux Tools"
+				@click="kaliDialogOpen = true"
+			>
+				<img :src="kaliLogo" class="size-3.5 shrink-0" alt="kali-logo" aria-hidden="true" />
+			</Button>
 		</div>
 
 		<!-- Bottom and right dock views, separated by a line -->
@@ -83,5 +100,7 @@ function isViewActive(dock, entry) {
 				<component :is="entry.icon" class="size-3.5" />
 			</Button>
 		</div>
+
+		<KaliToolsDialog v-model:open="kaliDialogOpen" />
 	</footer>
 </template>
