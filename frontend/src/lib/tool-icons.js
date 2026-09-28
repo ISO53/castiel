@@ -13,6 +13,7 @@ import {
 	MessageCircleQuestionMark,
 	Plug,
 	SquareTerminal,
+	FolderSearch,
 } from "@lucide/vue";
 
 export const TOOL_ICONS = {
