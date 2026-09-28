@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
 export const useKaliToolsStore = defineStore("kaliTools", () => {
 	const tools = ref([]);
@@ -7,6 +7,10 @@ export const useKaliToolsStore = defineStore("kaliTools", () => {
 	const loading = ref(false);
 	const launching = ref(false);
 	const selectedIds = ref(new Set());
+	const selectedToolsById = ref(new Map());
+	const selectedTools = computed(() =>
+		Array.from(selectedIds.value, (id) => selectedToolsById.value.get(id)).filter(Boolean)
+	);
 	const userNotes = ref("");
 
 	async function fetchCategories() {
@@ -31,7 +35,15 @@ export const useKaliToolsStore = defineStore("kaliTools", () => {
 
 			const res = await fetch(`/api/tools/kali?${params.toString()}`);
 			if (res.ok) {
-				tools.value = await res.json();
+				const fetchedTools = await res.json();
+				tools.value = fetchedTools;
+
+				// Refresh metadata for selected tools that are present in this response.
+				const nextSelectedTools = new Map(selectedToolsById.value);
+				for (const tool of fetchedTools) {
+					if (selectedIds.value.has(tool.id)) nextSelectedTools.set(tool.id, tool);
+				}
+				selectedToolsById.value = nextSelectedTools;
 			}
 		} catch (e) {
 			console.error("Failed to fetch Kali tools", e);
@@ -51,12 +63,17 @@ export const useKaliToolsStore = defineStore("kaliTools", () => {
 
 	function toggleSelect(id) {
 		const next = new Set(selectedIds.value);
+		const nextSelectedTools = new Map(selectedToolsById.value);
 		if (next.has(id)) {
 			next.delete(id);
+			nextSelectedTools.delete(id);
 		} else {
 			next.add(id);
+			const tool = tools.value.find((candidate) => candidate.id === id);
+			if (tool) nextSelectedTools.set(id, tool);
 		}
 		selectedIds.value = next;
+		selectedToolsById.value = nextSelectedTools;
 	}
 
 	function isSelected(id) {
@@ -65,6 +82,7 @@ export const useKaliToolsStore = defineStore("kaliTools", () => {
 
 	function clearSelection() {
 		selectedIds.value = new Set();
+		selectedToolsById.value = new Map();
 		userNotes.value = "";
 	}
 
@@ -95,6 +113,7 @@ export const useKaliToolsStore = defineStore("kaliTools", () => {
 		loading,
 		launching,
 		selectedIds,
+		selectedTools,
 		userNotes,
 		fetchCategories,
 		fetchTools,

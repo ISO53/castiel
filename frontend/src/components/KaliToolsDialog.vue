@@ -364,11 +364,7 @@ async function handleRefresh() {
 }
 
 const filteredTools = computed(() => store.tools);
-
-const selectedToolsList = computed(() => {
-	const set = store.selectedIds;
-	return store.tools.filter((t) => set.has(t.id));
-});
+const selectedToolsList = computed(() => store.selectedTools);
 
 const visibleInstalledTools = computed(() => {
 	return filteredTools.value.filter((t) => t.installed);
