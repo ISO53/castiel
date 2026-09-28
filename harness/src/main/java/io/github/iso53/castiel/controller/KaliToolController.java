@@ -182,36 +182,40 @@ public class KaliToolController {
 		return out.toString();
 	}
 
-	// Logs what the dispatch actually managed to start; the Processes view shows the detail.
+	// Logs what the dispatch actually managed to start, then drops the run from the registry.
 	private void reportVerdict(AgentRunManager.AgentRun run) {
 		KaliLaunchRegistry.Plan plan = registry.plan(run.id());
 		if (plan == null) {
 			log.warn("Dispatch {} finished but its plan is already gone", run.id());
-			return;
-		}
-		String settled = plan
-			.entries()
-			.values()
-			.stream()
-			.map(entry -> entry.toolId() + "=" + entry.outcome())
-			.sorted()
-			.toList()
-			.toString();
-		if (plan.isSettled()) {
-			log.info("Dispatch {} settled every tool: {}", run.id(), settled);
 		} else {
-			String outstanding = String.join(", ", plan.outstanding());
-			log.warn(
-				"Dispatch {} finished with {} of {} tools never handled: {} | settled: {}",
-				run.id(),
-				plan.outstanding().size(),
-				plan.requested().size(),
-				outstanding,
-				settled
-			);
-			run.markIncomplete("Tools never launched: " + outstanding);
+			String settled = plan
+				.entries()
+				.values()
+				.stream()
+				.map(entry -> entry.toolId() + "=" + entry.outcome())
+				.sorted()
+				.toList()
+				.toString();
+			if (plan.isSettled()) {
+				log.info("Dispatch {} settled every tool: {}", run.id(), settled);
+			} else {
+				String outstanding = String.join(", ", plan.outstanding());
+				log.warn(
+					"Dispatch {} finished with {} of {} tools never handled: {} | settled: {}",
+					run.id(),
+					plan.outstanding().size(),
+					plan.requested().size(),
+					outstanding,
+					settled
+				);
+			}
+			registry.clear(run.id());
 		}
-		registry.clear(run.id());
+		// A dispatch is scaffolding: the processes it started are the record worth keeping.
+		// Leaving the run tracked would invite the orchestrator to read a transcript nothing needs.
+		if (runs.remove(run.id())) {
+			log.debug("Dispatch {} removed itself from the agent registry", run.id());
+		}
 	}
 
 	private static String cap(String text, int limit) {

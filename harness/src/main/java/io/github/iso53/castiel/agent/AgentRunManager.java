@@ -181,15 +181,6 @@ public class AgentRunManager {
 		void setError(String error) {
 			this.error = error;
 		}
-
-		/** Marks a finished run as failed because it did not complete all of its work. */
-		public void markIncomplete(String reason) {
-			if (isFinished()) {
-				this.state = State.FAILED;
-			}
-			this.resultSummary = reason;
-			this.error = reason;
-		}
 	}
 
 	// id -> run.
