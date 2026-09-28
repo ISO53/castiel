@@ -215,6 +215,7 @@ public class HarnessService {
 	 *   <li>{@code tool_result} - JSON {@code {id, name, result}} once the tool has run</li>
 	 *   <li>{@code usage} - JSON token usage totals accumulated across all model rounds so far</li>
 	 *   <li>{@code warning} - plain text non-fatal notice (e.g. output truncated by the token limit)</li>
+	 *   <li>{@code checkpoint} - JSON {@code {text}} when the harness injects a checkpoint reminder</li>
 	 *   <li>{@code error} - plain text error message</li>
 	 * </ul>
 	 */
@@ -467,7 +468,14 @@ public class HarnessService {
 					// Periodic checkpoint: nudge the model to sync findings into the workspace
 					// and check app state like bg processes, sub agents etc.
 					if ((round + 1) % CHECKPOINT_INTERVAL_ROUNDS == 0) {
-						nextMessages.add(SystemMessage.from(buildCheckpointReminder()));
+						String reminder = buildCheckpointReminder();
+						// Sent as a user turn, not a system turn: it restates a standing rule the
+						// model already has rather than issuing a new one, and user is the role
+						// every provider accepts mid-thread.
+						nextMessages.add(UserMessage.from(reminder));
+						// Streamed at the same point so the UI block lands in the same round.
+						log.debug("Generation {} injected a checkpoint reminder as a user turn", generationId);
+						sink.next(event("checkpoint", json(Map.of("text", reminder))));
 					}
 					streamRound(generationId, provider, modelName, options, nextMessages, sink, state, round + 1);
 				}
@@ -522,15 +530,20 @@ public class HarnessService {
 		}
 	}
 
+	/**
+	 * The periodic checkpoint nudge. It restates a rule the system prompt already gives the
+	 * model rather than introducing new policy, so the model treats it as a reminder and not
+	 * as an amendment to how it should operate.
+	 */
 	private String buildCheckpointReminder() {
 		StringBuilder sb = new StringBuilder();
 
-		// Warn the agent about not forgetting to update the workspace documents
+		// Names the harness as the speaker so the model never attributes this to itself.
 		String msg = """
-		[harness checkpoint] You have made many tool calls without finishing. Before continuing, \
-		synchronize any confirmed findings into the workspace documents now (network.json, web.json, \
-		vulnerabilities.json, evidence.json. Read first, merge, never overwrite existing \
-		entries).""";
+		[harness checkpoint reminder] The harness is reminding you of your standing rule 3: \
+		synchronize confirmed findings into the workspace documents now (network.json, web.json, \
+		vulnerabilities.json, evidence.json). Read first, merge, never overwrite existing \
+		entries.""";
 		sb.append(msg).append("\n");
 
 		// Warn the agent about any running/un-read background processes

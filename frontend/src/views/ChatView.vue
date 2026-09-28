@@ -75,6 +75,10 @@
 								<ReasoningContent :content="part.text" class="text-xs leading-relaxed opacity-60" />
 							</Reasoning>
 
+							<!-- Harness checkpoint reminder: centered operator block, not dialogue -->
+							<HarnessNote v-else-if="part.type === 'checkpoint'" v-model:open="part.open"
+								:content="part.text" />
+
 							<!-- Tool call segment -->
 							<template v-else-if="part.type === 'tool'">
 								<ToolCall v-if="!isPendingQuestion(part)" v-model:open="part.open"
@@ -268,6 +272,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Message, MessageContent } from "@/components/ui/message";
+import { HarnessNote } from "@/components/ai-elements/harness";
 import { Spinner } from "@/components/ui/spinner";
 import {
 	Questionnaire,
@@ -898,6 +903,16 @@ export default {
 					}
 					if (event === "usage") {
 						this.applyUsage(JSON.parse(data));
+						return;
+					}
+					if (event === "checkpoint") {
+						// Harness-injected reminder, rendered as a centered operator block.
+						// Starts collapsed; the part never reaches persisted history.
+						assistantMessage.parts.push({
+							type: "checkpoint",
+							text: JSON.parse(data).text ?? "",
+							open: false,
+						});
 						return;
 					}
 					if (event === "tool_call") {
