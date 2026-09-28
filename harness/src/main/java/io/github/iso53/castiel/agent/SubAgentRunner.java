@@ -46,15 +46,16 @@ import org.springframework.stereotype.Service;
  *
  * <p>A run is foreground from the orchestrator's point of view (its tool call blocks until
  * the sub-agent finishes), but executes on its own virtual thread so the caller's HTTP
- * handler thread merely joins it. Every round streams text into the run's live transcript
- * buffer, which the bottom-dock Agents view tails.
+ * handler thread merely joins it. Each round streams from the model, but the tokens are
+ * discarded: the run reports only the phase it is in, plus a final summary, so the
+ * bottom-dock Agents view stays a monitor rather than a second transcript viewer.
  */
 @Service
 public class SubAgentRunner {
 
 	private static final Logger log = LoggerFactory.getLogger(SubAgentRunner.class);
 
-	// Result text kept for the orchestrator's context; the full run stays in the live transcript.
+	// Result text kept for the orchestrator's context; it is also the run's summary in the dock.
 	private static final int RESULT_CHAR_CAP = 4_000;
 
 	// Scope/context excerpt capped before it reaches the sub-agent's prompt.
@@ -149,7 +150,8 @@ public class SubAgentRunner {
 			}
 			Outcome loop = loop(run, spec, model, messages, toolset);
 			run.setTotalUsage(loop.usage());
-			run.setResultSummary(cap(loop.summary(), RESULT_CHAR_CAP));
+			String summary = summaryOrTemplate(loop);
+			run.setResultSummary(cap(summary, RESULT_CHAR_CAP));
 			AgentRunManager.State state = switch (loop.status()) {
 				case "done" -> AgentRunManager.State.DONE;
 				case "cancelled" -> AgentRunManager.State.CANCELLED;
@@ -158,12 +160,7 @@ public class SubAgentRunner {
 			run.setState(state);
 			run.setError(loop.error());
 			log.info("Run {} ended as {} after {} rounds", run.id(), state, loop.rounds());
-			return new SubAgentOutcome(
-				loop.status(),
-				cap(loop.summary(), RESULT_CHAR_CAP),
-				loop.usage(),
-				loop.rounds()
-			);
+			return new SubAgentOutcome(loop.status(), cap(summary, RESULT_CHAR_CAP), loop.usage(), loop.rounds());
 		} catch (Throwable ex) {
 			// Throwable, not Exception: an Error here would otherwise escape and strand the run
 			// in RUNNING with a dead thread, leaving the cancel button with nothing to stop.
@@ -218,6 +215,10 @@ public class SubAgentRunner {
 				);
 			}
 
+			// Opened the next round: the previous phase is over, so say so before the model
+			// starts producing. Covers the gap between a tool returning and the first token.
+			enterActivity(run, AgentRunManager.Activity.WORKING);
+
 			ChatRequest request = ChatRequest.builder()
 				.messages(thread)
 				.toolSpecifications(toolset.specifications())
@@ -246,6 +247,7 @@ public class SubAgentRunner {
 			}
 
 			thread.add(ai);
+			enterActivity(run, AgentRunManager.Activity.TOOL_CALLING);
 			for (ToolExecutionRequest toolRequest : ai.toolExecutionRequests()) {
 				log.debug(
 					"Run {} round {} calling tool {} with {}",
@@ -256,8 +258,7 @@ public class SubAgentRunner {
 				);
 				String result = executeTool(toolset, toolRequest);
 				log.debug("Run {} round {} tool {} returned: {}", run.id(), round + 1, toolRequest.name(), firstLine(result));
-				// The run's live transcript buffer already carries the streamed text; the tool
-				// call is summarised in the debug log above rather than duplicated in a file.
+				// Only the run's summary is exposed; tool chatter lives in the debug log above.
 				thread.add(ToolExecutionResultMessage.from(toolRequest, result));
 				if (run.cancelled().get()) {
 					log.info("Run {} stopped after round {}: cancel was requested", run.id(), round + 1);
@@ -298,19 +299,27 @@ public class SubAgentRunner {
 		return (newline < 0 ? text : text.substring(0, newline)).strip();
 	}
 
-	// Minimum spacing between UI change pings triggered by fresh transcript text, per run.
-	private static final long TRANSCRIPT_PING_INTERVAL_MS = 1_000;
-
-	// Ping the UI periodically while the model streams, so the transcript pane updates lively.
-	private void claimTranscriptPing(AgentRunManager.AgentRun run) {
-		if (run.tryClaimTranscriptPing(TRANSCRIPT_PING_INTERVAL_MS)) {
-			runs.notifyChange();
+	/**
+	 * The run's summary, or a plain sentence when it ended without producing one. A run that
+	 * was cancelled or died mid-flight has nothing to report, but the Agents dock still shows
+	 * a summary for every terminal row, and the orchestrator still needs a non-empty result to
+	 * reason about. Both come from here so they never disagree.
+	 */
+	private static String summaryOrTemplate(Outcome loop) {
+		if (loop.summary() != null && !loop.summary().isBlank()) {
+			return loop.summary();
 		}
+		return switch (loop.status()) {
+			case "cancelled" -> "Stopped before finishing; no result was produced.";
+			case "done" -> "Finished its tool work without producing a final answer.";
+			default -> "Failed before producing a result" + (loop.error().isBlank() ? "." : ": " + loop.error());
+		};
 	}
 
 	/**
-	 * Runs one streaming model round and waits for it. Streaming chunks flow into the run's
-	 * live transcript buffer while the round is in flight, so the dock pane shows progress.
+	 * Runs one streaming model round and waits for it. The streamed tokens themselves are
+	 * dropped: only the phase (thinking, answering) is recorded on the run, so the dock shows
+	 * what the sub-agent is doing without the harness copying every token into memory.
 	 */
 	private Round blockingRound(
 		StreamingChatModel model,
@@ -326,35 +335,23 @@ public class SubAgentRunner {
 				@Override
 				public void onPartialThinking(PartialThinking partialThinking, PartialThinkingContext context) {
 					if (
-						partialThinking != null && partialThinking.text() != null && !partialThinking.text().isBlank()
+						partialThinking != null && partialThinking.text() != null && !partialThinking.text().isBlank() && !inThinking[0]
 					) {
-						if (!inThinking[0]) {
-							inThinking[0] = true;
-							run.transcript().append("\n[thinking]\n");
-						}
-						run.transcript().append(partialThinking.text());
-						claimTranscriptPing(run);
+						inThinking[0] = true;
+						enterActivity(run, AgentRunManager.Activity.THINKING);
 					}
 				}
 
 				@Override
 				public void onPartialResponse(PartialResponse partialResponse, PartialResponseContext context) {
-					if (partialResponse != null && partialResponse.text() != null) {
-						if (inThinking[0]) {
-							inThinking[0] = false;
-							run.transcript().append("\n[/thinking]\n\n");
-						}
-						run.transcript().append(partialResponse.text());
-						claimTranscriptPing(run);
+					if (partialResponse != null && partialResponse.text() != null && inThinking[0]) {
+						inThinking[0] = false;
+						enterActivity(run, AgentRunManager.Activity.STREAMING);
 					}
 				}
 
 				@Override
 				public void onCompleteResponse(ChatResponse response) {
-					if (inThinking[0]) {
-						inThinking[0] = false;
-						run.transcript().append("\n[/thinking]\n\n");
-					}
 					future.complete(response);
 				}
 
@@ -367,6 +364,13 @@ public class SubAgentRunner {
 		ChatResponse response = future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
 		TokenUsage used = response.metadata() == null ? null : response.metadata().tokenUsage();
 		return new Round(response.aiMessage(), used == null ? new TokenUsage(0, 0, 0) : used);
+	}
+
+	// Records a phase change and pings the UI only when the phase actually moved.
+	private void enterActivity(AgentRunManager.AgentRun run, AgentRunManager.Activity activity) {
+		if (run.setActivity(activity)) {
+			runs.notifyChange();
+		}
 	}
 
 	// Runs one allowed tool; anything unknown or failing becomes an error string, never a throw.
