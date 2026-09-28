@@ -97,7 +97,6 @@ public class AgentRunController {
 		row.put("runtimeSeconds", Duration.between(run.startedAt(), java.time.Instant.now()).toSeconds());
 		row.put("startedAt", run.startedAt().toEpochMilli());
 		row.put("tokens", run.totalUsage().totalTokenCount());
-		row.put("transcriptPath", run.transcriptPath().toString());
 		row.put("resultSummary", run.resultSummary());
 		row.put("error", run.error());
 		return row;

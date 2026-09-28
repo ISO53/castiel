@@ -27,12 +27,9 @@ import io.github.iso53.castiel.service.HarnessService;
 import io.github.iso53.castiel.service.LlmClientFactory;
 import io.github.iso53.castiel.service.UserSettingsService;
 import io.github.iso53.castiel.service.WorkspaceSession;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -57,7 +54,7 @@ public class SubAgentRunner {
 
 	private static final Logger log = LoggerFactory.getLogger(SubAgentRunner.class);
 
-	// Result text kept for the orchestrator's context; more lives in the transcript file.
+	// Result text kept for the orchestrator's context; the full run stays in the live transcript.
 	private static final int RESULT_CHAR_CAP = 4_000;
 
 	// Scope/context excerpt capped before it reaches the sub-agent's prompt.
@@ -101,13 +98,8 @@ public class SubAgentRunner {
 		String systemPrompt,
 		Set<String> allowedTools,
 		String task,
-		int maxRounds,
-		boolean persistTranscript
+		int maxRounds
 	) {
-		public RunSpec(String label, String systemPrompt, Set<String> allowedTools, String task, int maxRounds) {
-			this(label, systemPrompt, allowedTools, task, maxRounds, true);
-		}
-
 		public RunSpec {
 			label = label == null || label.isBlank() ? AgentGuardrails.WORKER_LABEL : label.strip();
 			systemPrompt = systemPrompt == null ? "" : systemPrompt.strip();
@@ -117,7 +109,7 @@ public class SubAgentRunner {
 	}
 
 	// What a finished run reports back to the orchestrator's tool result.
-	public record SubAgentOutcome(String status, String summary, Path transcriptPath, TokenUsage usage, int rounds) {}
+	public record SubAgentOutcome(String status, String summary, TokenUsage usage, int rounds) {}
 
 	// Mutable accumulator for one executed run.
 	private record Outcome(
@@ -125,8 +117,7 @@ public class SubAgentRunner {
 		String error,
 		String summary,
 		TokenUsage usage,
-		int rounds,
-		String transcript
+		int rounds
 	) {}
 
 	/**
@@ -157,9 +148,7 @@ public class SubAgentRunner {
 				log.warn("Run {} has no usable tools after filtering {}", run.id(), spec.allowedTools());
 			}
 			Outcome loop = loop(run, spec, model, messages, toolset);
-			Path transcriptPath = spec.persistTranscript() ? persistTranscript(run, spec, loop.transcript(), loop.usage()) : null;
 			run.setTotalUsage(loop.usage());
-			run.setTranscriptPath(transcriptPath);
 			run.setResultSummary(cap(loop.summary(), RESULT_CHAR_CAP));
 			AgentRunManager.State state = switch (loop.status()) {
 				case "done" -> AgentRunManager.State.DONE;
@@ -172,7 +161,6 @@ public class SubAgentRunner {
 			return new SubAgentOutcome(
 				loop.status(),
 				cap(loop.summary(), RESULT_CHAR_CAP),
-				transcriptPath,
 				loop.usage(),
 				loop.rounds()
 			);
@@ -183,7 +171,7 @@ public class SubAgentRunner {
 			log.warn("Sub-agent run {} failed: {}", run.id(), message, ex);
 			run.setError(message);
 			run.setState(AgentRunManager.State.FAILED);
-			return new SubAgentOutcome("failed", "Error: " + message, run.transcriptPath(), run.totalUsage(), -1);
+			return new SubAgentOutcome("failed", "Error: " + message, run.totalUsage(), -1);
 		} finally {
 			HarnessService.setCurrentGenerationId(null);
 			// Last resort: never leave a run marked running once its thread is gone.
@@ -210,14 +198,13 @@ public class SubAgentRunner {
 	) {
 		long deadlineNanos = System.nanoTime() + MAX_RUNTIME.toNanos();
 		List<ChatMessage> thread = new ArrayList<>(messages);
-		StringBuilder transcript = new StringBuilder();
 		TokenUsage total = new TokenUsage(0, 0, 0);
 		int round = 0;
 
 		for (; round < spec.maxRounds(); round++) {
 			if (run.cancelled().get()) {
 				log.info("Run {} stopped before round {}: cancel was requested", run.id(), round + 1);
-				return new Outcome("cancelled", "", transcript.toString().strip(), total, round, transcript.toString());
+				return new Outcome("cancelled", "", "", total, round);
 			}
 			long remainingNanos = deadlineNanos - System.nanoTime();
 			if (remainingNanos <= 0) {
@@ -225,10 +212,9 @@ public class SubAgentRunner {
 				return new Outcome(
 					"failed",
 					"wall-clock limit of " + MAX_RUNTIME.toMinutes() + " min reached",
-					transcript.toString().strip(),
+					"",
 					total,
-					round,
-					transcript.toString()
+					round
 				);
 			}
 
@@ -242,26 +228,12 @@ public class SubAgentRunner {
 			} catch (Exception ex) {
 				if (run.cancelled().get()) {
 					log.info("Run {} stopped during round {}: cancel was requested", run.id(), round + 1);
-					return new Outcome(
-						"cancelled",
-						"",
-						transcript.toString().strip(),
-						total,
-						round,
-						transcript.toString()
-					);
+					return new Outcome("cancelled", "", "", total, round);
 				}
 				String message = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
 				// The message alone hides provider errors; the trace explains them in debug runs.
 				log.warn("Run {} failed during round {}: {}", run.id(), round + 1, message, ex);
-				return new Outcome(
-					"failed",
-					message,
-					transcript.toString().strip(),
-					total,
-					round,
-					transcript.toString()
-				);
+				return new Outcome("failed", message, "", total, round);
 			}
 			total = TokenUsage.sum(total, roundResult.usage());
 
@@ -270,7 +242,7 @@ public class SubAgentRunner {
 				String summary =
 					ai.text() == null || ai.text().isBlank() ? "(the sub-agent returned an empty answer)" : ai.text();
 				log.info("Run {} finished in round {}: the model asked for no further tools", run.id(), round + 1);
-				return new Outcome("done", "", summary, total, round + 1, transcript.toString());
+				return new Outcome("done", "", summary, total, round + 1);
 			}
 
 			thread.add(ai);
@@ -284,25 +256,12 @@ public class SubAgentRunner {
 				);
 				String result = executeTool(toolset, toolRequest);
 				log.debug("Run {} round {} tool {} returned: {}", run.id(), round + 1, toolRequest.name(), firstLine(result));
-				transcript
-					.append("\n\n### tool call: ")
-					.append(toolRequest.name())
-					.append('\n')
-					.append(toolRequest.arguments() == null ? "" : toolRequest.arguments())
-					.append('\n')
-					.append("--- result ---\n")
-					.append(cap(result, RESULT_CHAR_CAP));
+				// The run's live transcript buffer already carries the streamed text; the tool
+				// call is summarised in the debug log above rather than duplicated in a file.
 				thread.add(ToolExecutionResultMessage.from(toolRequest, result));
 				if (run.cancelled().get()) {
 					log.info("Run {} stopped after round {}: cancel was requested", run.id(), round + 1);
-					return new Outcome(
-						"cancelled",
-						"",
-						transcript.toString().strip(),
-						total,
-						round + 1,
-						transcript.toString()
-					);
+					return new Outcome("cancelled", "", "", total, round + 1);
 				}
 				// The run signalled it has nothing left to do; skip the final summary round.
 				if (run.isStopRequested()) {
@@ -312,8 +271,7 @@ public class SubAgentRunner {
 						"",
 						"The run finished its tool work and stopped on request.",
 						total,
-						round + 1,
-						transcript.toString()
+						round + 1
 					);
 				}
 			}
@@ -327,8 +285,7 @@ public class SubAgentRunner {
 				spec.maxRounds() +
 				" without producing a final answer. Partial work only; re-delegate a narrower task if needed.",
 			total,
-			round,
-			transcript.toString()
+			round
 		);
 	}
 
@@ -493,51 +450,6 @@ public class SubAgentRunner {
 		} catch (Exception ex) {
 			return "(scope unreadable: " + ex.getMessage() + ")";
 		}
-	}
-
-	// Writes the full transcript under evidence/agents/ and registers it as a known file.
-	private Path persistTranscript(AgentRunManager.AgentRun run, RunSpec spec, String transcript, TokenUsage usage) {
-		Path root = workspace.root().orElse(null);
-		if (root == null) {
-			return null;
-		}
-		try {
-			Path dir = root.resolve("evidence").resolve("agents");
-			Files.createDirectories(dir);
-			StringBuilder document = new StringBuilder();
-			document
-				.append("# Sub-agent run ")
-				.append(run.id())
-				.append("\n\n")
-				.append("- Worker: ")
-				.append(spec.label())
-				.append('\n')
-				.append("- Started: ")
-				.append(run.startedAt())
-				.append('\n')
-				.append("- Finished: ")
-				.append(Instant.now())
-				.append('\n')
-				.append("- Tokens: ")
-				.append(usage.totalTokenCount())
-				.append("\n\n")
-				.append("## Task\n\n")
-				.append(spec.task())
-				.append("\n\n## Transcript\n\n")
-				.append(transcript.strip());
-			Path target = dir.resolve(run.id() + "-" + safeName(spec.label()) + ".md");
-			Files.writeString(target, document.toString(), StandardCharsets.UTF_8);
-			workspace.remember(target);
-			return target;
-		} catch (IOException | RuntimeException ex) {
-			log.warn("Could not persist transcript for run {}: {}", run.id(), ex.getMessage());
-			return null;
-		}
-	}
-
-	private static String safeName(String value) {
-		String cleaned = value.strip().replaceAll("[^A-Za-z0-9._-]", "_");
-		return cleaned.isBlank() ? "worker" : cleaned;
 	}
 
 	private static String cap(String text, int limit) {

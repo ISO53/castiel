@@ -122,7 +122,6 @@ public class SubAgentTool implements ToolProvider {
 		SubAgentRunner.SubAgentOutcome notFinished = new SubAgentRunner.SubAgentOutcome(
 			"failed",
 			"the sub-agent did not finish within its time limit and was cancelled",
-			AgentRunManager.AgentRun.NO_TRANSCRIPT,
 			new TokenUsage(0, 0, 0),
 			-1
 		);
@@ -155,9 +154,6 @@ public class SubAgentTool implements ToolProvider {
 			.append(result.usage().totalTokenCount())
 			.append(" tokens.\n\n")
 			.append(result.summary());
-		if (!result.transcriptPath().toString().isEmpty()) {
-			answer.append("\n\nFull transcript saved to: ").append(result.transcriptPath());
-		}
 		return answer.toString();
 	}
 }

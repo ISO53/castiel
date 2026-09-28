@@ -3,7 +3,6 @@ package io.github.iso53.castiel.agent;
 import dev.langchain4j.model.output.TokenUsage;
 import io.github.iso53.castiel.tool.process.BoundedOutputBuffer;
 import io.github.iso53.castiel.tool.process.ProcessManager;
-import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.*;
@@ -67,9 +66,6 @@ public class AgentRunManager {
 
 		private volatile State state = State.QUEUED;
 		private volatile TokenUsage totalUsage = new TokenUsage(0, 0, 0);
-		// Empty path means "no transcript persisted"; callers test {@code toString().isEmpty()}.
-		public static final Path NO_TRANSCRIPT = Path.of("");
-		private volatile Path transcriptPath = NO_TRANSCRIPT;
 		private volatile String resultSummary = "";
 		private volatile String error = "";
 
@@ -146,10 +142,6 @@ public class AgentRunManager {
 			return totalUsage;
 		}
 
-		public Path transcriptPath() {
-			return transcriptPath;
-		}
-
 		public String resultSummary() {
 			return resultSummary;
 		}
@@ -168,10 +160,6 @@ public class AgentRunManager {
 
 		void setTotalUsage(TokenUsage totalUsage) {
 			this.totalUsage = totalUsage == null ? new TokenUsage(0, 0, 0) : totalUsage;
-		}
-
-		void setTranscriptPath(Path transcriptPath) {
-			this.transcriptPath = transcriptPath == null ? NO_TRANSCRIPT : transcriptPath;
 		}
 
 		void setResultSummary(String resultSummary) {
