@@ -5,8 +5,6 @@ import dev.langchain4j.agent.tool.Tool;
 import io.github.iso53.castiel.service.HarnessService;
 import io.github.iso53.castiel.service.WorkspaceSession;
 import io.github.iso53.castiel.tool.process.ProcessManager;
-import org.springframework.stereotype.Service;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
@@ -14,6 +12,7 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.springframework.stereotype.Service;
 
 /** Executes shell commands in the workspace on behalf of the model. */
 @Service
@@ -88,9 +87,10 @@ public class BashTool implements ToolProvider {
 		}
 		// Register under the owning generation so a cancel (or app shutdown) can tree-kill
 		// this shell even while the tool call is still blocked.
-		String owner = HarnessService.currentGenerationId() != null
-			? HarnessService.currentGenerationId()
-			: "shell-" + process.pid();
+		String owner =
+			HarnessService.currentGenerationId() != null
+				? HarnessService.currentGenerationId()
+				: "shell-" + process.pid();
 		processManager.registerForeground(owner, process);
 		try {
 			StringBuilder stdout = new StringBuilder();
@@ -173,7 +173,6 @@ public class BashTool implements ToolProvider {
 	static String cleanStdout(String stdout) {
 		return normalize(stdout, false);
 	}
-
 
 	// Cleans stderr.
 	static String cleanStderr(String stderr) {
