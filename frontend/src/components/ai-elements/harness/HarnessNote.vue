@@ -2,7 +2,7 @@
 import type { HTMLAttributes } from 'vue'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
-import { ChevronDownIcon, SettingsIcon } from '@lucide/vue'
+import { SettingsIcon } from '@lucide/vue'
 import { useVModel } from '@vueuse/core'
 
 interface Props {
@@ -32,21 +32,17 @@ const isOpen = useVModel(props, 'open', emit, {
     v-model:open="isOpen"
     :class="cn('not-prose my-1 w-full self-center', props.class)"
   >
-    <div class="flex items-center gap-3">
-      <hr class="flex-1 border-t border-border/60" />
+    <div class="flex w-full items-center gap-3">
+      <hr class="h-px min-w-0 flex-1 border-0 bg-primary" />
 
       <CollapsibleTrigger
         class="group/note flex shrink-0 items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
       >
         <SettingsIcon class="size-3 shrink-0" />
         <span class="font-mono text-[11px] tracking-tight">harness checkpoint reminder</span>
-        <ChevronDownIcon
-          class="size-3 shrink-0 transition-transform"
-          :class="isOpen ? 'rotate-180' : ''"
-        />
       </CollapsibleTrigger>
 
-      <hr class="flex-1 border-t border-border/60" />
+      <hr class="h-px min-w-0 flex-1 border-0 bg-primary" />
     </div>
 
     <CollapsibleContent

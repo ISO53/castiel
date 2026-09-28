@@ -326,6 +326,7 @@ export default {
 		Button,
 		Check,
 		EmptyState,
+		HarnessNote,
 		CodeBlock,
 		CodeBlockActions,
 		CodeBlockCopyButton,
