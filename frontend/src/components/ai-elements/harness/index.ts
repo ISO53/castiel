@@ -1,0 +1,1 @@
+export { default as HarnessNote } from './HarnessNote.vue'
