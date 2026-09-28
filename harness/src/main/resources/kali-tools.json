@@ -37,22 +37,6 @@
     "docsUrl": "https://www.kali.org/tools/7zip/"
   },
   {
-    "id": "abootimg",
-    "name": "abootimg",
-    "summary": "Android devices use a special partition format to boot any operating system on the devices. These boot-images contain a kernel image, a ramdisk, optionally a 2nd stage boot loader and the commandline passed to the kernel when booting. The original...",
-    "description": "Android devices use a special partition format to boot any operating system on the devices. These boot-images contain a kernel image, a ramdisk, optionally a 2nd stage boot loader and the commandline passed to the kernel when booting. The original mkbootimg from Android can only create these images where abootimg can also extract and modify them. Handling android boot images is necessary when bringing other operating systems to android devices. abootimg - manipulate Android Boot Images. (c) 2010-2011 Gilles Grandou 0.6 abootimg [-h] print usage abootimg -i print boot image information abootimg -x [ [ [ []]]] extract objects from boot image: - config file (default name bootimg.cfg) - kernel image (default name zImage) - ramdisk image (default name initrd.img) - second stage image (defaul...",
-    "categories": [
-      "kali-linux-arm"
-    ],
-    "commands": [
-      "abootimg",
-      "abootimg-pack-initrd",
-      "abootimg-unpack-initrd"
-    ],
-    "homepage": "http://gitorious.org/ac100/abootimg",
-    "docsUrl": "https://www.kali.org/tools/abootimg/"
-  },
-  {
     "id": "above",
     "name": "above",
     "summary": "This package contains a network security sniffer for finding vulnerabilities in the network, designed for pentesters and security professionals.",
@@ -276,30 +260,6 @@
     ],
     "homepage": "https://github.com/OWASP/Amass",
     "docsUrl": "https://www.kali.org/tools/amass/"
-  },
-  {
-    "id": "android-sdk",
-    "name": "android-sdk",
-    "summary": "The Android SDK provides you the API libraries and developer tools necessary to build, test, and debug apps for Android. Usage: android [global options] action [action options] Global options: -s --silent : Silent mode, shows errors only. -v --ver...",
-    "description": "The Android SDK provides you the API libraries and developer tools necessary to build, test, and debug apps for Android. Usage: android [global options] action [action options] Global options: -s --silent : Silent mode, shows errors only. -v --verbose : Verbose mode, shows errors, warnings and all messages. --clear-cache: Clear the SDK Manager repository manifest cache. -h --help : Help on a specific command. Valid actions are composed of a verb and an optional direct object: of a new SDK. AndroidManifest.xml). already have an AndroidManifest.xml). an AndroidManifest.xml). SDK add-ons. if available.",
-    "categories": [],
-    "commands": [
-      "android"
-    ],
-    "homepage": "https://developer.android.com/index.html",
-    "docsUrl": "https://www.kali.org/tools/android-sdk/"
-  },
-  {
-    "id": "android-sdk-meta",
-    "name": "android-sdk-meta",
-    "summary": "The Android SDK includes a variety of tools that help you develop mobile applications for the Android platform. The tools are classified into 3 groups: SDK Tools, Platform-tools and Build-tools.",
-    "description": "SDK Tools are platform independent and are required no matter which Android platform you are developing on. It is the base toolset of Android SDK. This metapackage pulls the entire Android SDK. The Android SDK includes a variety of tools that help you develop mobile applications for the Android platform. The tools are classified into 3 groups: SDK Tools, Platform-tools and Build-tools.",
-    "categories": [],
-    "commands": [
-      "android-sdk-meta"
-    ],
-    "homepage": "",
-    "docsUrl": "https://www.kali.org/tools/android-sdk-meta/"
   },
   {
     "id": "apache-users",
@@ -591,23 +551,6 @@
     ],
     "homepage": "https://github.com/b374k/b374k",
     "docsUrl": "https://www.kali.org/tools/b374k/"
-  },
-  {
-    "id": "backdoor-factory",
-    "name": "backdoor-factory",
-    "summary": "Injects shellcode into win32/64 PE files, 32/64bits ELF binaries, to continue normal file execution (if the shellcode supports it), by patching the exe/dll directly.",
-    "description": "Some executables have built in protections, as such this will not work on all ELF/PE files. It is advisable that you test target ELF/PE files before deploying them to clients or using them in exercises -h, --help show this help message and exit -f FILE, --file=FILE File to backdoor -s SHELL, --shell=SHELL Payloads that are available for use. Use 'show' to see payloads. -H HOST, --hostip=HOST IP of the C2 for reverse connections. -P PORT, --port=PORT The port to either connect back to for reverse shells or to listen on for bind shells -J, --cave_jumping Select this options if you want to use code cave jumping to further hide your shellcode in the binary. -a, --add_new_section Mandating that a new section be added to the exe (better success) but less av avoidance -U SUPPLIED_SHELLCODE, --...",
-    "categories": [
-      "kali-linux-nethunter",
-      "post-exploitation",
-      "social-engineering"
-    ],
-    "commands": [
-      "The",
-      "backdoor-factory"
-    ],
-    "homepage": "https://github.com/secretsquirrel/the-backdoor-factory",
-    "docsUrl": "https://www.kali.org/tools/backdoor-factory/"
   },
   {
     "id": "bed",
@@ -937,20 +880,6 @@
     ],
     "homepage": "http://www.bluez.org",
     "docsUrl": "https://www.kali.org/tools/bluez/"
-  },
-  {
-    "id": "bluez-firmware",
-    "name": "bluez-firmware",
-    "summary": "This firmware is required for operation of Bluetooth dongles based on the Broadcom BCM203x and Raspberry Pi chipset.",
-    "description": "This firmware is required for operation of Bluetooth dongles based on the Broadcom BCM203x and Raspberry Pi chipset.",
-    "categories": [
-      "kali-linux-firmware"
-    ],
-    "commands": [
-      "bluez-firmware"
-    ],
-    "homepage": "",
-    "docsUrl": "https://www.kali.org/tools/bluez-firmware/"
   },
   {
     "id": "bopscrk",
@@ -1369,18 +1298,6 @@
     ],
     "homepage": "https://github.com/jpillora/chisel",
     "docsUrl": "https://www.kali.org/tools/chisel/"
-  },
-  {
-    "id": "chisel-common-binaries",
-    "name": "chisel-common-binaries",
-    "summary": "This package contains a fast TCP/UDP tunnel, transported over HTTP, secured via SSH. Single executable including both client and server. Chisel is mainly useful for passing through firewalls, though it can also be used to provide a secure endpoint...",
-    "description": "This package contains a fast TCP/UDP tunnel, transported over HTTP, secured via SSH. Single executable including both client and server. Chisel is mainly useful for passing through firewalls, though it can also be used to provide a secure endpoint into your network.",
-    "categories": [],
-    "commands": [
-      "chisel-common-binaries"
-    ],
-    "homepage": "https://github.com/jpillora/chisel",
-    "docsUrl": "https://www.kali.org/tools/chisel-common-binaries/"
   },
   {
     "id": "chkrootkit",
@@ -1972,18 +1889,6 @@
     "docsUrl": "https://www.kali.org/tools/curl/"
   },
   {
-    "id": "curlftpfs",
-    "name": "curlftpfs",
-    "summary": "CurlFtpFS is a tool to mount FTP hosts as local directories. It connects to a FTP server and maps its directory structure to the local filesystem.",
-    "description": "Based on FUSE (filesystem in userspace) and the cURL library, CurlFtpFS has some features that distinguish it over other FTP filesystems: * support for SSLv3 and TLSv1 * connecting through tunneling HTTP proxies * automatic reconnection if the server times out * conversion of absolute symlinks to point back into the FTP filesystem -o opt,[opt...] ftp options -v --verbose make libcurl print verbose debug -h --help print help -V --version print version ftpfs_debug print some debugging information transform_symlinks prepend mountpoint to absolute symlink targets disable_epsv use PASV, without trying EPSV first (default) enable_epsv try EPSV before reverting to PASV skip_pasv_ip skip the IP address for PASV ftp_port=STR use PORT with address instead of PASV disable_eprt use PORT, without tr...",
-    "categories": [],
-    "commands": [
-      "curlftpfs"
-    ],
-    "homepage": "http://curlftpfs.sourceforge.net",
-    "docsUrl": "https://www.kali.org/tools/curlftpfs/"
-  },
-  {
     "id": "cutecom",
     "name": "cutecom",
     "summary": "Cutecom is a graphical serial terminal, like minicom. It is aimed mainly at hardware developers or other people who need a terminal to talk to their devices. It features lineoriented interface instead of character-oriented, xmodem, ymodem, zmodem ...",
@@ -2141,18 +2046,6 @@
     ],
     "homepage": "http://www.garloff.de/kurt/linux/ddrescue/",
     "docsUrl": "https://www.kali.org/tools/ddrescue/"
-  },
-  {
-    "id": "de4dot",
-    "name": "de4dot",
-    "summary": "de4dot is a .NET deobfuscator and unpacker. It will try its best to restore a packed and obfuscated assembly to almost the original assembly.",
-    "description": "Most of the obfuscation can be completely restored (eg. string encryption), but symbol renaming is impossible to restore since the original names aren't (usually) part of the obfuscated assembly. -r DIR Scan for .NET files in all subdirs -ro DIR Output base dir for recursively found files -ru Skip recursively found files with unsupported obfuscator -d Detect obfuscators and exit --asm-path PATH Add an assembly search path --dont-rename Don't rename classes, methods, etc. --keep-names FLAGS Don't rename n(amespaces), t(ypes), p(rops), e(vents), f(ields), m(ethods), a(rgs), g(enericparams), d(elegate fields). Can be combined, eg. efm --dont-create-params Don't create method params when renaming --dont-restore-props Don't restore properties/events --default-strtyp TYPE Default string decry...",
-    "categories": [],
-    "commands": [
-      "de4dot"
-    ],
-    "homepage": "https://github.com/0xd4d/de4dot",
-    "docsUrl": "https://www.kali.org/tools/de4dot/"
   },
   {
     "id": "defectdojo",
@@ -3060,30 +2953,6 @@
     "docsUrl": "https://www.kali.org/tools/exploitdb/"
   },
   {
-    "id": "exploitdb-bin-sploits",
-    "name": "exploitdb-bin-sploits",
-    "summary": "Searchable binary exploits from The Exploit Database. https://www.exploit-db.com",
-    "description": "Searchable binary exploits from The Exploit Database. https://www.exploit-db.com",
-    "categories": [],
-    "commands": [
-      "exploitdb-bin-sploit"
-    ],
-    "homepage": "https://www.exploit-db.com",
-    "docsUrl": "https://www.kali.org/tools/exploitdb-bin-sploits/"
-  },
-  {
-    "id": "exploitdb-papers",
-    "name": "exploitdb-papers",
-    "summary": "Searchable papers & ezines archives from The Exploit Database. https://www.exploit-db.com/papers",
-    "description": "Searchable papers & ezines archives from The Exploit Database. https://www.exploit-db.com/papers",
-    "categories": [],
-    "commands": [
-      "exploitdb-papers"
-    ],
-    "homepage": "https://www.exploit-db.com",
-    "docsUrl": "https://www.kali.org/tools/exploitdb-papers/"
-  },
-  {
     "id": "ext3grep",
     "name": "ext3grep",
     "summary": "ext3grep is a simple tool intended to aid anyone who accidentally deletes a file on an ext3 filesystem, only to find that they wanted it shortly thereafter.",
@@ -3151,20 +3020,6 @@
     "docsUrl": "https://www.kali.org/tools/eyewitness/"
   },
   {
-    "id": "fake-hwclock",
-    "name": "fake-hwclock",
-    "summary": "Some machines don't have a working realtime clock (RTC) unit, or no driver for the hardware that does exist. fake-hwclock is a simple set of scripts to save the kernel's current clock periodically (including at shutdown) and restore it at boot so ...",
-    "description": "On top of this, use of NTP is still recommended to deal with the fake clock \"drifting\" while the hardware is halted or rebooting. fake-hwclock - Control fake hardware clock fake-hwclock [ command ] [ force ] Many embedded Linux systems do not have a functional hardware clock. Either they simply don't have a hardware clock at all or they have a hardware clock but it is not usable (e.g. because Linux doesn't know how to use it or because no battery is present). This can lead to time moving backwards to some default value (often 1970) when the system is rebooted. Since lots of software assumes that time only moves forward this is a bad thing. NTP can (and should where practical) be used to sync with an external timeserver but it is not available early in the boot process and may be unavail...",
-    "categories": [
-      "kali-linux-arm"
-    ],
-    "commands": [
-      "fake-hwclock"
-    ],
-    "homepage": "",
-    "docsUrl": "https://www.kali.org/tools/fake-hwclock/"
-  },
-  {
     "id": "faraday-agent-dispatcher",
     "name": "faraday-agent-dispatcher",
     "summary": "This package contains Faraday Agents Dispatcher. It helps user develop integrations with Faraday written in any language.",
@@ -3187,19 +3042,6 @@
     ],
     "homepage": "https://github.com/infobyte/faraday-cli",
     "docsUrl": "https://www.kali.org/tools/faraday-cli/"
-  },
-  {
-    "id": "faraday-client",
-    "name": "faraday-client",
-    "summary": "This package contains the GTK client for Faraday. [--disable-excepthook] [--login] [--cert CERT_PATH] [--gui GUI] [--cli] [-w WORKSPACE] [-r FILENAME] [-d] [--nodeps] [-v] -h, --help show this help message and exit --disable-excepthook Disable the...",
-    "description": "This package contains the GTK client for Faraday. [--disable-excepthook] [--login] [--cert CERT_PATH] [--gui GUI] [--cli] [-w WORKSPACE] [-r FILENAME] [-d] [--nodeps] [-v] -h, --help show this help message and exit --disable-excepthook Disable the application exception hook that allows to send error reports to developers. --login Force to ask for credentials --cert CERT_PATH Path to the valid Faraday server certificate --gui GUI Select interface to start faraday. Supported values are gtk and 'no' (no GUI at all). Defaults to GTK --cli Set this flag to avoid GUI and use Faraday as a CLI. -w WORKSPACE, --workspace WORKSPACE Workspace to be opened -r FILENAME, --report FILENAME Report to be parsed by the CLI -d, --debug Enables debug mode. Default = disabled --nodeps Skip dependency check ...",
-    "categories": [],
-    "commands": [
-      "faraday-client",
-      "fplugin"
-    ],
-    "homepage": "https://github.com/infobyte/faraday-client",
-    "docsUrl": "https://www.kali.org/tools/faraday-client/"
   },
   {
     "id": "fatcat",
@@ -3381,20 +3223,6 @@
     "docsUrl": "https://www.kali.org/tools/firmware-mod-kit/"
   },
   {
-    "id": "firmware-sof",
-    "name": "firmware-sof",
-    "summary": "Provides the Intel SOF audio firmware and topology needed for audio functionality on some Intel system.",
-    "description": "This package contains the pre-built and signed binaries.",
-    "categories": [
-      "kali-linux-firmware"
-    ],
-    "commands": [
-      "firmware-sof"
-    ],
-    "homepage": "https://github.com/thesofproject/sof-bin",
-    "docsUrl": "https://www.kali.org/tools/firmware-sof/"
-  },
-  {
     "id": "flashrom",
     "name": "flashrom",
     "summary": "flashrom is a tool for identifying, reading, writing, verifying and erasing flash chips. It's often used to flash BIOS/EFI/coreboot/firmware/optionROM images in-system using a supported mainboard, but it also supports flashing of network cards (NI...",
@@ -3434,21 +3262,6 @@
     ],
     "homepage": "https://sourceforge.net/projects/foremost/",
     "docsUrl": "https://www.kali.org/tools/foremost/"
-  },
-  {
-    "id": "forensic-artifacts",
-    "name": "forensic-artifacts",
-    "summary": "A free, community-sourced, machine-readable knowledge base of forensic artifacts that the world can use both as an information source and within other tools.",
-    "description": "This package installs the data files alone, without the Python toolkit. A free, community-sourced, machine-readable knowledge base of forensic artifacts that the world can use both as an information source and within other tools. This package installs the Python 3 version.",
-    "categories": [
-      "forensics",
-      "respond"
-    ],
-    "commands": [
-      "forensic-artifacts"
-    ],
-    "homepage": "https://github.com/ForensicArtifacts/artifacts",
-    "docsUrl": "https://www.kali.org/tools/forensic-artifacts/"
   },
   {
     "id": "forensics-colorize",
@@ -3555,24 +3368,6 @@
     "docsUrl": "https://www.kali.org/tools/freeradius-wpe/"
   },
   {
-    "id": "freerdp2",
-    "name": "freerdp2",
-    "summary": "FreeRDP is a libre client/server implementation of the Remote Desktop Protocol (RDP).",
-    "description": "This package contains the FreeRDP development files. FreeRDP is a libre client/server implementation of the Remote Desktop Protocol (RDP). This package contains a \"shadowing\" server that can be used to share an already started X11 DISPLAY. FreeRDP is a libre client/server implementation of the Remote Desktop Protocol (RDP).",
-    "categories": [
-      "passwords"
-    ],
-    "commands": [
-      "freerdp-shadow-cli",
-      "winpr-hash",
-      "winpr-makecert",
-      "wlfreerdp",
-      "xfreerdp"
-    ],
-    "homepage": "https://www.freerdp.com/",
-    "docsUrl": "https://www.kali.org/tools/freerdp2/"
-  },
-  {
     "id": "freerdp3",
     "name": "freerdp3",
     "summary": "FreeRDP is a libre client/server implementation of the Remote Desktop Protocol (RDP).",
@@ -3619,29 +3414,6 @@
     ],
     "homepage": "https://dev.inversepath.com/ftester/",
     "docsUrl": "https://www.kali.org/tools/ftester/"
-  },
-  {
-    "id": "fuse3",
-    "name": "fuse3",
-    "summary": "This is a transitional package. It can safely be removed. Filesystem in Userspace (FUSE) is a simple interface for userspace programs to export a virtual filesystem to the Linux kernel. It also aims to provide a secure method for non privileged us...",
-    "description": "This package contains the shared library. Filesystem in Userspace (FUSE) is a simple interface for userspace programs to export a virtual filesystem to the Linux kernel. It also aims to provide a secure method for non privileged users to create and mount their own filesystem implementations. This package contains the development files.",
-    "categories": [
-      "forensics",
-      "hardware",
-      "information-gathering",
-      "passwords",
-      "respond",
-      "vulnerability",
-      "web"
-    ],
-    "commands": [
-      "fusermount",
-      "fusermount3",
-      "mount.fuse",
-      "mount.fuse3"
-    ],
-    "homepage": "https://github.com/libfuse/libfuse/wiki",
-    "docsUrl": "https://www.kali.org/tools/fuse3/"
   },
   {
     "id": "fwbuilder",
@@ -5054,24 +4826,6 @@
     "docsUrl": "https://www.kali.org/tools/inetsim/"
   },
   {
-    "id": "initramfs-tools",
-    "name": "initramfs-tools",
-    "summary": "This package builds a bootable initramfs for Linux kernel packages. The initramfs is loaded along with the kernel and is responsible for mounting the root filesystem and starting the main init system. -k version Specify kernel version or 'all' -c ...",
-    "description": "This package builds a bootable initramfs for Linux kernel packages. The initramfs is loaded along with the kernel and is responsible for mounting the root filesystem and starting the main init system. -k version Specify kernel version or 'all' -c Create a new initramfs -u Update an existing initramfs -d Remove an existing initramfs -b directory Set alternate boot directory -v Be verbose This package contains the mkinitramfs program that can be used to create a bootable initramfs for a Linux kernel. The initramfs should be loaded along with the kernel and is then responsible for mounting the root filesystem and starting the main init system. -l Display long and more verbose listing of initramfs content -c compress Override COMPRESS setting in initramfs.conf. -d confdir Specify an alterna...",
-    "categories": [
-      "kali-linux-arm",
-      "kali-linux-nethunter"
-    ],
-    "commands": [
-      "lsinitramfs",
-      "mkinitramfs",
-      "unmkinitramfs",
-      "update-initramfs"
-    ],
-    "homepage": "",
-    "docsUrl": "https://www.kali.org/tools/initramfs-tools/"
-  },
-  {
     "id": "inspectrum",
     "name": "inspectrum",
     "summary": "inspectrum is a tool for analysing captured signals, primarily from software-defined radio receivers.",
@@ -5154,36 +4908,6 @@
     ],
     "homepage": "https://code.kryo.se/iodine",
     "docsUrl": "https://www.kali.org/tools/iodine/"
-  },
-  {
-    "id": "ipv6-toolkit",
-    "name": "ipv6-toolkit",
-    "summary": "Included tools: - addr6: An IPv6 address analysis and manipulation tool. - flow6: A tool to perform a security asseessment of the IPv6 Flow Label. - frag6: A tool to perform IPv6 fragmentation-based attacks and to perform a security assessment of ...",
-    "description": "Included tools: - addr6: An IPv6 address analysis and manipulation tool. - flow6: A tool to perform a security asseessment of the IPv6 Flow Label. - frag6: A tool to perform IPv6 fragmentation-based attacks and to perform a security assessment of a number of fragmentation-related aspects. - icmp6: A tool to perform attacks based on ICMPv6 error messages. - jumbo6: A tool to assess potential flaws in the handling of IPv6 Jumbograms. - na6: A tool to send arbitrary Neighbor Advertisement messages. - ni6: A tool to send arbitrary ICMPv6 Node Information messages, and assess possible flaws in the processing of such packets. - ns6: A tool to send arbitrary Neighbor Solicitation messages. - ra6: A tool to send arbitrary Router Advertisement messages. - rd6: A tool to send arbitrary ICMPv6 Red...",
-    "categories": [],
-    "commands": [
-      "addr6",
-      "blackhole6",
-      "flow6",
-      "frag6",
-      "icmp6",
-      "jumbo6",
-      "messi",
-      "mldq6",
-      "na6",
-      "ni6",
-      "ns6",
-      "path6",
-      "ra6",
-      "rd6",
-      "rs6",
-      "scan6",
-      "script6",
-      "tcp6",
-      "udp6"
-    ],
-    "homepage": "https://www.si6networks.com/tools/ipv6toolkit/",
-    "docsUrl": "https://www.kali.org/tools/ipv6-toolkit/"
   },
   {
     "id": "ipv6toolkit",
@@ -5610,129 +5334,6 @@
     "docsUrl": "https://www.kali.org/tools/kali-autopilot/"
   },
   {
-    "id": "kali-community-wallpapers",
-    "name": "kali-community-wallpapers",
-    "summary": "The package has been renamed kali-wallpapers-community and is part of the kali-wallpapers source package now.",
-    "description": "This dummy package can be safely removed once kali-wallpapers-community is installed on the system. Wallpapers which have been created and submitted by the community, showing off Kali Linux.",
-    "categories": [],
-    "commands": [
-      "kali-community-wallpapers"
-    ],
-    "homepage": "",
-    "docsUrl": "https://www.kali.org/tools/kali-community-wallpapers/"
-  },
-  {
-    "id": "kali-defaults",
-    "name": "kali-defaults",
-    "summary": "This package implements various default settings within Kali.",
-    "description": "The size of this package (including its dependencies) should be rather limited because it is included in all Kali images, even minimalistic ones such as container images. This package is meant to be installed during bootstrap stage, so it shouldn't have any dependency, or only trivial dependencies. [list-units List units currently in memory [PATTERN…]] list-automounts List automount units currently in memory, ordered [PATTERN…] by path list-paths [PATTERN…] List path units currently in memory, ordered by path list-sockets List socket units currently in memory, ordered by [PATTERN…] address list-timers List timer units currently in memory, ordered by [PATTERN…] next elapse is-active PATTERN… Check whether units are active is-failed [PATTERN…] Check whether units are failed or system is i...",
-    "categories": [
-      "kali-linux-labs",
-      "kali-linux-nethunter",
-      "kali-linux-wsl",
-      "database",
-      "exploitation",
-      "forensics",
-      "identify",
-      "information-gathering",
-      "passwords",
-      "post-exploitation",
-      "reporting",
-      "respond",
-      "reverse-engineering",
-      "social-engineering",
-      "vulnerability",
-      "web",
-      "windows-resources"
-    ],
-    "commands": [
-      "kali-check-apt-sources",
-      "kali-deprecated",
-      "kali-motd",
-      "kali-service-start",
-      "kali-service-stop",
-      "kali-setup",
-      "kali-treecd",
-      "kali-winexec"
-    ],
-    "homepage": "https://www.kali.org",
-    "docsUrl": "https://www.kali.org/tools/kali-defaults/"
-  },
-  {
-    "id": "kali-meta",
-    "name": "kali-meta",
-    "summary": "This metapackage depends on Kali packages that should be installed on all desktop installations of Kali Linux.",
-    "description": "This metapackage is a dependency of all kali-desktop-* packages. This metapackage installs a minimalistic Enlightenment E17 desktop on your Kali system. This metapackage installs a minimalistic GNOME desktop on your Kali system. This metapackage installs a minimalistic i3 desktop on your Kali system. This is a transitional package. It can safely be removed. This metapackage installs a minimalistic KDE desktop on your Kali system. This metapackage depends on generic packages that should be installed on an official Kali live image. They provide features that are not directly related to penetration testing but that are intended to make the image more useful and usable for a wide set of users. This metapackage installs a minimalistic LXDE desktop on your Kali system. This metapackage instal...",
-    "categories": [
-      "kali-linux-arm",
-      "kali-linux-firmware",
-      "kali-linux-firmware-graphics",
-      "kali-linux-labs",
-      "kali-linux-nethunter",
-      "kali-linux-wsl",
-      "802-11",
-      "bluetooth",
-      "crypto-stego",
-      "database",
-      "detect",
-      "exploitation",
-      "forensics",
-      "fuzzing",
-      "gpu",
-      "hardware",
-      "identify",
-      "information-gathering",
-      "passwords",
-      "post-exploitation",
-      "protect",
-      "recover",
-      "reporting",
-      "respond",
-      "reverse-engineering",
-      "rfid",
-      "sdr",
-      "sniffing-spoofing",
-      "social-engineering",
-      "top10",
-      "voip",
-      "vulnerability",
-      "web",
-      "windows-resources",
-      "wireless"
-    ],
-    "commands": [
-      "kali-meta"
-    ],
-    "homepage": "https://www.kali.org",
-    "docsUrl": "https://www.kali.org/tools/kali-meta/"
-  },
-  {
-    "id": "kali-tweaks",
-    "name": "kali-tweaks",
-    "summary": "This package provides tweaks for Kali Linux.",
-    "description": "This include things like: * Shell configuration * APT mirrors configuration * Kali Linux metapackages installation and removal * Hardening of the system * Additional configuration for virtualized environments * Kernel settings ┌───────────────────────────────┤ Main Menu ├────────────────────────────────┐ │ │ │ Hardening Configure the system for extra security │ │ Metapackages Install specific subsets of tools for particular ne │ │ Network Repositories Configure network repositories for APT sources │ │ Shell & Prompt Configure the shell and command prompt │ │ Virtualization Additional configurations for Virtual Machines │ │ │ │ │ │ │ │ │ │ │ │ │ │ │ │ │ │ │ │ │ └────────────────────────────────────────────────────────────────────────────┘ / between elements | selects | next screen",
-    "categories": [],
-    "commands": [
-      "kali-tweaks"
-    ],
-    "homepage": "https://gitlab.com/kalilinux/packages/kali-tweaks",
-    "docsUrl": "https://www.kali.org/tools/kali-tweaks/"
-  },
-  {
-    "id": "kali-wallpapers",
-    "name": "kali-wallpapers",
-    "summary": "The package has been renamed kali-wallpapers-legacy and is part of the kali-wallpapers source package now.",
-    "description": "This dummy package can be safely removed once kali-wallpapers-legacy is installed on the system. This package contains multiple wallpapers that were in use in Kali Linux between versions 2019.4 and 2020.3. If you have multiple kali-wallpapers-YYYY.X packages on your system, you can remove them all except the latest which is a dependency of kali-themes-common and is thus required. This package contains multiple wallpapers that were in use in Kali Linux between versions 2020.4 and 2021.3.",
-    "categories": [
-      "kali-linux-nethunter"
-    ],
-    "commands": [
-      "kali-wallpapers"
-    ],
-    "homepage": "",
-    "docsUrl": "https://www.kali.org/tools/kali-wallpapers/"
-  },
-  {
     "id": "kalibrate-rtl",
     "name": "kalibrate-rtl",
     "summary": "Kalibrate, or kal, can scan for GSM base stations in a given frequency band and can use those GSM base stations to calculate the local oscillator frequency offset.",
@@ -5770,19 +5371,6 @@
     ],
     "homepage": "https://github.com/nidem/kerberoast",
     "docsUrl": "https://www.kali.org/tools/kerberoast/"
-  },
-  {
-    "id": "king-phisher",
-    "name": "king-phisher",
-    "summary": "This package contains is a tool for testing and promoting user awareness by simulating real world phishing attacks. It features an easy to use, yet very flexible architecture allowing full control over both emails and server content. King Phisher ...",
-    "description": "This package contains is a tool for testing and promoting user awareness by simulating real world phishing attacks. It features an easy to use, yet very flexible architecture allowing full control over both emails and server content. King Phisher can be used to run campaigns ranging from simple awareness training to more complicated scenarios in which user aware content is served for harvesting credentials. [--logger LOGGER] [--gc-debug-leak] [--gc-debug-stats] [-c CONFIG_FILE] [--no-plugins] [--no-style] -h, --help show this help message and exit -v, --version show program's version number and exit -L {DEBUG,INFO,WARNING,ERROR,FATAL}, --log {DEBUG,INFO,WARNING,ERROR,FATAL} set the logging level --logger LOGGER specify the root logger --gc-debug-leak set the DEBUG_LEAK flag --gc-debug-s...",
-    "categories": [],
-    "commands": [
-      "king-phisher-client",
-      "king-phisher-server"
-    ],
-    "homepage": "https://github.com/securestate/king-phisher",
-    "docsUrl": "https://www.kali.org/tools/king-phisher/"
   },
   {
     "id": "kismet",
@@ -6014,33 +5602,6 @@
     "docsUrl": "https://www.kali.org/tools/libfindrtp/"
   },
   {
-    "id": "libfreefare",
-    "name": "libfreefare",
-    "summary": "The libfreefare project aims to provide a convenient API for MIFARE card manipulations.",
-    "description": "This package includes some binaries that are useful for development purposes. -f Fast format (only erase MAD) -y Do not ask for confirmation (dangerous) keyfile Use keys from dump in addition to internal default keys -y Do not ask for confirmation -o Extract NDEF message if available in FILE -y Do not ask for confirmation -i Use FILE as NDEF message to write on card (\"-\" = stdin) -y Do not ask for confirmation -K Provide another PICC key than the default one -y Do not ask for confirmation (dangerous) -K Provide another PICC key than the default one -y Do not ask for confirmation -y Do not ask for confirmation (dangerous) -K Provide another PICC key than the default one -y Do not ask for confirmation (dangerous) -K Provide another PICC key than the default one -y Do not ask for confirmat...",
-    "categories": [
-      "rfid",
-      "wireless"
-    ],
-    "commands": [
-      "mifare-classic-format",
-      "mifare-classic-read-ndef",
-      "mifare-classic-write-ndef",
-      "mifare-desfire-access",
-      "mifare-desfire-create-ndef",
-      "mifare-desfire-ev1-configure-ats",
-      "mifare-desfire-ev1-configure-default-key",
-      "mifare-desfire-ev1-configure-random-uid",
-      "mifare-desfire-format",
-      "mifare-desfire-info",
-      "mifare-desfire-read-ndef",
-      "mifare-desfire-write-ndef",
-      "mifare-ultralight-info"
-    ],
-    "homepage": "https://code.google.com/p/libfreefare/",
-    "docsUrl": "https://www.kali.org/tools/libfreefare/"
-  },
-  {
     "id": "libimage-exiftool-perl",
     "name": "libimage-exiftool-perl",
     "summary": "Image::ExifTool is a customizable set of Perl modules plus a full-featured command-line application called exiftool for reading and writing meta information in a wide variety of files, including the maker note information of many digital cameras b...",
@@ -6051,42 +5612,6 @@
     ],
     "homepage": "https://exiftool.org/",
     "docsUrl": "https://www.kali.org/tools/libimage-exiftool-perl/"
-  },
-  {
-    "id": "libnfc",
-    "name": "libnfc",
-    "summary": "format will reset all keys to FFFFFFFFFFFF and all data to 00 and all ACLs to default",
-    "description": "libnfc is a library for Near Field Communication. It abstracts the low-level details of communicating with the devices away behind an easy-to-use high-level API. It supports most hardware based on the NXP PN531, PN532 or PN533 controller chips. This package contains some utils that come along with libnfc, for development or debugging purposes (including nfc-list, nfc-mfclassic, nfc-mfultralight, etc). -1: force Tag Type 4 v1.0 (default is v2.0) nfc-jewel - Jewel command line tool nfc-jewel r|w DUMP nfc-jewel is a Jewel tool that allows one to read or write a tag data to/from a DUMP file. Jewel tag by Broadcom, previously Innovision, uses a binary Dump file to store data for all sectors. Be cautious that some parts of a Jewel memory can be written only once and some parts are used as loc...",
-    "categories": [
-      "kali-linux-nethunter",
-      "rfid",
-      "wireless"
-    ],
-    "commands": [
-      "nfc-anticol",
-      "nfc-barcode",
-      "nfc-dep-initiator",
-      "nfc-dep-target",
-      "nfc-emulate-forum-tag2",
-      "nfc-emulate-forum-tag4",
-      "nfc-emulate-tag",
-      "nfc-emulate-uid",
-      "nfc-jewel",
-      "nfc-list",
-      "nfc-mfclassic",
-      "nfc-mfsetuid",
-      "nfc-mfultralight",
-      "nfc-poll",
-      "nfc-read-forum-tag3",
-      "nfc-relay",
-      "nfc-relay-picc",
-      "nfc-scan-device",
-      "pn53x-diagnose",
-      "pn53x-sam",
-      "pn53x-tamashell"
-    ],
-    "homepage": "http://www.nfc-tools.org/",
-    "docsUrl": "https://www.kali.org/tools/libnfc/"
   },
   {
     "id": "libpst",
@@ -6149,18 +5674,6 @@
     ],
     "homepage": "https://github.com/nicocha30/ligolo-ng",
     "docsUrl": "https://www.kali.org/tools/ligolo-ng/"
-  },
-  {
-    "id": "ligolo-ng-common-binaries",
-    "name": "ligolo-ng-common-binaries",
-    "summary": "Ligolo-ng is a simple, lightweight and fast tool that allows pentesters to establish tunnels from a reverse TCP/TLS connection using a tun interface (without the need of SOCKS).",
-    "description": "Ligolo-ng is a simple, lightweight and fast tool that allows pentesters to establish tunnels from a reverse TCP/TLS connection using a tun interface (without the need of SOCKS).",
-    "categories": [],
-    "commands": [
-      "ligolo-ng-common-binaries"
-    ],
-    "homepage": "https://github.com/nicocha30/ligolo-ng",
-    "docsUrl": "https://www.kali.org/tools/ligolo-ng-common-binaries/"
   },
   {
     "id": "linkedin2username",
@@ -6866,52 +6379,6 @@
     "docsUrl": "https://www.kali.org/tools/metasploitmcp/"
   },
   {
-    "id": "mfcuk",
-    "name": "mfcuk",
-    "summary": "Toolkit containing samples and various tools based on and around libnfc and crapto1, with emphasis on Mifare Classic NXP/Philips RFID cards. Special emphasis of the toolkit is on the following: 1) mifare classic weakness demonstration/exploitation...",
-    "description": "Toolkit containing samples and various tools based on and around libnfc and crapto1, with emphasis on Mifare Classic NXP/Philips RFID cards. Special emphasis of the toolkit is on the following: 1) mifare classic weakness demonstration/exploitation 2) demonstrate use of libnfc (and ACR122 readers) 3) demonstrate use of Crapto1 implementation to confirm internal workings and to verify theoretical/practical weaknesses/attacks. Recover all keys from all sectors: mfcuk -C -R -1 Recover the sector #0 key with 250 ms for all delays (delays could give more results): mfcuk -C -R 0 -s 250 -S 250",
-    "categories": [
-      "rfid",
-      "wireless"
-    ],
-    "commands": [
-      "mfcuk"
-    ],
-    "homepage": "https://github.com/nfc-tools/mfcuk",
-    "docsUrl": "https://www.kali.org/tools/mfcuk/"
-  },
-  {
-    "id": "mfoc",
-    "name": "mfoc",
-    "summary": "MFOC is an open source implementation of \"offline nested\" attack by Nethemba.",
-    "description": "This program allow one to recover authentication keys from MIFARE Classic card. Please note that MFOC is able to recover keys from target only if it have a known key: default one (hardcoded in MFOC) or custom one (user provided using command line). h print this help and exit k try the specified key in addition to the default keys f parses a file of keys to add in addition to the default keys P number of probes per sector, instead of default of 20 T nonce tolerance half-range, instead of default of 20 (i.e., 40 for the total range, in both directions) O file in which the card contents will be written (REQUIRED) D file in which partial card info will be written in case PRNG is not vulnerable",
-    "categories": [
-      "kali-linux-nethunter",
-      "rfid",
-      "wireless"
-    ],
-    "commands": [
-      "mfoc"
-    ],
-    "homepage": "https://github.com/nfc-tools/mfoc",
-    "docsUrl": "https://www.kali.org/tools/mfoc/"
-  },
-  {
-    "id": "mfterm",
-    "name": "mfterm",
-    "summary": "mfterm is a terminal interface for working with Mifare Classic tags. Tab completion on commands is available. Also, commands that have file name arguments provide tab completion on files. There is also a command history, like in most normal shells...",
-    "description": "mfterm is a terminal interface for working with Mifare Classic tags. Tab completion on commands is available. Also, commands that have file name arguments provide tab completion on files. There is also a command history, like in most normal shells. --help (-h) Show this help message. --version (-v) Display version information. --tag=tagfile (-t) Load a tag from the specified file. --keys=keyfile (-k) Load keys from the specified file. --dict=dictfile (-d) Load dictionary from the specified file.",
-    "categories": [
-      "rfid",
-      "wireless"
-    ],
-    "commands": [
-      "mfterm"
-    ],
-    "homepage": "https://github.com/4ZM/mfterm",
-    "docsUrl": "https://www.kali.org/tools/mfterm/"
-  },
-  {
     "id": "mimikatz",
     "name": "mimikatz",
     "summary": "Mimikatz uses admin rights on Windows to display passwords of currently logged in users in plaintext. |-- mimidrv.sys |-- mimikatz.exe |-- mimilib.dll `-- mimispool.dll",
@@ -7144,30 +6611,6 @@
     "docsUrl": "https://www.kali.org/tools/myrescue/"
   },
   {
-    "id": "mysql-defaults",
-    "name": "mysql-defaults",
-    "summary": "MySQL is a fast, stable and true multi-user, multi-threaded SQL database server. SQL (Structured Query Language) is the most popular database query language in the world. The main goals of MySQL are speed, robustness and ease of use.",
-    "description": "This package depends on the default implementation of the client development libraries and header files (API and ABI defined by MySQL). Depending on the default defined through this metapackage, the underlying implementation may be provided by either MySQL or MariaDB. Build-Depend on this package and then link using -lmysqlclient. You will end up with a binary that depends on either libmysqlclient.so.X or libmariadbclient.so.X depending on the current default. dpkg-shlibdeps should correctly generate a dependency on libmysqlclientX or libmariadbclientX as appropriate. MySQL is a fast, stable and true multi-user, multi-threaded SQL database server. SQL (Structured Query Language) is the most popular database query language in the world. The main goals of MySQL are speed, robustness and e...",
-    "categories": [
-      "kali-linux-labs",
-      "kali-linux-nethunter",
-      "exploitation",
-      "forensics",
-      "information-gathering",
-      "passwords",
-      "respond",
-      "social-engineering",
-      "top10",
-      "vulnerability",
-      "web"
-    ],
-    "commands": [
-      "mysql-defaults"
-    ],
-    "homepage": "",
-    "docsUrl": "https://www.kali.org/tools/mysql-defaults/"
-  },
-  {
     "id": "naabu",
     "name": "naabu",
     "summary": "This package contains a port scanning tool written in Go that allows you to enumerate valid ports for hosts in a fast and reliable manner. It is a really simple tool that does fast SYN/CONNECT scans on the host/list of hosts and lists all ports th...",
@@ -7384,46 +6827,6 @@
     "docsUrl": "https://www.kali.org/tools/net-tools/"
   },
   {
-    "id": "netbase",
-    "name": "netbase",
-    "summary": "This package provides the necessary infrastructure for basic TCP/IP based networking.",
-    "description": "In particular, it supplies common name-to-number mappings in /etc/services, /etc/rpc, /etc/protocols and /etc/ethertypes.",
-    "categories": [
-      "kali-linux-nethunter",
-      "kali-linux-wsl",
-      "802-11",
-      "bluetooth",
-      "database",
-      "exploitation",
-      "forensics",
-      "fuzzing",
-      "hardware",
-      "identify",
-      "information-gathering",
-      "passwords",
-      "post-exploitation",
-      "recover",
-      "reporting",
-      "respond",
-      "reverse-engineering",
-      "rfid",
-      "sdr",
-      "sniffing-spoofing",
-      "social-engineering",
-      "top10",
-      "voip",
-      "vulnerability",
-      "web",
-      "windows-resources",
-      "wireless"
-    ],
-    "commands": [
-      "netbase"
-    ],
-    "homepage": "",
-    "docsUrl": "https://www.kali.org/tools/netbase/"
-  },
-  {
     "id": "netcat",
     "name": "netcat",
     "summary": "A simple Unix utility which reads and writes data across network connections using TCP or UDP protocol. It is designed to be a reliable \"back-end\" tool that can be used directly or easily driven by other programs and scripts. At the same time it i...",
@@ -7469,46 +6872,6 @@
     ],
     "homepage": "https://github.com/Pennyw0rth/NetExec",
     "docsUrl": "https://www.kali.org/tools/netexec/"
-  },
-  {
-    "id": "netkit-ftp",
-    "name": "netkit-ftp",
-    "summary": "This is the user interface to the ARPANET standard File Transfer Protocol. The program allows a user to transfer files to and from a remote network site.",
-    "description": "This is the user interface to the ARPANET standard File Transfer Protocol. The program allows a user to transfer files to and from a remote network site.",
-    "categories": [
-      "kali-linux-arm",
-      "kali-linux-nethunter"
-    ],
-    "commands": [
-      "netkit-ftp"
-    ],
-    "homepage": "",
-    "docsUrl": "https://www.kali.org/tools/netkit-ftp/"
-  },
-  {
-    "id": "netkit-telnet",
-    "name": "netkit-telnet",
-    "summary": "The telnet command is used for interactive communication with another host using the TELNET protocol.",
-    "description": "For the purpose of remote login, the present client executable should be depreciated in favour of an ssh-client, or in some cases with variants like telnet-ssl or Kerberized TELNET clients. The most important reason is that this implementation exchanges user name and password in clear text. On the other hand, the present program does satisfy common use cases of network diagnostics, like protocol testing of SMTP services, so it can become handy enough. The in.telnetd program is a server which supports the DARPA telnet interactive communication protocol.",
-    "categories": [],
-    "commands": [
-      "in.telnetd",
-      "telnet.netkit"
-    ],
-    "homepage": "http://www.hcs.harvard.edu/~dholland/computers/netkit.html",
-    "docsUrl": "https://www.kali.org/tools/netkit-telnet/"
-  },
-  {
-    "id": "netkit-tftp",
-    "name": "netkit-tftp",
-    "summary": "This is a transitional package. It can safely be removed.",
-    "description": "This is a transitional package. It can safely be removed.",
-    "categories": [],
-    "commands": [
-      "netkit-tftp"
-    ],
-    "homepage": "",
-    "docsUrl": "https://www.kali.org/tools/netkit-tftp/"
   },
   {
     "id": "netmask",
@@ -7794,18 +7157,6 @@
     "docsUrl": "https://www.kali.org/tools/odat/"
   },
   {
-    "id": "offsec-courses",
-    "name": "offsec-courses",
-    "summary": "This is Kali Linux, the most advanced penetration testing and security auditing distribution.",
-    "description": "This metapackage depends on the resources required for OffSec's AWAE/WEB-300/OSWE. This package provides the Python 2 resources for OffSec's AWAE, and it depends on the resources required for OffSec's AWAE/WEB-300/OSWE. This is Kali Linux, the most advanced penetration testing and security auditing distribution. This metapackage depends on the resources required for OffSec's EXP-100 course. This is Kali Linux, the most advanced penetration testing and security auditing distribution.",
-    "categories": [],
-    "commands": [
-      "offsec-courses"
-    ],
-    "homepage": "https://www.kali.org",
-    "docsUrl": "https://www.kali.org/tools/offsec-courses/"
-  },
-  {
     "id": "ohrwurm",
     "name": "ohrwurm",
     "summary": "ohrwurm is a small and simple RTP fuzzer that has been successfully tested on a small number of SIP phones. Features:",
@@ -7915,29 +7266,6 @@
     ],
     "homepage": "https://www.openssh.com/",
     "docsUrl": "https://www.kali.org/tools/openssh/"
-  },
-  {
-    "id": "openssh-gssapi",
-    "name": "openssh-gssapi",
-    "summary": "This is the portable version of OpenSSH, a free implementation of the Secure Shell protocol as specified by the IETF secsh working group.",
-    "description": "Ssh (Secure Shell) is a program for logging into a remote machine and for executing commands on a remote machine. It provides secure encrypted communications between two untrusted hosts over an insecure network. X11 connections and arbitrary TCP/IP ports can also be forwarded over the secure channel. It can be used to provide applications with a secure communication channel. This package provides versions of the ssh client and related programs built with support for GSS-API authentication and key exchange, which can be used with systems such as Kerberos. [-i identity_file] [-J destination] [-l limit] [-o ssh_option] [-P port] [-S program] [-X sftp_option] source ... target [-D sftp_server_command] [-F ssh_config] [-i identity_file] [-J destination] [-l limit] [-o ssh_option] [-P port] [...",
-    "categories": [
-      "kali-linux-nethunter",
-      "kali-linux-wsl"
-    ],
-    "commands": [
-      "scp",
-      "sftp",
-      "ssh",
-      "ssh-add",
-      "ssh-agent",
-      "ssh-argv0",
-      "ssh-copy-id",
-      "ssh-keyscan",
-      "sshd"
-    ],
-    "homepage": "https://www.openssh.com/",
-    "docsUrl": "https://www.kali.org/tools/openssh-gssapi/"
   },
   {
     "id": "openssh-ssh1",
@@ -8093,23 +7421,6 @@
     "docsUrl": "https://www.kali.org/tools/osrframework/"
   },
   {
-    "id": "outguess",
-    "name": "outguess",
-    "summary": "OutGuess is a universal tool for steganography that allows the insertion of hidden information into the redundant bits of data sources. The nature of the data source is irrelevant to the core of OutGuess.",
-    "description": "The program relies on data specific handlers that will extract redundant bits and write them back after modification. The supported formats are JPEG, PPM and PNM. This package is useful in forensics investigations and security actions.",
-    "categories": [
-      "crypto-stego"
-    ],
-    "commands": [
-      "histogram",
-      "outguess",
-      "outguess-extract",
-      "seek_script"
-    ],
-    "homepage": "https://github.com/resurrecting-open-source-projects/outguess",
-    "docsUrl": "https://www.kali.org/tools/outguess/"
-  },
-  {
     "id": "owasp-mantra-ff",
     "name": "owasp-mantra-ff",
     "summary": "Mantra is a browser especially designed for web application security testing. By having such a product, more people will come to know the easiness and flexibility of being able to follow basic testing procedures within the browser. Mantra believes...",
@@ -8149,22 +7460,6 @@
     ],
     "homepage": "https://lcamtuf.coredump.cx/p0f3/",
     "docsUrl": "https://www.kali.org/tools/p0f/"
-  },
-  {
-    "id": "p7zip",
-    "name": "p7zip",
-    "summary": "This is a transitional package. It can be safely removed. This is a transitional package. It can be safely removed.",
-    "description": "This is a transitional package. It can be safely removed. This is a transitional package. It can be safely removed.",
-    "categories": [
-      "kali-linux-nethunter",
-      "forensics",
-      "respond"
-    ],
-    "commands": [
-      "p7zip"
-    ],
-    "homepage": "https://7-zip.org/",
-    "docsUrl": "https://www.kali.org/tools/p7zip/"
   },
   {
     "id": "pack",
@@ -8350,18 +7645,6 @@
     "docsUrl": "https://www.kali.org/tools/patchleaks/"
   },
   {
-    "id": "payloadsallthethings",
-    "name": "payloadsallthethings",
-    "summary": "A list of useful payloads and bypasses for Web Application Security and Pentest/CTF.",
-    "description": "A list of useful payloads and bypasses for Web Application Security and Pentest/CTF.",
-    "categories": [],
-    "commands": [
-      "payloadsallthethings"
-    ],
-    "homepage": "https://github.com/swisskyrepo/PayloadsAllTheThings",
-    "docsUrl": "https://www.kali.org/tools/payloadsallthethings/"
-  },
-  {
     "id": "pdf-parser",
     "name": "pdf-parser",
     "summary": "This tool will parse a PDF document to identify the fundamental elements used in the analyzed file. It will not render a PDF document. --version show program's version number and exit -h, --help show this help message and exit -m, --man Print manu...",
@@ -8458,31 +7741,6 @@
     ],
     "homepage": "https://metacpan.org/pod/Cisco::CopyConfig",
     "docsUrl": "https://www.kali.org/tools/perl-cisco-copyconfig/"
-  },
-  {
-    "id": "pev",
-    "name": "pev",
-    "summary": "pev is a tool to get information of PE32/PE32+ executables (EXE, DLL, OCX etc) like headers, sections, resources and more. -V, --version Show version. --help Show this help. --att Set AT&T assembly syntax (default: Intel). -e, --entrypoint Disasse...",
-    "description": "pev is a tool to get information of PE32/PE32+ executables (EXE, DLL, OCX etc) like headers, sections, resources and more. -V, --version Show version. --help Show this help. --att Set AT&T assembly syntax (default: Intel). -e, --entrypoint Disassemble the entire entrypoint function. -f, --format Change output format (default: text). -m, --mode Disassembly mode (default: auto). -i Number of instructions to disassemble. -n Number of bytes to disassemble -o, --offset Disassemble at specified offset, either in decimal or hexadecimal format (prefixed with 0x). -r, --rva Disassemble at specified RVA, either in decimal or hexadecimal format (prefixed with 0x). -s, --section Disassemble en entire section given. -V, --version Show version. --help Show this help. -f, --format Change output format...",
-    "categories": [
-      "forensics",
-      "respond"
-    ],
-    "commands": [
-      "ofs2rva",
-      "pedis",
-      "pehash",
-      "peldd",
-      "pepack",
-      "peres",
-      "pescan",
-      "pesec",
-      "pestr",
-      "readpe",
-      "rva2ofs"
-    ],
-    "homepage": "https://pev.sourceforge.net",
-    "docsUrl": "https://www.kali.org/tools/pev/"
   },
   {
     "id": "phishery",
@@ -8591,39 +7849,6 @@
     ],
     "homepage": "https://github.com/wiire/pixiewps",
     "docsUrl": "https://www.kali.org/tools/pixiewps/"
-  },
-  {
-    "id": "plaso",
-    "name": "plaso",
-    "summary": "This is a metapackage that depends on the Python 3 package of the Plaso libraries and scripts. Plaso (plaso langar að safna öllu) is the Python based back-end engine used by tools such as log2timeline for automatic creation of a super timelines. T...",
-    "description": "This package contains a Plaso installation for Python 3. [--artifact_definitions PATH] [--custom_artifact_definitions PATH] [--data PATH] [--process_memory_limit SIZE] [--vfs_back_end TYPE] [--logfile FILENAME] [--partitions PARTITIONS] [--volumes VOLUMES] [--no_vss] [--vss_only] [--vss_stores VSS_STORES] [--credential TYPE:DATA] [--artifact_filters ARTIFACT_FILTERS] [--artifact_filters_file PATH] [--date-filter TYPE_START_END] [-f FILE_FILTER] [-x EXTENSIONS] [--names NAMES] [--signatures IDENTIFIERS] [--enable_artifacts_map] [-w PATH] [--include_duplicates] [--no_hashes] [IMAGE] IMAGE The full path to the image file that we are about to extract files from, it should be a raw image or another image that Plaso supports. -h, --help Show this help message and exit. --troubles Show trouble...",
-    "categories": [
-      "forensics",
-      "respond"
-    ],
-    "commands": [
-      "plaso-image_export",
-      "plaso-log2timeline",
-      "plaso-pinfo",
-      "plaso-psort",
-      "plaso-psteal"
-    ],
-    "homepage": "https://github.com/log2timeline/plaso",
-    "docsUrl": "https://www.kali.org/tools/plaso/"
-  },
-  {
-    "id": "plecost",
-    "name": "plecost",
-    "summary": "Wordpress finger printer tool, plecost search and retrieve information about the plugins versions installed in Wordpress systems. It can analyze a single URL or perform an analysis based on the results indexed by Google. Additionally displays CVE ...",
-    "description": "Plecost retrieves the information contained on Web sites supported by Wordpress, and also allows a search on the results indexed by Google. [-nv] [-f] [-j] [-w WORDLIST] [-l] [-c CONCURRENCY] [-nb] [--update-cve] [--update-plugins] [--update-all] [-sp] [-vp SHOW_PLUGIN_CVES] [--cve CVE_DETAILS] [TARGET ...] TARGET -h, --help show this help message and exit -v, --verbosity verbosity level: -v, -vv, -vvv. -o OUTPUT_FILE report file with extension: xml|json --hostname HOSTNAME set custom hostname for the HTTP request -np, --no-plugins do not try to find plugins versions -nc, --no-check-wordpress do not check Wordpress connectivity -nv, --no-wordpress-version do not check Wordpress version -f, --force-scan force to scan even although not wordpress installation detected -j, --jackass-modes j...",
-    "categories": [
-      "web"
-    ],
-    "commands": [
-      "plecost"
-    ],
-    "homepage": "https://github.com/iniqua/plecost",
-    "docsUrl": "https://www.kali.org/tools/plecost/"
   },
   {
     "id": "plocate",
@@ -9325,22 +8550,6 @@
     "docsUrl": "https://www.kali.org/tools/radare2/"
   },
   {
-    "id": "radare2-cutter",
-    "name": "radare2-cutter",
-    "summary": "Cutter is a Qt based GUI for reverse engineering binaries, which makes use of the radare2 framework. Advanced users are expected to use the radare2 CLI tools instead, which are much more powerful. Cutter - GUI for radare2 reverse engineering frame...",
-    "description": "Cutter is a Qt based GUI for reverse engineering binaries, which makes use of the radare2 framework. Advanced users are expected to use the radare2 CLI tools instead, which are much more powerful. Cutter - GUI for radare2 reverse engineering framework Cutter [options] Cutter is a Qt and C++ GUI for radare2 reverse engineering framework. -h, --help Displays this help -v, --version Displays version information -A, --anal=level Automatically open file and optionally start analysis. Needs filename to be specified. May be a value between 0 and 2. 0 = no analysis, 1 = aaa, 2 = aaaa (experimental) --pythonhome=PYTHONHOME PYTHONHOME to use for Jupyter cutter was written by the Cutter Project . This manual page was written by Sebastian Reichel . August 20, 2018 CUTTER(1)",
-    "categories": [
-      "forensics",
-      "hardware",
-      "reverse-engineering"
-    ],
-    "commands": [
-      "Cutter"
-    ],
-    "homepage": "https://cutter.re",
-    "docsUrl": "https://www.kali.org/tools/radare2-cutter/"
-  },
-  {
     "id": "rainbowcrack",
     "name": "rainbowcrack",
     "summary": "RainbowCrack is a general propose implementation of Philippe Oechslin's faster time-memory trade-off technique. It crack hashes with rainbow tables.",
@@ -9576,20 +8785,6 @@
     ],
     "homepage": "https://www.rfc1149.net/devel/recoverjpeg",
     "docsUrl": "https://www.kali.org/tools/recoverjpeg/"
-  },
-  {
-    "id": "redeye",
-    "name": "redeye",
-    "summary": "This package contains a tool intended to help you manage your data during a pentest operation in the most efficient and organized way.",
-    "description": "This package contains a tool intended to help you manage your data during a pentest operation in the most efficient and organized way.",
-    "categories": [],
-    "commands": [
-      "redeye",
-      "redeye-start",
-      "redeye-stop"
-    ],
-    "homepage": "https://github.com/redeye-framework/Redeye",
-    "docsUrl": "https://www.kali.org/tools/redeye/"
   },
   {
     "id": "redfang",
@@ -9983,21 +9178,6 @@
     "docsUrl": "https://www.kali.org/tools/rsmangler/"
   },
   {
-    "id": "rtlsdr-scanner",
-    "name": "rtlsdr-scanner",
-    "summary": "A cross platform Python frequency scanning GUI for the OsmoSDR rtl-sdr library.",
-    "description": "The scanner attempts to overcome the tuner's frequency response by averaging scans from both the positive and negative frequency offsets of the baseband data. [-g GAIN] [-d DWELL] [-f FFT] [-l LO] [-c CONF] [-i INDEX | -r REMOTE] [file] file Output file (.rfs.csv, .plt, .m or .sdb2) -h, --help show this help message and exit -s START, --start START Start frequency (MHz) -e END, --end END End frequency (MHz) -w SWEEPS, --sweeps SWEEPS Number of sweeps -p DELAY, --delay DELAY Delay between sweeps (s) -g GAIN, --gain GAIN Gain (dB) -d DWELL, --dwell DWELL Dwell time (seconds) -f FFT, --fft FFT FFT bins -l LO, --lo LO Local oscillator offset -c CONF, --conf CONF Load a config file -i INDEX, --index INDEX Device index (from 0) -r REMOTE, --remote REMOTE Server IP and port",
-    "categories": [
-      "sdr",
-      "wireless"
-    ],
-    "commands": [
-      "rtlsdr-scanner"
-    ],
-    "homepage": "https://github.com/CdeMills/RTLSDR-Scanner",
-    "docsUrl": "https://www.kali.org/tools/rtlsdr-scanner/"
-  },
-  {
     "id": "rtpbreak",
     "name": "rtpbreak",
     "summary": "With rtpbreak you can detect, reconstruct and analyze any RTP session. It doesn't require the presence of RTCP packets and works independently form the used signaling protocol (SIP, H.323, SCCP, ...). The input is a sequence of packets, the output...",
@@ -10378,20 +9558,6 @@
     "docsUrl": "https://www.kali.org/tools/sdrangel/"
   },
   {
-    "id": "seclists",
-    "name": "seclists",
-    "summary": "SecLists is a collection of multiple types of lists used during security assessments. List types include usernames, passwords, URLs, sensitive data grep strings, fuzzing payloads, and many more.",
-    "description": "The goal is to enable a security tester to pull this repo onto a new testing box and have access to every type of list that may be needed.",
-    "categories": [
-      "passwords"
-    ],
-    "commands": [
-      "seclists"
-    ],
-    "homepage": "https://github.com/danielmiessler/SecLists",
-    "docsUrl": "https://www.kali.org/tools/seclists/"
-  },
-  {
     "id": "secure-socket-funneling",
     "name": "secure-socket-funneling",
     "summary": "This package provides simple and efficient ways to forward data from multiple sockets (TCP or UDP) through a single secure TLS link to a remote computer.",
@@ -10576,18 +9742,6 @@
     ],
     "homepage": "https://github.com/wetw0rk/sickle-pdk",
     "docsUrl": "https://www.kali.org/tools/sickle-pdk/"
-  },
-  {
-    "id": "sickle-tool",
-    "name": "sickle-tool",
-    "summary": "Sickle is a payload development tool originally created to aid in crafting shellcode, however it can be used in crafting payloads for other exploit types as well (non-binary). Although the current modules are mostly aimed towards assembly this too...",
-    "description": "Sickle is a payload development tool originally created to aid in crafting shellcode, however it can be used in crafting payloads for other exploit types as well (non-binary). Although the current modules are mostly aimed towards assembly this tool is not limited to shellcode. [-a ARCH] [-b BADCHARS] [-v VARNAME] [-i] [-l] -h, --help Show this help message and exit -r, --read READ Read bytes from binary file (use - for stdin) -p, --payload PAYLOAD Shellcode to use -f, --format FORMAT Output format (--list for more info) -m, --module MODULE Development module -a, --arch ARCH Select architecture for disassembly -b, --badchars BADCHARS Bad characters to avoid in shellcode -v, --varname VARNAME Alternative variable name -i, --info Print detailed info for module or payload -l, --list List av...",
-    "categories": [],
-    "commands": [
-      "sickle-tool"
-    ],
-    "homepage": "https://github.com/wetw0rk/Sickle",
-    "docsUrl": "https://www.kali.org/tools/sickle-tool/"
   },
   {
     "id": "sidguesser",
@@ -10842,21 +9996,6 @@
     "docsUrl": "https://www.kali.org/tools/slowhttptest/"
   },
   {
-    "id": "smali",
-    "name": "smali",
-    "summary": "smali/baksmali is an assembler/disassembler for the dex format used by dalvik, Android's Java VM implementation. The syntax is loosely based on Jasmin's/dedexer's syntax, and supports the full functionality of the dex format (annotations, debug in...",
-    "description": "smali/baksmali is an assembler/disassembler for the dex format used by dalvik, Android's Java VM implementation. The syntax is loosely based on Jasmin's/dedexer's syntax, and supports the full functionality of the dex format (annotations, debug info, line info, etc.) --help,-h,-? - Show usage information --version,-v - Print the version of baksmali and then exit deodex(de,x) - Deodexes an odex/oat file disassemble(dis,d) - Disassembles a dex file. dump(du) - Prints an annotated hex dump for the given dex file help(h) - Shows usage information list(l) - Lists various objects in a dex file. -h,-?,--help - Show usage information -v,--version - Print the version of baksmali and then exit assemble(ass,as,a) - Assembles smali files into a dex file. help(h) - Shows usage information",
-    "categories": [
-      "forensics"
-    ],
-    "commands": [
-      "baksmali",
-      "smali"
-    ],
-    "homepage": "https://github.com/JesusFreke/smali",
-    "docsUrl": "https://www.kali.org/tools/smali/"
-  },
-  {
     "id": "smbmap",
     "name": "smbmap",
     "summary": "SMBMap allows users to enumerate samba share drives across an entire domain. List share drives, drive permissions, share contents, upload/download functionality, file name auto-download pattern matching, and even execute remote commands. This tool...",
@@ -11022,22 +10161,6 @@
     ],
     "homepage": "https://github.com/ghostop14/sparrow-wifi",
     "docsUrl": "https://www.kali.org/tools/sparrow-wifi/"
-  },
-  {
-    "id": "spectools",
-    "name": "spectools",
-    "summary": "Spectrum-Tools is a set of utilities for using the Wi-Spy USB spectrum analyzer tools from Metageek LLC. They include userspace drivers for the hardware (implemented via libusb), a graphing UI built on GTK/Cairo, network servers for remote devices...",
-    "description": "Spectrum-Tools is a set of utilities for using the Wi-Spy USB spectrum analyzer tools from Metageek LLC. They include userspace drivers for the hardware (implemented via libusb), a graphing UI built on GTK/Cairo, network servers for remote devices, and simple utilities for developing additional tools. -n / --net tcp://host:port Connect to network server -l / --list List detected devices -r / --range # Use device range # -d / --device # Use device # --broadcast/-b Send broadcast announce --port/-p Use alternate port --bindaddr/-a Bind to specific address -l / --list List devices and ranges only -r / --range [device:]range Configure a device for a specific range -n / --net tcp://host:port Connect to network server instead of -b / --broadcast Listen for (and connect to) broadcast servers -...",
-    "categories": [
-      "wireless"
-    ],
-    "commands": [
-      "spectool_curses",
-      "spectool_net",
-      "spectool_raw"
-    ],
-    "homepage": "https://www.kismetwireless.net/static/spectools/",
-    "docsUrl": "https://www.kali.org/tools/spectools/"
   },
   {
     "id": "spiderfoot",
@@ -11529,23 +10652,6 @@
     "docsUrl": "https://www.kali.org/tools/stunnel/"
   },
   {
-    "id": "stunnel4",
-    "name": "stunnel4",
-    "summary": "The stunnel program is designed to work as SSL encryption wrapper between remote client and local (inetd-startable) or remote server. The concept is that having non-SSL aware daemons running on your system you can easily setup them to communicate ...",
-    "description": "stunnel can be used to add SSL functionality to commonly used inetd daemons like POP-2, POP-3 and IMAP servers without any changes in the programs' code. This package contains a wrapper script for compatibility with stunnel 3.x stunnel - TLS offloading and load-balancing proxy * Unix: stunnel [FILE] | -fd N | -help | -version | -sockets | -options * WIN32: stunnel [ [ -install | -uninstall | -start | -stop | -reload | -reopen | -exit ] [-quiet] [FILE] ] | -help | -version | -sockets | -op- tions The stunnel program is designed to work as TLS encryption wrapper between remote clients and local (inetd-startable) or remote servers. The concept is that having non-TLS aware daemons running on your system you can easily set them up to communicate with clients over secure TLS channels. stunnel...",
-    "categories": [
-      "post-exploitation",
-      "web"
-    ],
-    "commands": [
-      "stunnel",
-      "stunnel3",
-      "stunnel4"
-    ],
-    "homepage": "https://www.stunnel.org/",
-    "docsUrl": "https://www.kali.org/tools/stunnel4/"
-  },
-  {
     "id": "subfinder",
     "name": "subfinder",
     "summary": "This package contains a subdomain discovery tool that discovers valid subdomains for websites by using passive online sources. It has a simple modular architecture and is optimized for speed. subfinder is built for doing one thing only - passive s...",
@@ -11639,35 +10745,6 @@
     ],
     "homepage": "https://labs.portcullis.co.uk/tools/sucrack/",
     "docsUrl": "https://www.kali.org/tools/sucrack/"
-  },
-  {
-    "id": "sudo",
-    "name": "sudo",
-    "summary": "Transitional package for the removed libnss-sudo.",
-    "description": "This can be safely removed. Sudo is a program designed to allow a sysadmin to give limited root privileges to users and log root activity. The basic philosophy is to give as few privileges as possible but still allow people to get their work done. -b, --base=dn the base DN for sudo LDAP queries -c, --config=conf_file the path to the configuration file -d, --defaults=deftypes only convert Defaults of the specified types -e, --expand-aliases expand aliases when converting -f, --output-format=format set output format: JSON, LDIF or sudoers -i, --input-format=format set input format: LDIF or sudoers -I, --increment=num amount to increase each sudoOrder by -h, --help display help message and exit -m, --match=filter only convert entries that match the filter -M, --match-local match filter use...",
-    "categories": [
-      "kali-linux-labs",
-      "kali-linux-nethunter",
-      "kali-linux-wsl",
-      "identify",
-      "information-gathering",
-      "passwords",
-      "post-exploitation",
-      "reporting",
-      "social-engineering",
-      "vulnerability"
-    ],
-    "commands": [
-      "cvtsudoers",
-      "sudo",
-      "sudo_logsrvd",
-      "sudo_sendlog",
-      "sudoedit",
-      "sudoreplay",
-      "visudo"
-    ],
-    "homepage": "https://www.sudo.ws/",
-    "docsUrl": "https://www.kali.org/tools/sudo/"
   },
   {
     "id": "swaks",
@@ -12104,21 +11181,6 @@
     "docsUrl": "https://www.kali.org/tools/tmux/"
   },
   {
-    "id": "tnftp",
-    "name": "tnftp",
-    "summary": "This is a dummy transitional package transitioning ftp to tnftp. tnftp is what many users affectionately call the enhanced ftp client in NetBSD (http://www.netbsd.org).",
-    "description": "This package is a `port' of the NetBSD ftp client to other systems. The enhancements over the standard ftp client in 4.4BSD include: * command-line editing within ftp * command-line fetching of URLS, including support for: - http proxies (c.f: $http_proxy, $ftp_proxy) - authentication * context sensitive command and filename completion * dynamic progress bar * IPv6 support (from the WIDE project) * modification time preservation * paging of local and remote files, and of directory listings (c.f: lpage', page', pdir') * passive mode support, with fallback to active mode * set option' override of ftp environment variables * TIS Firewall Toolkit gate ftp proxy support (c.f: gate') * transfer-rate throttling (c.f: -T', `rate') [-P PORT] [-q QUITTIME] [-r RETRY] [-s SRCADDR] [-T DIR,MAX[,INC...",
-    "categories": [
-      "kali-linux-nethunter",
-      "kali-linux-wsl"
-    ],
-    "commands": [
-      "tnftp"
-    ],
-    "homepage": "https://en.wikipedia.org/wiki/Tnftp",
-    "docsUrl": "https://www.kali.org/tools/tnftp/"
-  },
-  {
     "id": "tnscmd10g",
     "name": "tnscmd10g",
     "summary": "A tool to prod the oracle tnslsnr process on port 1521/tcp. where 'command' is something like ping, version, status, etc. (default is ping) [-p port] - alternate TCP port to use (default is 1521) [--logfile logfile] - write raw packets to specifie...",
@@ -12249,64 +11311,6 @@
     "docsUrl": "https://www.kali.org/tools/twofi/"
   },
   {
-    "id": "tzdata",
-    "name": "tzdata",
-    "summary": "This package contains data required for the implementation of standard local time for many representative locations around the globe. It is updated periodically to reflect changes made by political bodies to time zone boundaries, UTC offsets, and ...",
-    "description": "This package contains timezones counted in International Atomic Time with a -10 second offset (TAI-10s) in /usr/share/zoneinfo/right. This is the current IBM recommended setting of hardware clocks on IBM mainframes, which ran on GMT until the inception of UTC in 1972 when TAI was 10 seconds ahead of UTC. IBM switched to running clocks at the atomic rate and introduced the 10-second offset in order to avoid a discontinuity. This package also contains legacy timezone symlinks that are not following the current rule of using the geographical region (continent or ocean) and city name.",
-    "categories": [
-      "kali-linux-labs",
-      "kali-linux-nethunter",
-      "kali-linux-wsl",
-      "802-11",
-      "bluetooth",
-      "exploitation",
-      "forensics",
-      "fuzzing",
-      "hardware",
-      "identify",
-      "information-gathering",
-      "passwords",
-      "post-exploitation",
-      "recover",
-      "reporting",
-      "respond",
-      "reverse-engineering",
-      "rfid",
-      "sdr",
-      "sniffing-spoofing",
-      "social-engineering",
-      "top10",
-      "vulnerability",
-      "web",
-      "windows-resources",
-      "wireless"
-    ],
-    "commands": [
-      "tzdata"
-    ],
-    "homepage": "https://www.iana.org/time-zones",
-    "docsUrl": "https://www.kali.org/tools/tzdata/"
-  },
-  {
-    "id": "u-boot",
-    "name": "u-boot",
-    "summary": "Das U-Boot is a cross-platform bootloader for embedded systems, used as the default boot loader by several board vendors. It is intended to be easy to port and to debug, and runs on many supported architectures, including PPC, ARM, MIPS, x86, m68k...",
-    "description": "This package includes boot loaders for qemu/kvm. Included platforms: qemu-ppce500 qemu-riscv64 qemu-riscv64_smode qemu-x86 qemu-x86_64 qemu_arm qemu_arm64 This package includes programs for generating and listing U-Boot images in various formats: - mkimage - dumpimage - mksunxiboot - mkenvimage -l ==> list image header information -T ==> parse image file as 'type' dumpimage [-T type] [-p position] [-o outfile] image -T ==> declare image type as 'type' -p ==> 'position' (starting at 0) of the component to extract from image -o ==> extract component to file 'outfile' dumpimage -h ==> print usage information and exit dumpimage -V ==> print version information and exit -b : boot with preamble (Kirkwood, Avanta, Armada 370/XP/375/38x/39x) -D : boot without preamble (Dove) -b: enter xmodem bo...",
-    "categories": [
-      "kali-linux-arm"
-    ],
-    "commands": [
-      "dumpimage",
-      "kwboot",
-      "mkeficapsule",
-      "mkenvimage",
-      "mkimage",
-      "mksunxiboot"
-    ],
-    "homepage": "https://www.denx.de/wiki/U-Boot/",
-    "docsUrl": "https://www.kali.org/tools/u-boot/"
-  },
-  {
     "id": "ubertooth",
     "name": "ubertooth",
     "summary": "Project Ubertooth is an open source wireless development platform suitable for Bluetooth experimentation. Ubertooth ships with a capable BLE (Bluetooth Smart) sniffer and can sniff some data from Basic Rate (BR) Bluetooth Classic connections.",
@@ -12377,21 +11381,6 @@
     ],
     "homepage": "https://www.ettus.com/sdr-software/uhd-usrp-hardware-driver/",
     "docsUrl": "https://www.kali.org/tools/uhd/"
-  },
-  {
-    "id": "uhd-images",
-    "name": "uhd-images",
-    "summary": "Various UHD Images",
-    "description": "Various UHD Images",
-    "categories": [
-      "sdr",
-      "wireless"
-    ],
-    "commands": [
-      "uhd-images"
-    ],
-    "homepage": "https://www.ettus.com",
-    "docsUrl": "https://www.kali.org/tools/uhd-images/"
   },
   {
     "id": "unar",
@@ -12594,196 +11583,6 @@
     "docsUrl": "https://www.kali.org/tools/uro/"
   },
   {
-    "id": "usbutils",
-    "name": "usbutils",
-    "summary": "This package contains the lsusb utility for inspecting the devices connected to the USB bus. It shows a graphical representation of the devices that are currently plugged in, showing the topology of the USB bus. It also displays information on eac...",
-    "description": "This package contains the lsusb utility for inspecting the devices connected to the USB bus. It shows a graphical representation of the devices that are currently plugged in, showing the topology of the USB bus. It also displays information on each individual device on the bus. -v, --verbose Increase verbosity (show descriptors) -s [[bus]:][devnum] Show only devices with specified device and/or bus numbers (in decimal) -d vendor:[product] Show only devices with the specified vendor and product ID numbers (in hexadecimal) -D device Selects which device lsusb will examine -t, --tree Dump the physical USB device hierarchy as a tree -V, --version Show version of program -h, --help Show usage and help -h, --help output this help message and exit -v, --version output version information and e...",
-    "categories": [
-      "kali-linux-arm",
-      "kali-linux-nethunter",
-      "802-11",
-      "exploitation",
-      "sniffing-spoofing",
-      "social-engineering",
-      "top10",
-      "wireless"
-    ],
-    "commands": [
-      "lsusb",
-      "usb-devices",
-      "usbhid-dump",
-      "usbreset"
-    ],
-    "homepage": "https://github.com/gregkh/usbutils",
-    "docsUrl": "https://www.kali.org/tools/usbutils/"
-  },
-  {
-    "id": "util-linux",
-    "name": "util-linux",
-    "summary": "Never logged in",
-    "description": "This package contains some extra BSD utilities: col, colcrt, colrm, column, hd, hexdump, look, rev, ul. Other BSD utilities are provided by bsdutils and calendar. col [options] -b, --no-backspaces do not output backspaces -f, --fine permit forward half line feeds -p, --pass pass unknown control sequences -h, --tabs convert spaces to tabs -x, --spaces convert tabs to spaces -l, --lines NUM buffer at least NUM lines -H, --help display this help -V, --version display version colcrt [options] [...] -, --no-underlining suppress all underlining -2, --half-lines print all half-lines -h, --help display this help -V, --version display version colrm [startcol [endcol]] -h, --help display this help -V, --version display version column [options] [...] -t, --table create a table -n, --table-name tab...",
-    "categories": [
-      "kali-linux-labs",
-      "kali-linux-nethunter",
-      "kali-linux-wsl",
-      "802-11",
-      "bluetooth",
-      "crypto-stego",
-      "database",
-      "detect",
-      "exploitation",
-      "forensics",
-      "fuzzing",
-      "hardware",
-      "identify",
-      "information-gathering",
-      "passwords",
-      "post-exploitation",
-      "protect",
-      "recover",
-      "reporting",
-      "respond",
-      "reverse-engineering",
-      "rfid",
-      "sdr",
-      "sniffing-spoofing",
-      "social-engineering",
-      "top10",
-      "voip",
-      "vulnerability",
-      "web",
-      "windows-resources",
-      "wireless"
-    ],
-    "commands": [
-      "addpart",
-      "agetty",
-      "bits",
-      "blkdiscard",
-      "blkid",
-      "blkpr",
-      "blkzone",
-      "blockdev",
-      "cfdisk",
-      "chcpu",
-      "chmem",
-      "choom",
-      "chrt",
-      "col",
-      "colcrt",
-      "colrm",
-      "column",
-      "copyfilerange",
-      "coresched",
-      "ctrlaltdel",
-      "delpart",
-      "dmesg",
-      "eject",
-      "enosys",
-      "exch",
-      "fadvise",
-      "fallocate",
-      "fdisk",
-      "fincore",
-      "findfs",
-      "findmnt",
-      "flock",
-      "fsck",
-      "fsck.cramfs",
-      "fsck.minix",
-      "fsfreeze",
-      "fstrim",
-      "getino",
-      "getopt",
-      "getty",
-      "hardlink",
-      "hd",
-      "hexdump",
-      "hwclock",
-      "i386",
-      "ionice",
-      "ipcmk",
-      "ipcrm",
-      "ipcs",
-      "isosize",
-      "lastlog2",
-      "ldattach",
-      "linux32",
-      "linux64",
-      "logger",
-      "login",
-      "look",
-      "losetup",
-      "lsblk",
-      "lsclocks",
-      "lscpu",
-      "lsfd",
-      "lsipc",
-      "lsirq",
-      "lslocks",
-      "lslogins",
-      "lsmem",
-      "lsns",
-      "mcookie",
-      "mkfs",
-      "mkfs.bfs",
-      "mkfs.cramfs",
-      "mkfs.minix",
-      "mkswap",
-      "more",
-      "mount",
-      "mountpoint",
-      "namei",
-      "newgrp",
-      "nologin",
-      "nsenter",
-      "partx",
-      "pipesz",
-      "pivot_root",
-      "prlimit",
-      "readprofile",
-      "rename.ul",
-      "renice",
-      "resizepart",
-      "rev",
-      "rfkill",
-      "rtcwake",
-      "runuser",
-      "script",
-      "scriptlive",
-      "scriptreplay",
-      "setarch",
-      "setpriv",
-      "setsid",
-      "setterm",
-      "sfdisk",
-      "sg",
-      "su",
-      "sulogin",
-      "swaplabel",
-      "swapoff",
-      "swapon",
-      "switch_root",
-      "taskset",
-      "uclampset",
-      "ul",
-      "umount",
-      "unshare",
-      "uuidd",
-      "uuidgen",
-      "uuidparse",
-      "waitpid",
-      "wall",
-      "wdctl",
-      "whereis",
-      "wipefs",
-      "x86_64",
-      "zramctl"
-    ],
-    "homepage": "https://github.com/util-linux/util-linux",
-    "docsUrl": "https://www.kali.org/tools/util-linux/"
-  },
-  {
     "id": "vboot-utils",
     "name": "vboot-utils",
     "summary": "Cgpt is a tool to manipulate GUID Partition Table from command line. It also supports Chromium OS extensions enabling you to change priority for kernel partitions. create Create or reset GPT headers and tables add Add, edit or remove a partition e...",
@@ -12929,18 +11728,6 @@
     ],
     "homepage": "https://github.com/streambinder/vpnc",
     "docsUrl": "https://www.kali.org/tools/vpnc/"
-  },
-  {
-    "id": "vwifi-dkms",
-    "name": "vwifi-dkms",
-    "summary": "This package contains a minimal interface to provide essential functionalities, such as scanning for dummy Wi-Fi networks, establishing connections, and disconnecting from them.",
-    "description": "It is built upon the cfg80211 subsystem, which collaborates with FullMAC drivers. Currently, vwifi supports both Station Mode and Host AP Mode and is equipped with robust WPA/WPA2 security features. This enables users to configure a wireless environment using vwifi, hostapd (in HostAP mode interface), and wpa_supplicant (in station mode interface). This package contains a tool which supports more user-specific utilization for vwifi-dkms. It aims to provide more flexibility and customization for users of vwifi-dkms. Currently supporting feature: * display the status of vwifi driver * Use netlink socket to communicate with vwifi driver allowing user to configure user-specific deny list",
-    "categories": [],
-    "commands": [
-      "vwifi-tool"
-    ],
-    "homepage": "https://github.com/sysprog21/vwifi",
-    "docsUrl": "https://www.kali.org/tools/vwifi-dkms/"
   },
   {
     "id": "wafw00f",
@@ -13305,21 +12092,6 @@
     "docsUrl": "https://www.kali.org/tools/wig-ng/"
   },
   {
-    "id": "windows-binaries",
-    "name": "windows-binaries",
-    "summary": "A collection of Windows executables for use on penetration tests.",
-    "description": "A collection of Windows executables for use on penetration tests.",
-    "categories": [
-      "windows-resources"
-    ],
-    "commands": [
-      "windows-binaries",
-      "windows-resources"
-    ],
-    "homepage": "https://www.kali.org",
-    "docsUrl": "https://www.kali.org/tools/windows-binaries/"
-  },
-  {
     "id": "windows-privesc-check",
     "name": "windows-privesc-check",
     "summary": "Windows-privesc-check is standalone executable that runs on Windows systems (tested on XP, Windows 7 only so far). It tries to find misconfigurations that could allow local unprivileged users to escalate privileges to other users or to access loca...",
@@ -13332,20 +12104,6 @@
     ],
     "homepage": "https://pentestmonkey.net/tools/windows-privesc-check",
     "docsUrl": "https://www.kali.org/tools/windows-privesc-check/"
-  },
-  {
-    "id": "winexe",
-    "name": "winexe",
-    "summary": "Winexe remotely executes commands on Windows NT/2000/XP/2003 systems from GNU/Linux (and possibly also from other Unices capable of building the Samba 4 software package). -h, --help Display help message -V, --version Display version number -U, --...",
-    "description": "With the given credentials (-U ‘Administrator%s3cr3t’), connect to the remote server (//192.168.1.225), and execute the given command (cmd.exe /c echo “this is running on windows”):",
-    "categories": [
-      "passwords"
-    ],
-    "commands": [
-      "winexe"
-    ],
-    "homepage": "https://sourceforge.net/projects/winexe",
-    "docsUrl": "https://www.kali.org/tools/winexe/"
   },
   {
     "id": "winregfs",
@@ -13442,22 +12200,6 @@
     ],
     "homepage": "https://github.com/GregorBiswanger/WordlistRaider",
     "docsUrl": "https://www.kali.org/tools/wordlistraider/"
-  },
-  {
-    "id": "wordlists",
-    "name": "wordlists",
-    "summary": "This package contains the rockyou.txt wordlist and has an installation size of 134 MB.",
-    "description": "This package contains the rockyou.txt wordlist and has an installation size of 134 MB.",
-    "categories": [
-      "information-gathering",
-      "passwords",
-      "vulnerability"
-    ],
-    "commands": [
-      "wordlists"
-    ],
-    "homepage": "https://www.kali.org",
-    "docsUrl": "https://www.kali.org/tools/wordlists/"
   },
   {
     "id": "wotmate",
@@ -13579,20 +12321,6 @@
     "docsUrl": "https://www.kali.org/tools/xplico/"
   },
   {
-    "id": "xprobe",
-    "name": "xprobe",
-    "summary": "Xprobe2 allows you to determine what operating system is running on a remote host. It sends several packets to a host and analyses the returned answers.",
-    "description": "Xprobe2's functionality is comparable to the OS fingerprinting feature in nmap (written by a different Fyodor): - Outputs its level of confidence about the OS on the remote host. - Remains usable even if intermediate systems (routers, firewalls) make slight modifications to the packets. - Can list the type of intermediate device (e.g. \"Linux IP masquerading\"). - Modular architecture allows new fingerprinting tests and new OS signatures to be added. -v Be verbose -r Show route to target(traceroute) -p Specify portnumber, protocol and state. Example: tcp:23:open, UDP:53:CLOSED -c Specify config file to use. -h Print this help. -o Use logfile to log everything. -t Set initial receive timeout or roundtrip time. -s Set packsending delay (milseconds). -d Specify debugging level. -D Disable mo...",
-    "categories": [
-      "information-gathering"
-    ],
-    "commands": [
-      "xprobe2"
-    ],
-    "homepage": "",
-    "docsUrl": "https://www.kali.org/tools/xprobe/"
-  },
-  {
     "id": "xspy",
     "name": "xspy",
     "summary": "Sniffs keystrokes on remote or local X-Windows servers.",
@@ -13689,32 +12417,6 @@
     "docsUrl": "https://www.kali.org/tools/zaproxy/"
   },
   {
-    "id": "zd1211-firmware",
-    "name": "zd1211-firmware",
-    "summary": "This package contains the firmware to be used with the zd1211rw Linux kernel driver for USB wireless dongles based on the following chipsets:",
-    "description": "For more information, see also: http://wiki.debian.org/zd1211rw",
-    "categories": [
-      "kali-linux-firmware"
-    ],
-    "commands": [
-      "zd1211-firmware"
-    ],
-    "homepage": "https://sourceforge.net/projects/zd1211/",
-    "docsUrl": "https://www.kali.org/tools/zd1211-firmware/"
-  },
-  {
-    "id": "zenmap-kbx",
-    "name": "zenmap-kbx",
-    "summary": "Zenmap is an Nmap frontend. It is meant to be useful for advanced users and to make Nmap easy to use by beginners. It was originally derived from Umit, an Nmap GUI created as part of the Google Summer of Code.",
-    "description": "This application runs in a container via kaboxer.",
-    "categories": [],
-    "commands": [
-      "zenmap-kbx"
-    ],
-    "homepage": "https://nmap.org/",
-    "docsUrl": "https://www.kali.org/tools/zenmap-kbx/"
-  },
-  {
     "id": "zerofree",
     "name": "zerofree",
     "summary": "Zerofree finds the unallocated blocks with non-zero value content in an ext2, ext3 or ext4 file-system and fills them with zeroes (zerofree can also work with another value than zero). This is mostly useful if the device on which this file-system ...",
@@ -13737,18 +12439,6 @@
     ],
     "homepage": "https://zim-wiki.org",
     "docsUrl": "https://www.kali.org/tools/zim/"
-  },
-  {
-    "id": "zonedb",
-    "name": "zonedb",
-    "summary": "This package provides a free, open-source database (http://opendatacommons.org/licenses/odbl/1.0/) containing a list and associated metadata of public DNS zones (http://en.wikipedia.org/wiki/DNS_zone) (domain name extensions). It attempts to be ex...",
-    "description": "This package is the library package (source code). This package provides a free, open-source database (http://opendatacommons.org/licenses/odbl/1.0/) containing a list and associated metadata of public DNS zones (http://en.wikipedia.org/wiki/DNS_zone) (domain name extensions). It attempts to be exhaustive, including current, retired, and withdrawn top-level domains and subdomains. -add-languages string add BCP 47 language tags to zones (comma-delimited) -add-locations string add locations to zones (comma-delimited) -add-rdap-url string add RDAP URL to zones -add-tags string add tags to zones (comma-delimited) -c int number of concurrent connections (default 32) -dir string data directory (location of zones.txt and metadata dir) (default \"/var/lib/zonedb\") -exclude-tags string exclude wo...",
-    "categories": [],
-    "commands": [
-      "zonedb"
-    ],
-    "homepage": "https://github.com/zonedb/zonedb",
-    "docsUrl": "https://www.kali.org/tools/zonedb/"
   },
   {
     "id": "zsh",
