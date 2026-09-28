@@ -194,7 +194,7 @@
 			<!-- Step 2: Review & User Notes -->
 			<div v-else class="flex min-h-0 flex-1 flex-col px-2.5 pb-2.5 text-xs">
 				<div class="mb-4">
-					<h3 class="text-xs font-semibold text-foreground uppercase tracking-wide">
+					<h3 class="text-xs font-semibold text-foreground tracking-wide">
 						Selected Tools ({{ selectedToolsList.length }})
 					</h3>
 					<p class="text-xs text-muted-foreground mt-0.5">
@@ -220,7 +220,7 @@
 
 				<!-- User Instructions Textarea -->
 				<div class="flex flex-1 flex-col min-h-0">
-					<label for="kali-user-notes" class="text-xs font-semibold text-foreground uppercase tracking-wide">
+					<label for="kali-user-notes" class="text-xs font-semibold text-foreground tracking-wide">
 						Parameters & Instructions (Optional)
 					</label>
 					<p class="text-xs text-muted-foreground mt-0.5 mb-2">
