@@ -40,8 +40,8 @@ export const useMcpStore = defineStore("mcp", {
 		/** Listens to the harness SSE feed; each reachability ping refetches the list. */
 		startFeed() {
 			if (this.source) return;
+			this.fetch();
 			this.source = new EventSource(`${API_BASE_URL}/events`);
-			this.source.onopen = () => this.fetch();
 			this.source.onmessage = () => this.fetch();
 		},
 		/** Config file path and last parse error, for the settings view. */
