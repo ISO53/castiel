@@ -61,6 +61,8 @@ public class AgentRunManager {
 
 		private final BoundedOutputBuffer transcript = BoundedOutputBuffer.of(TRANSCRIPT_CAPACITY_CHARS);
 		private final AtomicBoolean cancelled = new AtomicBoolean(false);
+		// Set when the run finished its work and should end without another model round.
+		private final AtomicBoolean stopRequested = new AtomicBoolean(false);
 		private final AtomicLong lastTranscriptPingAt = new AtomicLong(0);
 
 		private volatile State state = State.QUEUED;
@@ -124,6 +126,20 @@ public class AgentRunManager {
 
 		public AtomicBoolean cancelled() {
 			return cancelled;
+		}
+
+		/**
+		 * Asks the run to end after the current tool round. Unlike {@link #cancelled()} this is
+		 * a successful finish, not a failure: it saves the model a final summary round when the
+		 * run has no reason to keep talking.
+		 */
+		public void requestStop() {
+			stopRequested.set(true);
+		}
+
+		/** True once {@link #requestStop()} was called. */
+		public boolean isStopRequested() {
+			return stopRequested.get();
 		}
 
 		public TokenUsage totalUsage() {

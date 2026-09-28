@@ -68,12 +68,20 @@ public class ProcessManager {
 	 * strings.
 	 */
 	public ManagedProcess start(String command, String purpose) throws IOException {
+		return start(command, purpose, null);
+	}
+
+	/**
+	 * Starts {@code command} and records which sub-agent run owns it, so launch coverage can be
+	 * verified later without parsing the command line.
+	 */
+	public ManagedProcess start(String command, String purpose, String ownerRunId) throws IOException {
 		ProcessBuilder builder = shellCommand(command);
 		builder.directory(workspace.root().map(Path::toFile).orElse(null));
 
 		Process process = builder.start();
 		String id = newId();
-		ManagedProcess entry = new ManagedProcess(id, process, command, purpose.strip());
+		ManagedProcess entry = new ManagedProcess(id, process, command, purpose.strip(), ownerRunId);
 		processes.put(id, entry);
 
 		Thread.ofVirtual().name("bg-out-" + id).start(() -> drain(entry, false));

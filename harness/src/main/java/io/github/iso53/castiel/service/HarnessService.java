@@ -61,12 +61,6 @@ public class HarnessService {
 	/** Inject a workspace-sync checkpoint reminder into the model's context every N tool rounds. */
 	private static final int CHECKPOINT_INTERVAL_ROUNDS = 12;
 
-	private static final String CHECKPOINT_REMINDER = """
-		[harness checkpoint] You have made many tool calls without finishing. Before continuing, \
-		synchronize any confirmed findings into the workspace documents now (network.json, web.json, \
-		vulnerabilities.json, evidence.json. Read first, merge, never overwrite existing \
-		entries). Then carry on with your remaining work.""";
-
 	/** Arguments preset substituted for tool calls whose streamed arguments arrived truncated. */
 	private static final String FAULTY_TOOL_CALL_ARGUMENTS = "{}";
 
@@ -471,9 +465,9 @@ public class HarnessService {
 						CURRENT_GENERATION.remove();
 					}
 					// Periodic checkpoint: nudge the model to sync findings into the workspace
-					// instead of stockpiling observations across a long tool-call stretch.
+					// and check app state like bg processes, sub agents etc.
 					if ((round + 1) % CHECKPOINT_INTERVAL_ROUNDS == 0) {
-						nextMessages.add(SystemMessage.from(CHECKPOINT_REMINDER));
+						nextMessages.add(SystemMessage.from(buildCheckpointReminder()));
 					}
 					streamRound(generationId, provider, modelName, options, nextMessages, sink, state, round + 1);
 				}
@@ -526,6 +520,32 @@ public class HarnessService {
 		if (value != null) {
 			map.put(key, value);
 		}
+	}
+
+	private String buildCheckpointReminder() {
+		StringBuilder sb = new StringBuilder();
+
+		// Warn the agent about not forgetting to update the workspace documents
+		String msg = """
+		[harness checkpoint] You have made many tool calls without finishing. Before continuing, \
+		synchronize any confirmed findings into the workspace documents now (network.json, web.json, \
+		vulnerabilities.json, evidence.json. Read first, merge, never overwrite existing \
+		entries).""";
+		sb.append(msg).append("\n");
+
+		// Warn the agent about any running/un-read background processes
+		List<io.github.iso53.castiel.tool.process.ManagedProcess> bgList = processManager.list();
+		int totalCount = bgList.size();
+		if (totalCount > 0) {
+			int unseenCount = bgList.stream().filter(p -> !p.isSeenByAgent()).toList().size();
+			int totalRunning = bgList.stream().filter(p -> p.isRunning()).toList().size();
+			sb.append("You also have some background processes to look at too.\n");
+			sb.append("You have ").append(unseenCount).append(" unseen background processes.\n");
+			sb.append("You have ").append(totalRunning).append(" still running background processes.\n");
+		}
+
+		sb.append("After doing the checkpoint tasks, then carry on with your remaining work.");
+		return sb.toString();
 	}
 
 	/**

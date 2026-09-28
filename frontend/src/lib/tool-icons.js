@@ -6,13 +6,14 @@ import {
 	FilePen,
 	FilePlus,
 	FileText,
-	FolderSearch,
+	PackageSearch,
 	Globe,
 	Info,
 	Link2,
 	MessageCircleQuestionMark,
 	Plug,
 	SquareTerminal,
+	FolderSearch,
 } from "@lucide/vue";
 
 export const TOOL_ICONS = {
@@ -31,6 +32,7 @@ export const TOOL_ICONS = {
 	workspace_search: FolderSearch,
 	sub_agent: Bot,
 	ask_user_question: MessageCircleQuestionMark,
+	search_kali_tools: PackageSearch,
 };
 
 export function toolIcon(name) {

@@ -3,6 +3,7 @@ package io.github.iso53.castiel.agent;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
+import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.SystemMessage;
@@ -95,7 +96,18 @@ public class SubAgentRunner {
 	}
 
 	// Everything one sub-agent generation needs, resolved by the {@code sub_agent} tool.
-	public record RunSpec(String label, String systemPrompt, Set<String> allowedTools, String task, int maxRounds) {
+	public record RunSpec(
+		String label,
+		String systemPrompt,
+		Set<String> allowedTools,
+		String task,
+		int maxRounds,
+		boolean persistTranscript
+	) {
+		public RunSpec(String label, String systemPrompt, Set<String> allowedTools, String task, int maxRounds) {
+			this(label, systemPrompt, allowedTools, task, maxRounds, true);
+		}
+
 		public RunSpec {
 			label = label == null || label.isBlank() ? AgentGuardrails.WORKER_LABEL : label.strip();
 			systemPrompt = systemPrompt == null ? "" : systemPrompt.strip();
@@ -133,8 +145,19 @@ public class SubAgentRunner {
 			StreamingChatModel model = resolveModel();
 			List<ChatMessage> messages = buildMessages(spec);
 			HarnessService.AgentToolset toolset = harnessProvider.getObject().toolsFor(spec.allowedTools());
+			log.info(
+				"Run {} ({}) starting with tools {} and a budget of {} rounds",
+				run.id(),
+				spec.label(),
+				toolset.specifications().stream().map(ToolSpecification::name).toList(),
+				spec.maxRounds()
+			);
+			if (toolset.specifications().isEmpty()) {
+				// Nothing to call means the loop can only ever return an empty answer.
+				log.warn("Run {} has no usable tools after filtering {}", run.id(), spec.allowedTools());
+			}
 			Outcome loop = loop(run, spec, model, messages, toolset);
-			Path transcriptPath = persistTranscript(run, spec, loop.transcript(), loop.usage());
+			Path transcriptPath = spec.persistTranscript() ? persistTranscript(run, spec, loop.transcript(), loop.usage()) : null;
 			run.setTotalUsage(loop.usage());
 			run.setTranscriptPath(transcriptPath);
 			run.setResultSummary(cap(loop.summary(), RESULT_CHAR_CAP));
@@ -145,6 +168,7 @@ public class SubAgentRunner {
 			};
 			run.setState(state);
 			run.setError(loop.error());
+			log.info("Run {} ended as {} after {} rounds", run.id(), state, loop.rounds());
 			return new SubAgentOutcome(
 				loop.status(),
 				cap(loop.summary(), RESULT_CHAR_CAP),
@@ -152,14 +176,21 @@ public class SubAgentRunner {
 				loop.usage(),
 				loop.rounds()
 			);
-		} catch (Exception ex) {
+		} catch (Throwable ex) {
+			// Throwable, not Exception: an Error here would otherwise escape and strand the run
+			// in RUNNING with a dead thread, leaving the cancel button with nothing to stop.
 			String message = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
-			log.warn("Sub-agent run {} failed: {}", run.id(), message);
+			log.warn("Sub-agent run {} failed: {}", run.id(), message, ex);
 			run.setError(message);
 			run.setState(AgentRunManager.State.FAILED);
 			return new SubAgentOutcome("failed", "Error: " + message, run.transcriptPath(), run.totalUsage(), -1);
 		} finally {
 			HarnessService.setCurrentGenerationId(null);
+			// Last resort: never leave a run marked running once its thread is gone.
+			if (!run.isFinished()) {
+				log.warn("Sub-agent run {} ended without a terminal state; marking it failed", run.id());
+				run.setState(AgentRunManager.State.FAILED);
+			}
 			runs.notifyChange();
 			log.info(
 				"Sub-agent run {} finished in {} ms",
@@ -185,10 +216,12 @@ public class SubAgentRunner {
 
 		for (; round < spec.maxRounds(); round++) {
 			if (run.cancelled().get()) {
+				log.info("Run {} stopped before round {}: cancel was requested", run.id(), round + 1);
 				return new Outcome("cancelled", "", transcript.toString().strip(), total, round, transcript.toString());
 			}
 			long remainingNanos = deadlineNanos - System.nanoTime();
 			if (remainingNanos <= 0) {
+				log.warn("Run {} stopped at round {}: wall-clock limit reached", run.id(), round + 1);
 				return new Outcome(
 					"failed",
 					"wall-clock limit of " + MAX_RUNTIME.toMinutes() + " min reached",
@@ -208,6 +241,7 @@ public class SubAgentRunner {
 				roundResult = blockingRound(model, request, run, Duration.ofNanos(remainingNanos));
 			} catch (Exception ex) {
 				if (run.cancelled().get()) {
+					log.info("Run {} stopped during round {}: cancel was requested", run.id(), round + 1);
 					return new Outcome(
 						"cancelled",
 						"",
@@ -218,6 +252,8 @@ public class SubAgentRunner {
 					);
 				}
 				String message = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
+				// The message alone hides provider errors; the trace explains them in debug runs.
+				log.warn("Run {} failed during round {}: {}", run.id(), round + 1, message, ex);
 				return new Outcome(
 					"failed",
 					message,
@@ -233,12 +269,21 @@ public class SubAgentRunner {
 			if (!ai.hasToolExecutionRequests()) {
 				String summary =
 					ai.text() == null || ai.text().isBlank() ? "(the sub-agent returned an empty answer)" : ai.text();
+				log.info("Run {} finished in round {}: the model asked for no further tools", run.id(), round + 1);
 				return new Outcome("done", "", summary, total, round + 1, transcript.toString());
 			}
 
 			thread.add(ai);
 			for (ToolExecutionRequest toolRequest : ai.toolExecutionRequests()) {
+				log.debug(
+					"Run {} round {} calling tool {} with {}",
+					run.id(),
+					round + 1,
+					toolRequest.name(),
+					toolRequest.arguments()
+				);
 				String result = executeTool(toolset, toolRequest);
+				log.debug("Run {} round {} tool {} returned: {}", run.id(), round + 1, toolRequest.name(), firstLine(result));
 				transcript
 					.append("\n\n### tool call: ")
 					.append(toolRequest.name())
@@ -249,6 +294,7 @@ public class SubAgentRunner {
 					.append(cap(result, RESULT_CHAR_CAP));
 				thread.add(ToolExecutionResultMessage.from(toolRequest, result));
 				if (run.cancelled().get()) {
+					log.info("Run {} stopped after round {}: cancel was requested", run.id(), round + 1);
 					return new Outcome(
 						"cancelled",
 						"",
@@ -258,9 +304,22 @@ public class SubAgentRunner {
 						transcript.toString()
 					);
 				}
+				// The run signalled it has nothing left to do; skip the final summary round.
+				if (run.isStopRequested()) {
+					log.info("Run {} stopped after round {}: it requested to stop", run.id(), round + 1);
+					return new Outcome(
+						"done",
+						"",
+						"The run finished its tool work and stopped on request.",
+						total,
+						round + 1,
+						transcript.toString()
+					);
+				}
 			}
 		}
 
+		log.info("Run {} exhausted its budget of {} rounds without settling", run.id(), spec.maxRounds());
 		return new Outcome(
 			"done",
 			"",
@@ -275,6 +334,12 @@ public class SubAgentRunner {
 
 	// Result of one model round: the (possibly tool-calling) message and its token usage.
 	private record Round(AiMessage message, TokenUsage usage) {}
+
+	// Collapses a tool result to its first line, so a debug line stays readable.
+	private static String firstLine(String text) {
+		int newline = text.indexOf('\n');
+		return (newline < 0 ? text : text.substring(0, newline)).strip();
+	}
 
 	// Minimum spacing between UI change pings triggered by fresh transcript text, per run.
 	private static final long TRANSCRIPT_PING_INTERVAL_MS = 1_000;

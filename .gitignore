@@ -34,3 +34,6 @@ dist/
 
 # lock files
 package-lock.json
+
+# scripts
+scripts/

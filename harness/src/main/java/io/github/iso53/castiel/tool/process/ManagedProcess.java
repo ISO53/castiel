@@ -32,6 +32,9 @@ public final class ManagedProcess {
 	private final String purpose;
 	private final Instant startedAt;
 
+	// Run id of the sub-agent generation that started this, or null for user/agent starts.
+	private final String ownerRunId;
+
 	private final Process process;
 	private final OutputStream stdin;
 	private final BoundedOutputBuffer output;
@@ -45,10 +48,11 @@ public final class ManagedProcess {
 	private volatile Instant endedAt;
 	private volatile boolean seenByAgent;
 
-	ManagedProcess(String id, Process process, String command, String purpose) {
+	ManagedProcess(String id, Process process, String command, String purpose, String ownerRunId) {
 		this.id = id;
 		this.command = command;
 		this.purpose = purpose;
+		this.ownerRunId = ownerRunId;
 		this.startedAt = Instant.now();
 		this.process = process;
 		this.stdin = process.getOutputStream();
@@ -69,6 +73,11 @@ public final class ManagedProcess {
 
 	public String purpose() {
 		return purpose;
+	}
+
+	/** Run id of the sub-agent that started this process, or null when not sub-agent owned. */
+	public String ownerRunId() {
+		return ownerRunId;
 	}
 
 	public Instant startedAt() {
@@ -135,6 +144,22 @@ public final class ManagedProcess {
 	/** True when the process is alive but exits while being killed. */
 	boolean sameUnderlying(Process other) {
 		return process == other;
+	}
+
+	/**
+	 * Null while the process is still alive, otherwise its exit code. Reads the OS process
+	 * directly, so an instant exit is visible even before the exit callback updates the state.
+	 */
+	public Integer exitCodeIfDead() {
+		if (process.isAlive()) {
+			return null;
+		}
+		try {
+			return process.exitValue();
+		} catch (IllegalThreadStateException ex) {
+			// Died without a readable code; fall back to whatever the exit callback recorded.
+			return exitCode;
+		}
 	}
 
 	/** Queues text for delivery to the process stdin; returns false after exit. */

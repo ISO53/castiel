@@ -64,7 +64,7 @@ public class BackgroundShellTool implements ToolProvider {
 				entry.id() +
 				" (pid " +
 				entry.osPid() +
-				"). Use bg_read/bg_list to follow it; bg_send to type into it if interactive."
+				"). It keeps running across your turns; the user sees it in the Processes view."
 			);
 		} catch (Exception ex) {
 			return "Error: could not start the command: " + ex.getMessage();
