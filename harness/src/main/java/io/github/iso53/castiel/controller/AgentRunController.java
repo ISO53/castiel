@@ -9,7 +9,6 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,8 +70,11 @@ public class AgentRunController {
 		row.put("task", run.task());
 		row.put("state", run.state().name());
 		row.put("activity", run.activity().name());
-		row.put("runtimeSeconds", Duration.between(run.startedAt(), java.time.Instant.now()).toSeconds());
+		row.put("runtimeSeconds", run.runtimeSeconds());
 		row.put("startedAt", run.startedAt().toEpochMilli());
+		if (run.endedAt() != null) {
+			row.put("endedAt", run.endedAt().toEpochMilli());
+		}
 		row.put("resultSummary", run.resultSummary());
 		row.put("error", run.error());
 		return row;

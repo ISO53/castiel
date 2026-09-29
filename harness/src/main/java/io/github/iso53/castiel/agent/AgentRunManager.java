@@ -3,6 +3,7 @@ package io.github.iso53.castiel.agent;
 import dev.langchain4j.model.output.TokenUsage;
 import io.github.iso53.castiel.tool.process.ProcessManager;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -67,6 +68,9 @@ public class AgentRunManager {
 		private final AtomicBoolean stopRequested = new AtomicBoolean(false);
 
 		private volatile State state = State.QUEUED;
+		// Stamped when the run first reaches a terminal state, so its runtime stops there
+		// instead of growing for as long as the registry keeps the row.
+		private volatile Instant endedAt;
 		private volatile Activity activity = Activity.WORKING;
 		private volatile TokenUsage totalUsage = new TokenUsage(0, 0, 0);
 		private volatile String resultSummary = "";
@@ -98,6 +102,20 @@ public class AgentRunManager {
 
 		public Instant startedAt() {
 			return startedAt;
+		}
+
+		/** When the run reached a terminal state, or null while it is still working. */
+		public Instant endedAt() {
+			return endedAt;
+		}
+
+		/**
+		 * How long the run has taken. A finished run reports the time up to the moment it
+		 * settled; a live one keeps counting, so the UI can tick it between server updates.
+		 */
+		public long runtimeSeconds() {
+			Instant end = endedAt != null ? endedAt : Instant.now();
+			return Math.max(0L, Duration.between(startedAt, end).toSeconds());
 		}
 
 		public State state() {
@@ -153,6 +171,10 @@ public class AgentRunManager {
 
 		void setState(State state) {
 			this.state = state;
+			// Only the first terminal state counts; a later re-set must not move the end.
+			if (endedAt == null && (state == State.DONE || state == State.FAILED || state == State.CANCELLED)) {
+				endedAt = Instant.now();
+			}
 		}
 
 		void setTotalUsage(TokenUsage totalUsage) {
