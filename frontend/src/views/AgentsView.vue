@@ -6,6 +6,7 @@ import DOMPurify from "dompurify";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/ui/button";
 import EmptyState from "@/components/EmptyState.vue";
+import DataTable from "@/components/views/DataTable.vue";
 import { useAgentsStore } from "@/stores/agents";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { dotClass, dotTitle } from "@/lib/dock-dots";
@@ -106,10 +107,17 @@ function shortId(id) {
 	return text.length > 16 ? text.slice(0, 9) + "…" + text.slice(-5) : text;
 }
 
-function shortTask(task) {
-	const line = (task ?? "").replace(/\s+/g, " ").trim();
-	return line.length > 70 ? line.slice(0, 67) + "..." : line;
-}
+// Dock columns: no sorting, and the status dot and action buttons keep a fixed width
+// so the row always reads the same way. Sizes seed the persisted layout.
+const columns = [
+	{ id: "dot", header: "", accessorFn: (row) => row.state, enableSorting: false, enableResizing: false, size: 28 },
+	{ id: "id", header: "ID", accessorKey: "id", enableSorting: false, size: 110 },
+	{ id: "profile", header: "Profile", accessorKey: "profile", enableSorting: false, size: 130 },
+	{ id: "runtime", header: "Runtime", accessorFn: (row) => row.runtimeSeconds ?? 0, enableSorting: false, size: 100 },
+	{ id: "status", header: "Status", accessorFn: (row) => row.state, enableSorting: false, size: 120 },
+	{ id: "task", header: "Task", accessorKey: "task", enableSorting: false, size: 380 },
+	{ id: "actions", header: "", accessorFn: () => "", enableSorting: false, enableResizing: false, size: 72 },
+];
 
 // The Status column shows a phase while a run works and a terminal state word once
 // it settles. DONE reads as "Finished" because that is what it means to the user.
@@ -145,69 +153,59 @@ const summaryHtml = computed(() =>
 		</EmptyState>
 
 		<template v-else>
-			<div :class="store.selected ? 'shrink-0 border-b border-zinc-800' : 'min-h-[35%] flex-1 overflow-auto'"
-				@scroll.prevent>
-				<table class="w-full text-left text-xs">
-					<thead v-if="!store.selected" class="sticky top-0 bg-zinc-950 text-zinc-500">
-						<tr>
-							<th class="w-4 px-3 py-1.5"></th>
-							<th class="px-3 py-1.5 font-medium">ID</th>
-							<th class="px-3 py-1.5 font-medium">Profile</th>
-							<th class="px-3 py-1.5 font-medium">Runtime</th>
-							<th class="px-3 py-1.5 font-medium">Status</th>
-							<th class="px-3 py-1.5 font-medium">Task</th>
-							<th class="px-3 py-1.5"></th>
-						</tr>
-					</thead>
-					<tbody>
-						<tr v-for="row in displayRows" :key="row.id"
-							class="h-7 border-t border-zinc-900"
-							:class="[
-								isSettled(row) ? 'cursor-pointer hover:bg-zinc-900/60' : '',
-								row.id === store.selectedId ? 'bg-zinc-900' : '',
-							]"
-							:title="isSettled(row) ? (row.id === store.selectedId ? 'Click to close' : 'Click to read the summary') : row.task"
-							@click="selectRow(row)">
-							<td class="w-4 px-3 py-1.5">
-								<span class="inline-block size-1.5 rounded-full" :class="dotClass(row.state)"
-									:title="dotTitle(row.state)" />
-							</td>
-							<td class="px-3 py-1.5 font-mono">
-								<span class="block max-w-[14ch] truncate" :title="row.id">{{ shortId(row.id) }}</span>
-							</td>
-							<td class="px-3 py-1.5 text-zinc-300">{{ row.profile }}</td>
-							<td class="whitespace-nowrap px-3 py-1.5 tabular-nums text-zinc-300">{{
-								runtimeDisplay(row) }}</td>
-							<td class="px-3 py-1.5">
-								<Shimmer v-if="isLive(row)" as="span" :duration="2">
-									{{ activityLabel(row) }}
-								</Shimmer>
-								<span v-else class="text-zinc-400">
-									{{ terminalStates[row.state] ?? row.state }}
-								</span>
-							</td>
-							<td class="max-w-[60ch] truncate px-3 py-1.5 text-zinc-300" :title="row.task">
-								{{ shortTask(row.task) }}
-							</td>
-							<td class="px-3 py-0">
-								<div class="flex h-7 items-center justify-end gap-1">
-									<ChevronDown v-if="row.id === store.selectedId" :size="14" class="text-zinc-500" />
-									<Button v-if="isLive(row)" size="icon" variant="ghost"
-										class="size-6 text-zinc-500 hover:text-red-400" title="Cancel run"
-										:disabled="cancellingId === row.id" @click.stop="cancelRun(row)">
-										<SquareX :size="13" />
-									</Button>
-									<Button v-if="isSettled(row)" size="icon" variant="ghost"
-										class="size-6 text-zinc-500 hover:text-red-400" title="Remove from tracking"
-										@click.stop="store.remove(row.id)">
-										<Trash2 :size="13" />
-									</Button>
-								</div>
-							</td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
+			<DataTable
+				:columns="columns"
+				:data="displayRows"
+				:selected-id="store.selectedId"
+				:hide-header="!!store.selected"
+				:searchable="false"
+				:row-clickable="isSettled"
+				:fill="!store.selected"
+				variant="dock"
+				table-id="agents"
+				:class="store.selected ? 'shrink-0 border-b border-zinc-800' : 'min-h-[35%] flex-1'"
+				@row-click="selectRow"
+			>
+				<template #cell-dot="{ row }">
+					<span class="inline-block size-1.5 rounded-full" :class="dotClass(row.state)"
+						:title="dotTitle(row.state)" />
+				</template>
+				<template #cell-id="{ value }">
+					<span class="block truncate font-mono" :title="value">{{ shortId(value) }}</span>
+				</template>
+				<template #cell-profile="{ value }">
+					<span class="block truncate text-zinc-300" :title="value">{{ value }}</span>
+				</template>
+				<template #cell-runtime="{ row }">
+					<span class="block whitespace-nowrap tabular-nums text-zinc-300">{{ runtimeDisplay(row) }}</span>
+				</template>
+				<template #cell-status="{ row }">
+					<Shimmer v-if="isLive(row)" as="span" :duration="2">
+						{{ activityLabel(row) }}
+					</Shimmer>
+					<span v-else class="block truncate text-zinc-400">
+						{{ terminalStates[row.state] ?? row.state }}
+					</span>
+				</template>
+				<template #cell-task="{ value }">
+					<span class="block truncate text-zinc-300" :title="value">{{ value }}</span>
+				</template>
+				<template #cell-actions="{ row }">
+					<div class="flex h-6 items-center justify-end gap-1">
+						<ChevronDown v-if="row.id === store.selectedId" :size="14" class="text-zinc-500" />
+						<Button v-if="isLive(row)" size="icon" variant="ghost"
+							class="size-6 text-zinc-500 hover:text-red-400" title="Cancel run"
+							:disabled="cancellingId === row.id" @click.stop="cancelRun(row)">
+							<SquareX :size="13" />
+						</Button>
+						<Button v-if="isSettled(row)" size="icon" variant="ghost"
+							class="size-6 text-zinc-500 hover:text-red-400" title="Remove from tracking"
+							@click.stop="store.remove(row.id)">
+							<Trash2 :size="13" />
+						</Button>
+					</div>
+				</template>
+			</DataTable>
 
 			<div v-if="store.selected" class="flex min-h-0 flex-1 flex-col overflow-auto p-3">
 				<div class="typeset typeset-docs min-w-0 flex-1 text-sm text-zinc-300" v-html="summaryHtml" />

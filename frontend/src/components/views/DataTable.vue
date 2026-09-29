@@ -1,5 +1,5 @@
 <template>
-	<div class="flex h-full min-h-0 flex-col gap-1.5">
+	<div :class="cn('flex min-h-0 flex-col gap-1.5', fill && 'h-full')">
 		<div v-if="searchable" class="relative shrink-0">
 			<Search class="absolute left-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground" />
 			<input v-model="globalFilter"
@@ -9,17 +9,21 @@
 
 		<ScrollArea class="min-h-0 flex-1">
 			<!-- table-fixed plus explicit column widths keeps the layout stable while a
-			     column is being dragged. min-w-full fills the panel; a larger total lets
-			     the table grow past the edge and scroll sideways. -->
-			<table class="table-fixed border-collapse text-xs" :style="tableStyle">
+			     column is being dragged. The width is the sum of the columns, so dragging
+			     one only moves that one. -->
+			<table :class="cn('table-fixed border-collapse text-left text-xs', dock ? 'text-left' : '')"
+				:style="tableStyle">
 				<colgroup>
 					<col v-for="column in leafColumns" :key="column.id" :style="{ width: `${column.getSize()}px` }" />
 				</colgroup>
-				<thead class="sticky top-0 z-10 bg-muted">
+				<thead v-if="!hideHeader" :class="cn('sticky top-0 z-10', dock ? 'bg-zinc-950 text-zinc-500' : 'bg-muted text-muted-foreground')">
 					<tr>
 						<th v-for="header in headerGroup?.headers ?? []" :key="header.id"
-							class="border-b px-2.5 py-1.5 text-left font-medium text-muted-foreground select-none"
-							:class="header.column.getCanSort() ? 'cursor-pointer hover:text-foreground' : ''"
+							:class="cn(
+								'font-medium select-none',
+								dock ? 'border-b border-zinc-900 px-3 py-1' : 'border-b px-2.5 py-1.5',
+								header.column.getCanSort() ? 'cursor-pointer hover:text-foreground' : '',
+							)"
 							@click="header.column.getToggleSortingHandler()?.($event)">
 							<div class="relative flex items-center gap-1">
 								<span class="inline-flex min-w-0 items-center gap-1">
@@ -37,17 +41,30 @@
 					</tr>
 				</thead>
 				<tbody>
-					<tr v-for="row in table.getRowModel().rows" :key="row.id" class="hover:bg-muted/40" @click="emit('row-click', row.original)">
+					<tr v-for="row in table.getRowModel().rows" :key="row.id"
+						:class="cn(
+							rowClickable(row.original) ? 'cursor-pointer' : '',
+							dock
+								? rowClickable(row.original)
+									? 'border-t border-zinc-900 hover:bg-zinc-900/60'
+									: 'border-t border-zinc-900'
+								: 'border-b border-border/40 hover:bg-muted/40',
+							row.original.id === selectedId ? 'bg-zinc-900' : '',
+						)"
+						@click="rowClickable(row.original) && emit('row-click', row.original)">
 						<td v-for="cell in row.getVisibleCells()" :key="cell.id"
-							class="border-b border-border/40 px-2.5 py-1.5 align-top text-foreground"
-							:class="cell.column.getCanResize() ? 'overflow-hidden' : ''">
+							:class="cn(
+								dock ? 'px-3 py-1 align-middle' : 'border-b border-border/40 px-2.5 py-1.5 align-top text-foreground',
+								cell.column.getCanResize() ? 'overflow-hidden' : '',
+							)">
 							<slot v-if="$slots['cell-' + cell.column.id]" :name="'cell-' + cell.column.id"
 								:row="row.original" :value="cell.getValue()" />
 							<FlexRender v-else :render="cell.column.columnDef.cell" :props="cell.getContext()" />
 						</td>
 					</tr>
 					<tr v-if="table.getRowModel().rows.length === 0">
-						<td :colspan="columns.length" class="px-2.5 py-6 text-center text-muted-foreground">
+						<td :colspan="columns.length"
+							:class="cn('text-center text-muted-foreground', dock ? 'px-3 py-6' : 'px-2.5 py-6')">
 							{{ emptyMessage }}
 						</td>
 					</tr>
@@ -68,6 +85,7 @@ import {
 import { ArrowDown, ArrowUp, ArrowUpDown, Search } from "@lucide/vue";
 import { computed, ref, watch } from "vue";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 /**
  * Headless TanStack Table rendered with app styling: sortable and resizable headers plus
@@ -88,6 +106,25 @@ const props = defineProps({
 	tableId: { type: String, default: "" },
 	/** Initial TanStack sorting state, e.g. [{ id: 'score', desc: true }]. */
 	defaultSorting: { type: Array, default: () => [] },
+	/**
+	 * 'panel' styles for the full-height document views; 'dock' reproduces the dense
+	 * bottom-dock look (fixed row height, zinc borders, header only over the table).
+	 */
+	variant: { type: String, default: "panel" },
+	/** Id of the highlighted row, for tables that select a row to drive a detail pane. */
+	selectedId: { type: [String, Number], default: null },
+	/** Collapses the table to the selected row; the header is then hidden. */
+	hideHeader: { type: Boolean, default: false },
+	/**
+	 * Whether the table stretches to fill its parent. A table that collapses to a single
+	 * row must switch this off, or the full-height root pushes the detail pane out of view.
+	 */
+	fill: { type: Boolean, default: true },
+	/**
+	 * Decides whether a row reacts to clicks, so a monitor can mark live rows read-only
+	 * without losing the pointer affordance on the ones that do open something.
+	 */
+	rowClickable: { type: Function, default: () => true },
 	searchable: { type: Boolean, default: true },
 	searchPlaceholder: { type: String, default: "Filter…" },
 	emptyMessage: { type: String, default: "No entries yet." },
@@ -169,6 +206,10 @@ watch(
 );
 
 const headerGroup = computed(() => table.getHeaderGroups()[0] ?? null);
+
+// The dock variant only changes presentation: dense rows, zinc borders, and a header
+// that is hidden while a row is selected.
+const dock = computed(() => props.variant === "dock");
 
 // The rendered columns, in order; one <col> per leaf column drives the fixed layout.
 const leafColumns = computed(() => headerGroup.value?.headers.map((header) => header.column) ?? []);
