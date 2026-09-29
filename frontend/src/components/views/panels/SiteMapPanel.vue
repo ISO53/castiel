@@ -9,6 +9,7 @@
 		v-else
 		:columns="columns"
 		:data="rows"
+		table-id="sitemap"
 		search-placeholder="Filter URLs…"
 		empty-message="No entries match the filter."
 	/>

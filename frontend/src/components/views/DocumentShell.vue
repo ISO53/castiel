@@ -27,6 +27,9 @@ import { useWorkspaceStore } from "@/stores/workspace";
  */
 export default {
 	name: "DocumentShell",
+	// This component uses the options API, so the template's <Spinner> must be registered
+	// here; importing it in a plain <script> block does not expose it to the template.
+	components: { Spinner },
 	props: {
 		docId: { type: String, required: true },
 	},

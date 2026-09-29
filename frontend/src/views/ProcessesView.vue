@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { ChevronDown, SquareX, Terminal as TerminalIcon, Trash2 } from "@lucide/vue";
 import { Terminal } from "@/components/ai-elements/terminal";
 import { Button } from "@/components/ui/button";
+import DataTable from "@/components/views/DataTable.vue";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import EmptyState from "@/components/EmptyState.vue";
 import { Input } from "@/components/ui/input";
@@ -103,14 +104,21 @@ function formatRuntime(seconds) {
 	return `${s}s`;
 }
 
+// Dock columns: no sorting, and the status dot and action buttons keep a fixed width
+// so the row always reads the same way. Sizes seed the persisted layout.
+const columns = [
+	{ id: "dot", header: "", accessorFn: (row) => row.state, enableSorting: false, enableResizing: false, size: 28 },
+	{ id: "id", header: "ID", accessorKey: "id", enableSorting: false, size: 120 },
+	{ id: "pid", header: "PID", accessorKey: "pid", enableSorting: false, size: 80 },
+	{ id: "runtime", header: "Runtime", accessorFn: (row) => row.runtimeSeconds ?? 0, enableSorting: false, size: 100 },
+	{ id: "purpose", header: "Purpose", accessorKey: "purpose", enableSorting: false, size: 260 },
+	{ id: "command", header: "Command", accessorKey: "command", enableSorting: false, size: 320 },
+	{ id: "actions", header: "", accessorFn: () => "", enableSorting: false, enableResizing: false, size: 72 },
+];
+
 function shortId(id) {
 	const text = id ?? "";
 	return text.length > 16 ? text.slice(0, 9) + "…" + text.slice(-5) : text;
-}
-
-function shortCommand(command) {
-	const line = (command ?? "").replace(/\s+/g, " ").trim();
-	return line.length > 70 ? line.slice(0, 67) + "..." : line;
 }
 </script>
 
@@ -139,62 +147,55 @@ function shortCommand(command) {
 		</EmptyState>
 
 		<template v-else>
-			<div :class="store.selected ? 'shrink-0 border-b border-zinc-800' : 'min-h-[35%] flex-1 overflow-auto'"
-				@scroll.prevent>
-				<table class="w-full text-left text-xs">
-					<thead v-if="!store.selected" class="sticky top-0 bg-zinc-950 text-zinc-500">
-						<tr>
-							<th class="w-4 px-3 py-1.5"></th>
-							<th class="px-3 py-1.5 font-medium">ID</th>
-							<th class="px-3 py-1.5 font-medium">PID</th>
-							<th class="px-3 py-1.5 font-medium">Runtime</th>
-							<th class="px-3 py-1.5 font-medium">Purpose</th>
-							<th class="px-3 py-1.5 font-medium">Command</th>
-							<th class="px-3 py-1.5"></th>
-						</tr>
-					</thead>
-					<tbody>
-						<tr v-for="row in displayRows" :key="row.id"
-							class="h-7 cursor-pointer border-t border-zinc-900 hover:bg-zinc-900/60"
-							:class="row.id === store.selectedId ? 'bg-zinc-900' : ''"
-							:title="row.id === store.selectedId ? 'Click to close' : ''" @click="store.select(row.id)">
-							<td class="w-4 px-3 py-1.5">
-								<span class="inline-block size-1.5 rounded-full" :class="dotClass(row.state)"
-									:title="dotTitle(row.state)" />
-							</td>
-							<td class="px-3 py-1.5 font-mono">
-								<span class="block max-w-[16ch] truncate" :title="row.id">{{ shortId(row.id) }}</span>
-							</td>
-							<td class="px-3 py-1.5 font-mono text-zinc-400">{{ row.pid }}</td>
-							<td class="whitespace-nowrap px-3 py-1.5 tabular-nums text-zinc-300">{{
-								runtimeDisplay(row) }}</td>
-							<td class="max-w-[40ch] truncate px-3 py-1.5 text-zinc-300" :title="row.purpose">
-								{{ shortCommand(row.purpose) }}
-							</td>
-							<td class="max-w-[50ch] truncate px-3 py-1.5 font-mono text-zinc-400" :title="row.command">
-								{{ shortCommand(row.command) }}
-							</td>
-							<td class="px-3 py-0">
-								<div class="flex h-7 items-center justify-end gap-1">
-									<ChevronDown v-if="row.id === store.selectedId" :size="14" class="text-zinc-500" />
-									<Button v-if="row.state === 'RUNNING'" size="icon" variant="ghost"
-										class="size-6 text-zinc-500 hover:text-red-400" title="Kill process"
-										:disabled="killingId === row.id" @click.stop="killProcess(row)">
-										<SquareX :size="13" />
-									</Button>
-									<Button v-if="row.state !== 'RUNNING'" size="icon" variant="ghost"
-										class="size-6 text-zinc-500 hover:text-red-400" title="Remove from tracking"
-										@click.stop="store.remove(row.id)">
-										<Trash2 :size="13" />
-									</Button>
-								</div>
-							</td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
+			<DataTable
+				:columns="columns"
+				:data="displayRows"
+				:selected-id="store.selectedId"
+				:hide-header="!!store.selected"
+				:searchable="false"
+				:fill="!store.selected"
+				variant="dock"
+				table-id="processes"
+				:class="store.selected ? 'shrink-0 border-b border-zinc-800' : 'min-h-[35%] flex-1'"
+				@row-click="(row) => store.select(row.id)"
+			>
+				<template #cell-dot="{ row }">
+					<span class="inline-block size-1.5 rounded-full" :class="dotClass(row.state)"
+						:title="dotTitle(row.state)" />
+				</template>
+				<template #cell-id="{ value }">
+					<span class="block truncate font-mono" :title="value">{{ shortId(value) }}</span>
+				</template>
+				<template #cell-pid="{ value }">
+					<span class="block truncate font-mono text-zinc-400">{{ value }}</span>
+				</template>
+				<template #cell-runtime="{ row }">
+					<span class="block whitespace-nowrap tabular-nums text-zinc-300">{{ runtimeDisplay(row) }}</span>
+				</template>
+				<template #cell-purpose="{ value }">
+					<span class="block truncate text-zinc-300" :title="value">{{ value }}</span>
+				</template>
+				<template #cell-command="{ value }">
+					<span class="block truncate font-mono text-zinc-400" :title="value">{{ value }}</span>
+				</template>
+				<template #cell-actions="{ row }">
+					<div class="flex h-6 items-center justify-end gap-1">
+						<ChevronDown v-if="row.id === store.selectedId" :size="14" class="text-zinc-500" />
+						<Button v-if="row.state === 'RUNNING'" size="icon" variant="ghost"
+							class="size-6 text-zinc-500 hover:text-red-400" title="Kill process"
+							:disabled="killingId === row.id" @click.stop="killProcess(row)">
+							<SquareX :size="13" />
+						</Button>
+						<Button v-if="row.state !== 'RUNNING'" size="icon" variant="ghost"
+							class="size-6 text-zinc-500 hover:text-red-400" title="Remove from tracking"
+							@click.stop="store.remove(row.id)">
+							<Trash2 :size="13" />
+						</Button>
+					</div>
+				</template>
+			</DataTable>
 
-			<div v-if="store.selected" class="flex min-h-0 flex-1 flex-col p-1 pt-0">
+			<div v-if="store.selected" class="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-zinc-800 p-1 pt-0">
 				<Terminal class="min-h-0 flex-1" :output="store.selectedText"
 					:is-streaming="store.selected.state === 'RUNNING'" @clear="store.clearView" />
 			</div>

@@ -16,6 +16,7 @@
 				v-else
 				:columns="columns"
 				:data="rows"
+				table-id="headers"
 				search-placeholder="Filter site or header…"
 				empty-message="No entries match the filter."
 			>
@@ -42,6 +43,7 @@
 				v-else
 				:columns="cookieColumns"
 				:data="cookieRows"
+				table-id="cookies"
 				search-placeholder="Filter cookies…"
 				empty-message="No cookies match the filter."
 			/>

@@ -1,16 +1,14 @@
 package io.github.iso53.castiel.agent;
 
 import dev.langchain4j.model.output.TokenUsage;
-import io.github.iso53.castiel.tool.process.BoundedOutputBuffer;
 import io.github.iso53.castiel.tool.process.ProcessManager;
-import java.nio.file.Path;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -20,15 +18,13 @@ import reactor.core.publisher.Sinks;
  * Registry of sub-agent runs, the read side of the bottom-dock Agents view.
  *
  * <p>Mirrors {@link io.github.iso53.castiel.tool.process.ProcessManager}: every run gets a
- * stable id, a live bounded transcript buffer tailed by the UI, and state-change pings over
- * an SSE feed. Runs are recorded regardless of outcome so the user can always inspect what
- * a sub-agent did; the oldest finished runs are evicted once the registry grows past its cap.
+ * stable id, a live activity phase while it works, and state-change pings over an SSE feed.
+ * A run's record is its task, its activity, and its final summary; the reasoning behind it
+ * stays with the model and the workspace. Runs are recorded regardless of outcome so the user
+ * can always see what was delegated; the oldest finished runs are evicted past the cap.
  */
 @Service
 public class AgentRunManager {
-
-	// Live transcript tail retained per run; older characters are evicted from the front.
-	static final int TRANSCRIPT_CAPACITY_CHARS = 256 * 1024;
 
 	// Maximum tracked runs; the oldest finished ones are evicted beyond this.
 	private static final int MAX_RUNS = 100;
@@ -50,6 +46,14 @@ public class AgentRunManager {
 		CANCELLED,
 	}
 
+	// What a running sub-agent is doing right now
+	public enum Activity {
+		WORKING,
+		THINKING,
+		STREAMING,
+		TOOL_CALLING
+	}
+
 	// One tracked sub-agent run.
 	public static final class AgentRun {
 
@@ -59,17 +63,16 @@ public class AgentRunManager {
 		private final String task;
 		private final Instant startedAt = Instant.now();
 
-		private final BoundedOutputBuffer transcript = BoundedOutputBuffer.of(TRANSCRIPT_CAPACITY_CHARS);
 		private final AtomicBoolean cancelled = new AtomicBoolean(false);
 		// Set when the run finished its work and should end without another model round.
 		private final AtomicBoolean stopRequested = new AtomicBoolean(false);
-		private final AtomicLong lastTranscriptPingAt = new AtomicLong(0);
 
 		private volatile State state = State.QUEUED;
+		// Stamped when the run first reaches a terminal state, so its runtime stops there
+		// instead of growing for as long as the registry keeps the row.
+		private volatile Instant endedAt;
+		private volatile Activity activity = Activity.WORKING;
 		private volatile TokenUsage totalUsage = new TokenUsage(0, 0, 0);
-		// Empty path means "no transcript persisted"; callers test {@code toString().isEmpty()}.
-		public static final Path NO_TRANSCRIPT = Path.of("");
-		private volatile Path transcriptPath = NO_TRANSCRIPT;
 		private volatile String resultSummary = "";
 		private volatile String error = "";
 
@@ -101,27 +104,35 @@ public class AgentRunManager {
 			return startedAt;
 		}
 
+		/** When the run reached a terminal state, or null while it is still working. */
+		public Instant endedAt() {
+			return endedAt;
+		}
+
+		/**
+		 * How long the run has taken. A finished run reports the time up to the moment it
+		 * settled; a live one keeps counting, so the UI can tick it between server updates.
+		 */
+		public long runtimeSeconds() {
+			Instant end = endedAt != null ? endedAt : Instant.now();
+			return Math.max(0L, Duration.between(startedAt, end).toSeconds());
+		}
+
 		public State state() {
 			return state;
 		}
 
-		// Live transcript buffer; readers track their own cursor.
-		public BoundedOutputBuffer transcript() {
-			return transcript;
+		public Activity activity() {
+			return activity;
 		}
 
-		/**
-		 * Claims the right to emit one UI change ping for fresh transcript text; true at
-		 * most once per {@code intervalMs} per run, so token-level streaming cannot flood
-		 * the SSE feed.
-		 */
-		public boolean tryClaimTranscriptPing(long intervalMs) {
-			long now = System.currentTimeMillis();
-			long last = lastTranscriptPingAt.get();
-			if (now - last < intervalMs) {
+		/** Records a phase change; the caller pings the UI only when this returns true. */
+		public boolean setActivity(Activity activity) {
+			if (this.activity == activity) {
 				return false;
 			}
-			return lastTranscriptPingAt.compareAndSet(last, now);
+			this.activity = activity;
+			return true;
 		}
 
 		public AtomicBoolean cancelled() {
@@ -146,10 +157,6 @@ public class AgentRunManager {
 			return totalUsage;
 		}
 
-		public Path transcriptPath() {
-			return transcriptPath;
-		}
-
 		public String resultSummary() {
 			return resultSummary;
 		}
@@ -164,14 +171,14 @@ public class AgentRunManager {
 
 		void setState(State state) {
 			this.state = state;
+			// Only the first terminal state counts; a later re-set must not move the end.
+			if (endedAt == null && (state == State.DONE || state == State.FAILED || state == State.CANCELLED)) {
+				endedAt = Instant.now();
+			}
 		}
 
 		void setTotalUsage(TokenUsage totalUsage) {
 			this.totalUsage = totalUsage == null ? new TokenUsage(0, 0, 0) : totalUsage;
-		}
-
-		void setTranscriptPath(Path transcriptPath) {
-			this.transcriptPath = transcriptPath == null ? NO_TRANSCRIPT : transcriptPath;
 		}
 
 		void setResultSummary(String resultSummary) {

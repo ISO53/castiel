@@ -6,23 +6,21 @@ const API = `${window.location.origin}/api/agents`;
  * Live view of the sub-agent run registry for the bottom dock.
  *
  * Mirrors the processes store: the list refreshes on server-sent change pings from
- * /api/agents/events; the selected run's transcript is streamed in via cursor-based
- * delta reads.
+ * /api/agents/events. A run carries no transcript here, only its activity while it works
+ * and its summary once it ends, so the feed is the only channel the dock needs.
  */
 export const useAgentsStore = defineStore("agents", {
 	state: () => ({
 		rows: [],
 		selectedId: null,
-		texts: {},
-		cursors: {},
 		source: null,
 	}),
 	getters: {
 		selected() {
 			return this.rows.find((row) => row.id === this.selectedId) || null;
 		},
-		selectedText() {
-			return this.texts[this.selectedId] ?? "";
+		selectedSummary() {
+			return this.selected?.resultSummary ?? "";
 		},
 		runningCount() {
 			return this.rows.filter((row) => row.state === "RUNNING" || row.state === "QUEUED").length;
@@ -48,7 +46,6 @@ export const useAgentsStore = defineStore("agents", {
 			this.source = new EventSource(`${API}/events`);
 			this.source.onmessage = () => {
 				this.fetchList();
-				if (this.selectedId) this.fetchTranscriptDelta();
 			};
 		},
 		stopFeed() {
@@ -56,34 +53,11 @@ export const useAgentsStore = defineStore("agents", {
 			this.source = null;
 		},
 		/**
-		 * Toggles row selection: clicking the selected run again closes the transcript
+		 * Toggles row selection: clicking the selected run again closes the summary
 		 * pane and restores the full table.
 		 */
 		select(id) {
-			if (this.selectedId === id) {
-				this.selectedId = null;
-				return;
-			}
-			this.selectedId = id;
-			if (!(id in this.texts)) this.texts[id] = "";
-			this.fetchTranscriptDelta();
-		},
-		/** Pulls new transcript text since the last read using a cursor-based delta. */
-		async fetchTranscriptDelta() {
-			const id = this.selectedId;
-			if (!id) return;
-			try {
-				const cursor = this.cursors[id] ?? 0;
-				const response = await fetch(
-					`${API}/${encodeURIComponent(id)}/output?cursor=${cursor}&max=16384`,
-				);
-				if (!response.ok) return;
-				const data = await response.json();
-				this.cursors[data.id] = data.cursor;
-				if (data.text) this.texts[data.id] = (this.texts[data.id] ?? "") + data.text;
-			} catch {
-				// Transient; next tick retries.
-			}
+			this.selectedId = this.selectedId === id ? null : id;
 		},
 		async remove(id) {
 			await fetch(`${API}/${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
@@ -93,7 +67,7 @@ export const useAgentsStore = defineStore("agents", {
 			}
 		},
 		/**
-		 * Cancels a live sub-agent run on the user's behalf. The row and its transcript
+		 * Cancels a live sub-agent run on the user's behalf. The row and its summary
 		 * stay in the registry; only remove() takes a row off the list. A 409 means the
 		 * run already finished; the refetch below corrects the row.
 		 */
@@ -113,17 +87,10 @@ export const useAgentsStore = defineStore("agents", {
 			}
 			await this.fetchList();
 		},
-		clearView() {
-			if (!this.selectedId) return;
-			this.texts[this.selectedId] = "";
-			this.cursors[this.selectedId] = 0;
-		},
 		reset() {
 			this.stopFeed();
 			this.rows = [];
 			this.selectedId = null;
-			this.texts = {};
-			this.cursors = {};
 			this.startFeed();
 		},
 	},

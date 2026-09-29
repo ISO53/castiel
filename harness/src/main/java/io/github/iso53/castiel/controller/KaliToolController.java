@@ -132,9 +132,7 @@ public class KaliToolController {
 			// command line for the model to bend into a general-purpose shell.
 			Set.of(KaliLaunchTool.NAME, "bash", "read_file", "search_kali_tools"),
 			task,
-			10,
-			// A dispatch is judged by the processes it left behind, not by its own transcript.
-			false
+			10
 		);
 
 		AgentRunManager.AgentRun run = runs.create(null, "kali-launcher", taskSummary);
