@@ -39,7 +39,7 @@
 		</header>
 
 		<Conversation class="min-h-0 flex-1" aria-label="Chat messages">
-			<ConversationContent class="gap-4 px-3 py-4">
+			<ConversationContent class="gap-5 px-3 py-4">
 				<EmptyState v-if="!cwd"
 					text="Please open or create a workspace from the Home tab or File menu to start chatting.">
 					<MessageSquare />
@@ -62,7 +62,7 @@
 
 				<Message v-for="message in messages" :key="message.id"
 					:align="message.role === 'user' ? 'end' : 'start'">
-					<MessageContent>
+					<MessageContent class="gap-2.5">
 						<div v-if="message.role === 'user'"
 							class="max-w-[90%] self-end whitespace-pre-wrap rounded-lg bg-primary px-3 py-2 text-xs leading-relaxed text-primary-foreground">
 							{{ messageText(message) }}

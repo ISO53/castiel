@@ -3,9 +3,9 @@ import { computed } from "vue";
 import { ChevronDown } from "@lucide/vue";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { CodeBlock } from "../code-block";
 import { Shimmer } from "../shimmer";
 import { toolIcon } from "@/lib/tool-icons";
+import ToolCallParams from "./ToolCallParams.vue";
 
 const props = defineProps({
 	name: { type: String, required: true },
@@ -32,77 +32,66 @@ const input = computed(() => {
 	}
 });
 
-const prettyInput = computed(() => JSON.stringify(input.value, null, 2));
-
-const isError = computed(
-	() => typeof props.result === "string" && props.result.startsWith("Error"),
+const hasParams = computed(
+	() =>
+		input.value !== null &&
+		typeof input.value === "object" &&
+		!Array.isArray(input.value) &&
+		Object.keys(input.value).length > 0,
 );
 
-const prettyResult = computed(() =>
-	typeof props.result === "string" ? props.result : JSON.stringify(props.result, null, 2),
-);
-
-// Compact one-line signature for the collapsed header, e.g.
-// `bash(command: "nmap -sV 10.0.0.0/24")`. CSS truncates the overflow.
 const summaryParams = computed(() => {
-	if (!input.value || typeof input.value !== "object" || Array.isArray(input.value)) {
-		return "";
-	}
-	const entries = Object.entries(input.value);
-	if (!entries.length) return "()";
-	const params = entries
+	if (!hasParams.value) return "";
+	const params = Object.entries(input.value)
 		.map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
 		.join(", ");
 	return `(${params})`;
 });
 
 const summary = computed(() => props.name + summaryParams.value);
+
+/**
+ * Output is plain wrapped text. It sits directly beneath a header that already states
+ * what was called, so it needs no label or syntax highlighting to read as the result.
+ * It cannot push the transcript sideways.
+ */
+const resultText = computed(() => {
+	if (typeof props.result === "string") return props.result;
+	try {
+		return JSON.stringify(props.result, null, 2);
+	} catch {
+		return String(props.result);
+	}
+});
 </script>
 
 <template>
-	<Collapsible
-		v-model:open="isOpen"
-		:class="cn('group/tool-call not-prose w-full', props.class)"
-	>
+	<Collapsible v-model:open="isOpen" :class="cn('group/tool-call not-prose w-full min-w-0', props.class)">
+		<!-- An open call keeps the hover colour, so the header still reads as the active
+		     control once its body is showing rather than dimming back to idle. -->
 		<CollapsibleTrigger
-			class="flex w-full items-center gap-2 text-left text-muted-foreground text-xs transition-colors hover:text-foreground"
-		>
+			class="flex w-full min-w-0 items-center gap-2 text-left text-muted-foreground text-xs transition-colors hover:text-foreground data-[state=open]:text-foreground">
 			<component :is="icon" class="size-3.5 shrink-0" />
-			<span class="min-w-0 truncate">
+			<!-- The name in bold with the arguments beside it, on one line: the body
+			     repeats them in full, so the header only has to be a summary. -->
+			<span class="min-w-0 flex-1 truncate">
 				<Shimmer v-if="running" as="span" :duration="1">{{ summary }}</Shimmer>
-				<template v-else><span class="font-bold">{{ name }}</span><span>{{ summaryParams }}</span></template>
+				<template v-else>
+					<span class="font-bold">{{ name }}</span><span v-if="hasParams">{{ summaryParams }}</span>
+				</template>
 			</span>
-			<ChevronDown
-				class="size-3.5 shrink-0 transition-all group-data-[state=open]/tool-call:rotate-180"
-			/>
+			<ChevronDown class="size-3.5 shrink-0 transition-all group-data-[state=open]/tool-call:rotate-180" />
 		</CollapsibleTrigger>
 
 		<CollapsibleContent
-			class="outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:animate-in data-[state=open]:slide-in-from-top-2"
-		>
-			<div class="space-y-3 px-1 py-1.5">
-				<section class="space-y-1.5">
-					<h4 class="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
-						Parameters
-					</h4>
-					<CodeBlock :code="prettyInput" language="json" class="border-0 bg-muted/40 text-xs" />
-				</section>
-
-				<section v-if="result !== null" class="space-y-1.5">
-					<h4 class="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
-						{{ isError ? "Error" : "Result" }}
-					</h4>
-					<pre
-						v-if="isError"
-						class="overflow-x-auto rounded-md bg-destructive/10 p-2 text-xs text-destructive whitespace-pre-wrap"
-					>{{ prettyResult }}</pre>
-					<CodeBlock
-						v-else
-						:code="prettyResult"
-						language="json"
-						class="border-0 bg-muted/40 text-xs"
-					/>
-				</section>
+			class="outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:animate-in data-[state=open]:slide-in-from-top-2">
+			<div class="space-y-2 px-1 py-1.5">
+				<ToolCallParams v-if="hasParams" :input="input" class="text-muted-foreground/70" />
+				<!-- Output sits at the same weight of colour as the arguments; monospace
+				     alone marks it as the result. -->
+				<pre v-if="result !== null"
+					class="min-w-0 overflow-hidden wrap-break-word whitespace-pre-wrap font-mono text-xs text-muted-foreground/70">
+					{{ resultText }}</pre>
 			</div>
 		</CollapsibleContent>
 	</Collapsible>
