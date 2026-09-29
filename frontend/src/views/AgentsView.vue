@@ -208,7 +208,10 @@ const summaryHtml = computed(() =>
 			</DataTable>
 
 			<div v-if="store.selected" class="flex min-h-0 flex-1 flex-col overflow-auto p-3">
-				<div class="typeset typeset-docs min-w-0 flex-1 text-sm text-zinc-300" v-html="summaryHtml" />
+				<!-- No text-sm here: typeset-docs already sizes markdown to 0.75rem, and a
+				     Tailwind size on the same element overrides it, making this pane drift
+				     larger than the chat's. -->
+				<div class="typeset typeset-docs min-w-0 flex-1 text-zinc-300" v-html="summaryHtml" />
 				<p v-if="store.selected.error" class="mt-3 shrink-0 text-xs text-red-400/90">
 					{{ store.selected.error }}
 				</p>
