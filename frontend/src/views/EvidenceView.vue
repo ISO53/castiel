@@ -11,6 +11,7 @@
 				v-else
 				:columns="columns"
 				:data="artifactsOf(data)"
+			table-id="evidence"
 				search-placeholder="Filter artifacts…"
 				empty-message="No artifacts match the filter."
 				@row-click="(row) => (selected = row)"

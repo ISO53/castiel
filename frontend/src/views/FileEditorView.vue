@@ -42,6 +42,8 @@ const FILES_API = `${window.location.origin}/api/files`;
 
 export default {
 	name: "FileEditorView",
+	// Options API: template components have to be registered, not merely imported.
+	components: { Button, Spinner },
 
 	props: {
 		path: { type: String, required: true },

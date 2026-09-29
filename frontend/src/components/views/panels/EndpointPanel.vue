@@ -16,6 +16,7 @@
 				v-else
 				:columns="endpointColumns"
 				:data="endpoints"
+				table-id="endpoints"
 				search-placeholder="Filter endpoints…"
 				empty-message="No endpoints match the filter."
 			>
@@ -44,6 +45,7 @@
 				v-else
 				:columns="parameterColumns"
 				:data="parameters"
+				table-id="parameters"
 				search-placeholder="Filter parameters…"
 				empty-message="No parameters match the filter."
 			>
