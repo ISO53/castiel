@@ -56,7 +56,7 @@ public class HarnessService {
 	private static final Logger log = LoggerFactory.getLogger(HarnessService.class);
 
 	private static final String SYSTEM_PROMPT_PATH = "prompts/SYSTEM_PROMPT.md";
-	private static final int MAX_TOOL_ROUNDS = 64;
+	private static final int MAX_TOOL_ROUNDS = 256;
 
 	/** Inject a workspace-sync checkpoint reminder into the model's context every N tool rounds. */
 	private static final int CHECKPOINT_INTERVAL_ROUNDS = 12;
