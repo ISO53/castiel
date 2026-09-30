@@ -41,6 +41,9 @@ public final class BoundedOutputBuffer {
 		if (overflow > 0) {
 			data.delete(0, overflow);
 			startOffset += overflow;
+			// delete() shifts the retained chars down but leaves the backing array at its
+			// high-water mark, so trimToSize() releases the peak allocation.
+			data.trimToSize();
 		}
 	}
 
