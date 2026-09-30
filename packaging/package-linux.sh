@@ -60,6 +60,7 @@ cp "target/castiel-$VERSION.jar" "$STAGE/"
 	--app-version "$VERSION" \
 	--input "$STAGE" \
 	--main-jar "castiel-$VERSION.jar" \
+	--java-options "-Xmx1g" \
 	--icon "$SCRIPT_DIR/icons/castiel.png" \
 	--dest "$SCRIPT_DIR/dist"
 echo "App image: $SCRIPT_DIR/dist/castiel"

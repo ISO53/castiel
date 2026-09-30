@@ -69,6 +69,7 @@ Remove-Item (Join-Path $packagingDir 'dist') -Recurse -Force -ErrorAction Silent
 	--app-version $version `
 	--input $stage `
 	--main-jar "castiel-$version.jar" `
+	--java-options "-Xmx1g" `
 	--win-console `
 	--icon "$packagingDir\icons\castiel.ico" `
 	--dest "$packagingDir\dist"
