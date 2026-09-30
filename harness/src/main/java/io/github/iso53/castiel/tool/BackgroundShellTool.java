@@ -27,6 +27,14 @@ public class BackgroundShellTool implements ToolProvider {
 	private static final int DEFAULT_READ_CHARS = 4_000;
 	private static final int MAX_READ_CHARS = 20_000;
 
+	/** How long bg_start waits for a new process to fail before reporting it as started. */
+	private static final long STARTUP_GRACE_NANOS = 250_000_000L;
+
+	private static final long STARTUP_POLL_MILLIS = 25;
+
+	/** Output characters shown when reporting a process that died on startup. */
+	private static final int MAX_STARTUP_OUTPUT_CHARS = 2_000;
+
 	private final ProcessManager manager;
 
 	/** Agent-read cursor per process so bg_read returns deltas across calls. */
@@ -44,6 +52,9 @@ public class BackgroundShellTool implements ToolProvider {
 			"The purpose argument is required: state what the command does and how long you",
 			"expect it to run, e.g. 'SYN scan of 10.0.0.5, expect ~10 min'. Later checks show",
 			"elapsed vs expected time so you can spot runs that went sideways.",
+			"Pass a bare command only. It already runs in a shell, so wrapping it in another",
+			"shell such as `powershell -Command \"...\"` or `bash -c \"...\"` makes the outer",
+			"shell expand your variables first and the command fails to parse.",
 			"For commands finishing within ~1 minute prefer the plain bash tool.",
 		}
 	)
@@ -59,16 +70,48 @@ public class BackgroundShellTool implements ToolProvider {
 		}
 		try {
 			ManagedProcess entry = manager.start(command, purpose);
-			return (
+			boolean alive = awaitStartup(entry);
+			String started =
 				"Started " +
 				entry.id() +
 				" (pid " +
 				entry.osPid() +
-				"). It keeps running across your turns; the user sees it in the Processes view."
+				"). It keeps running across your turns; the user sees it in the Processes view.";
+			if (alive) {
+				return started;
+			}
+			return (
+				started +
+				"\n\nWarning: the process exited immediately (exit code " +
+				entry.exitCode() +
+				"). Its output was:\n" +
+				entry.output().read(0, MAX_STARTUP_OUTPUT_CHARS).text()
 			);
 		} catch (Exception ex) {
 			return "Error: could not start the command: " + ex.getMessage();
 		}
+	}
+
+	/**
+	 * Gives a freshly started process a moment to fail, so an instantly-dying command is
+	 * reported here instead of looking like a healthy background run.
+	 *
+	 * @return {@code true} if the process was still alive when the wait ended.
+	 */
+	private static boolean awaitStartup(ManagedProcess entry) {
+		long deadline = System.nanoTime() + STARTUP_GRACE_NANOS;
+		while (System.nanoTime() < deadline) {
+			if (!entry.isRunning()) {
+				return false;
+			}
+			try {
+				Thread.sleep(STARTUP_POLL_MILLIS);
+			} catch (InterruptedException ex) {
+				Thread.currentThread().interrupt();
+				return entry.isRunning();
+			}
+		}
+		return entry.isRunning();
 	}
 
 	@Tool(

@@ -253,24 +253,33 @@ public class WorkspaceSearchTool implements ToolProvider {
 		}
 		filesScanned.incrementAndGet();
 
-		String[] lines = content.split("\n", -1);
+		// Match each line without splitting the file into an array of Strings.
 		for (int queryIndex = 0; queryIndex < compiled.size(); queryIndex++) {
 			if (counts[queryIndex].get() >= MAX_RESULTS_PER_QUERY) {
 				continue;
 			}
+			// One Matcher per query, reused across lines.
+			Matcher matcher = compiled.get(queryIndex).pattern().matcher(content);
 			int lineNumber = 1;
-			for (String line : lines) {
-				if (counts[queryIndex].get() >= MAX_RESULTS_PER_QUERY) {
-					break;
+			int lineStart = 0;
+			int contentLength = content.length();
+			while (lineStart <= contentLength && counts[queryIndex].get() < MAX_RESULTS_PER_QUERY) {
+				int newline = content.indexOf('\n', lineStart);
+				int lineEnd = newline == -1 ? contentLength : newline;
+				int trimmedEnd = lineEnd;
+				if (trimmedEnd > lineStart && content.charAt(trimmedEnd - 1) == '\r') {
+					trimmedEnd--;
 				}
-				if (line.endsWith("\r")) {
-					line = line.substring(0, line.length() - 1);
-				}
-				Matcher matcher = compiled.get(queryIndex).pattern().matcher(line);
+				// Confine the match to this line.
+				matcher.region(lineStart, trimmedEnd);
 				if (matcher.find()) {
 					addResult(results, queryIndex, relative(file) + ":" + lineNumber);
 					counts[queryIndex].incrementAndGet();
 				}
+				if (newline == -1) {
+					break;
+				}
+				lineStart = newline + 1;
 				lineNumber++;
 			}
 		}
