@@ -43,6 +43,7 @@
 			</ul>
 			<EmptyState v-else text="No MCP servers registered. Add them in Settings.">
 				<Plug />
+				<Button size="sm" variant="outline" class="mt-3" @click="openSettings">Open Settings</Button>
 			</EmptyState>
 		</div>
 	</section>
@@ -54,18 +55,23 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import EmptyState from "@/components/EmptyState.vue";
 import { useMcpStore } from "@/stores/mcp";
+import { useSettingsUiStore } from "@/stores/settingsUi";
 
 // Live view of the MCP servers declared in mcp.json; the refresh button retries the down ones.
 export default {
 	name: "McpPanel",
 	components: { Button, EmptyState, Plug, RefreshCw, Switch },
 	data() {
-		return { mcp: useMcpStore(), reconnecting: false };
+		return { mcp: useMcpStore(), settingsUi: useSettingsUiStore(), reconnecting: false };
 	},
 	mounted() {
 		this.mcp.startFeed();
 	},
 	methods: {
+		// Jumps straight to the MCP section of the settings dialog.
+		openSettings() {
+			this.settingsUi.show("mcp");
+		},
 		async reconnectDisconnected() {
 			this.reconnecting = true;
 			try {

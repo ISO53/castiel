@@ -125,6 +125,7 @@ import { ENGAGEMENT_PHASES, useEngagementStore } from "@/stores/engagement";
 import { useDocksStore } from "@/stores/docks";
 import { useMcpStore } from "@/stores/mcp";
 import { useTabsStore } from "@/stores/tabs";
+import { useSettingsUiStore } from "@/stores/settingsUi";
 import { useWorkspaceStore } from "@/stores/workspace";
 import AboutDialog from "@/components/AboutDialog.vue";
 import WorkspaceDialog from "@/components/WorkspaceDialog.vue";
@@ -159,6 +160,7 @@ export default {
 		return {
 			ENGAGEMENT_PHASES,
 			tabs: useTabsStore(),
+			settingsUi: useSettingsUiStore(),
 			engagement: useEngagementStore(),
 			workspace: useWorkspaceStore(),
 			mcp: useMcpStore(),
@@ -280,12 +282,7 @@ export default {
 			}
 		},
 		openSettings() {
-			this.tabs.openTab({
-				value: "settings",
-				label: "Settings",
-				component: "SettingsView",
-				closable: true,
-			});
+			this.settingsUi.show();
 		},
 	},
 };

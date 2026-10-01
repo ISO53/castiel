@@ -40,6 +40,9 @@
 
 		<!-- Bottom bar -->
 		<DockBar />
+
+		<!-- Modal settings; mounted once so any view can open it. -->
+		<SettingsDialog />
 	</div>
 </template>
 
@@ -55,6 +58,7 @@ import MenuBar from "@/views/MenuBar.vue";
 import AgentsView from "@/views/AgentsView.vue";
 import ProcessesView from "@/views/ProcessesView.vue";
 import TabbedView from "./views/TabbedView.vue";
+import SettingsDialog from "@/components/settings/SettingsDialog.vue";
 import { useChatsStore } from "@/stores/chats";
 import { useDocksStore } from "@/stores/docks";
 import { useTabsStore } from "@/stores/tabs";
@@ -87,6 +91,7 @@ export default {
 		MenuBar,
 		ProcessesView,
 		TabbedView,
+		SettingsDialog,
 	},
 	setup() {
 		const docks = useDocksStore();

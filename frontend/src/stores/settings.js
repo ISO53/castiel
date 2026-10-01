@@ -68,10 +68,16 @@ export const useSettingsStore = defineStore("settings", {
 	state: () => ({
 		providers: {},
 		activeProviderId: null,
+		workerModel: { providerId: "", modelName: "" },
+		defaultMaxRounds: 16,
 		loaded: false,
 		cvssVersion: localStorage.getItem("castiel:cvssVersion") ?? "4.0",
 	}),
 	getters: {
+		/** Ids of every provider that has been connected at least once. */
+		providerIds(state) {
+			return Object.keys(state.providers ?? {});
+		},
 		llamaCpp(state) {
 			return {
 				...defaultLlamaCppProvider(),
@@ -106,7 +112,41 @@ export const useSettingsStore = defineStore("settings", {
 			const data = await response.json();
 			this.providers = data.providers ?? {};
 			this.activeProviderId = data.activeProviderId ?? null;
+			this.workerModel = data.workerModel ?? { providerId: "", modelName: "" };
+			this.defaultMaxRounds = data.defaultMaxRounds ?? 16;
 			this.loaded = true;
+			return data;
+		},
+		/** Lists the model catalog of a connected provider. */
+		async listModels(providerId) {
+			const response = await fetch(
+				`${API_BASE_URL}/providers/${encodeURIComponent(providerId)}/models`,
+			);
+			if (!response.ok) {
+				throw new Error(await readError(response));
+			}
+			return await response.json();
+		},
+		/**
+		 * Saves the sub-agent worker model and tool-round budget. Both are
+		 * optional: blank values fall back to the harness defaults.
+		 */
+		async saveAgents(workerModel, defaultMaxRounds) {
+			const response = await fetch(`${API_BASE_URL}/agents`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					workerModel:
+						workerModel?.providerId && workerModel?.modelName ? workerModel : null,
+					defaultMaxRounds: Number.isFinite(defaultMaxRounds) ? defaultMaxRounds : null,
+				}),
+			});
+			if (!response.ok) {
+				throw new Error(await readError(response));
+			}
+			const data = await response.json();
+			this.workerModel = data.workerModel ?? this.workerModel;
+			this.defaultMaxRounds = data.defaultMaxRounds ?? this.defaultMaxRounds;
 			return data;
 		},
 		/**
