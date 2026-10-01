@@ -72,6 +72,7 @@ export const useSettingsStore = defineStore("settings", {
 		kaliModel: { providerId: "", modelName: "" },
 		defaultMaxRounds: 32,
 		loaded: false,
+		toolGroups: [],
 		cvssVersion: localStorage.getItem("castiel:cvssVersion") ?? "4.0",
 	}),
 	getters: {
@@ -118,6 +119,41 @@ export const useSettingsStore = defineStore("settings", {
 			this.defaultMaxRounds = data.defaultMaxRounds ?? 32;
 			this.loaded = true;
 			return data;
+		},
+		/** Lists the harness tool groups with their current enabled state. */
+		async fetchToolGroups() {
+			const response = await fetch(`${API_BASE_URL}/tools`);
+			if (!response.ok) {
+				throw new Error(await readError(response));
+			}
+			this.toolGroups = await response.json();
+			return this.toolGroups;
+		},
+		/**
+		 * Switches one tool group on or off. The backend stores the whole disabled set and
+		 * answers with the new settings, so the optimistic local flip is authoritative here.
+		 */
+		async setToolGroupEnabled(id, enabled) {
+			const group = this.toolGroups.find((entry) => entry.id === id);
+			if (!group) return;
+			const previous = group.enabled;
+			group.enabled = enabled;
+			const disabled = this.toolGroups
+				.filter((entry) => !entry.enabled)
+				.map((entry) => entry.id);
+			try {
+				const response = await fetch(`${API_BASE_URL}/tools`, {
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ disabledGroups: disabled }),
+				});
+				if (!response.ok) {
+					throw new Error(await readError(response));
+				}
+			} catch (error) {
+				group.enabled = previous;
+				throw error;
+			}
 		},
 		/** Lists the model catalog of a connected provider. */
 		async listModels(providerId) {

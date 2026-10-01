@@ -3,6 +3,7 @@ package io.github.iso53.castiel.model;
 import io.github.iso53.castiel.agent.AgentGuardrails;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Full user settings document stored under the OS config directory. MCP servers
@@ -20,7 +21,8 @@ public record UserSettings(
 	String activeProviderId,
 	AgentModelRef workerModel,
 	AgentModelRef kaliModel,
-	Integer defaultMaxRounds
+	Integer defaultMaxRounds,
+	Set<String> disabledToolGroups
 ) {
 
 	public UserSettings {
@@ -30,7 +32,14 @@ public record UserSettings(
 		defaultMaxRounds = defaultMaxRounds == null
 			? AgentGuardrails.DEFAULT_MAX_ROUNDS
 			: (int) Math.clamp(defaultMaxRounds.longValue(), AgentGuardrails.MIN_MAX_ROUNDS, AgentGuardrails.MAX_MAX_ROUNDS);
+		disabledToolGroups = disabledToolGroups == null ? Set.of() : Set.copyOf(disabledToolGroups);
 	}
+
+	/**
+	 * No shorter constructor on purpose: a five-argument one would silently reset the tool
+	 * toggles to "all enabled" on every provider or agent update. Every call site therefore
+	 * passes the current value through, which makes the field impossible to lose by omission.
+	 */
 
 	public LlmProviderConfig requireProvider(String providerId) {
 		LlmProviderConfig config = providers.get(providerId);

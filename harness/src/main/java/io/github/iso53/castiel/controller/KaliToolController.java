@@ -8,6 +8,7 @@ import io.github.iso53.castiel.model.KaliToolDto;
 import io.github.iso53.castiel.service.KaliToolCatalog;
 import io.github.iso53.castiel.service.UserSettingsService;
 import io.github.iso53.castiel.tool.KaliLaunchTool;
+import io.github.iso53.castiel.tool.ToolCatalog;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,19 +34,22 @@ public class KaliToolController {
 	private final SubAgentRunner subAgentRunner;
 	private final KaliLaunchRegistry registry;
 	private final UserSettingsService userSettingsService;
+	private final ToolCatalog toolCatalog;
 
 	public KaliToolController(
 		KaliToolCatalog catalog,
 		AgentRunManager runs,
 		SubAgentRunner subAgentRunner,
 		KaliLaunchRegistry registry,
-		UserSettingsService userSettingsService
+		UserSettingsService userSettingsService,
+		ToolCatalog toolCatalog
 	) {
 		this.catalog = catalog;
 		this.runs = runs;
 		this.subAgentRunner = subAgentRunner;
 		this.registry = registry;
 		this.userSettingsService = userSettingsService;
+		this.toolCatalog = toolCatalog;
 	}
 
 	@GetMapping
@@ -87,6 +91,15 @@ public class KaliToolController {
 			.toList();
 		if (tools.isEmpty()) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "toolIds must contain valid tool names");
+		}
+
+		// Without kali_launch the dispatcher sub-agent has no way to settle its plan, so the
+		// run would sit until the round budget expired. Refuse the dispatch instead.
+		if (!toolCatalog.isGroupEnabled("kali_launch", userSettingsService.get().disabledToolGroups())) {
+			throw new ResponseStatusException(
+				HttpStatus.CONFLICT,
+				"Kali launch is switched off in Settings > Tools. Enable it to dispatch scans."
+			);
 		}
 
 		String userNotes =

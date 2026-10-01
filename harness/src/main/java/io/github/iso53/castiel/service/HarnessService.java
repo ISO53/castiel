@@ -83,6 +83,7 @@ public class HarnessService {
 	private final WorkspaceSession workspaceSession;
 	private final AgentRunManager agentRunManager;
 	private final ProcessManager processManager;
+	private final ToolCatalog toolCatalog;
 	private final List<ToolSpecification> toolSpecifications;
 	private final Map<String, ToolExecutor> toolExecutors;
 
@@ -122,7 +123,9 @@ public class HarnessService {
 		WorkspaceSession workspaceSession,
 		AgentRunManager agentRunManager,
 		ProcessManager processManager,
-		List<ToolProvider> toolProviders
+		List<ToolProvider> toolProviders,
+		UserQuestionTool userQuestionTool,
+		ToolCatalog toolCatalog
 	) {
 		this.llmClientFactory = llmClientFactory;
 		this.userSettingsService = userSettingsService;
@@ -133,13 +136,12 @@ public class HarnessService {
 		this.agentRunManager = agentRunManager;
 		this.processManager = processManager;
 
-		UserQuestionTool questionTool = null;
+		// ask_user_question is never executed through this map: its @Tool method only declares
+		// the schema, because executeTool() intercepts the call and blocks on the user instead.
+		this.userQuestionTool = userQuestionTool;
 		this.toolSpecifications = new ArrayList<>();
 		Map<String, ToolExecutor> executors = new LinkedHashMap<>();
 		for (ToolProvider provider : toolProviders) {
-			if (provider instanceof UserQuestionTool userTool) {
-				questionTool = userTool;
-			}
 			for (Method method : provider.getClass().getMethods()) {
 				if (method.isAnnotationPresent(Tool.class)) {
 					ToolSpecification specification = ToolSpecifications.toolSpecificationFrom(method);
@@ -148,11 +150,10 @@ public class HarnessService {
 				}
 			}
 		}
-		if (questionTool == null) {
-			throw new IllegalStateException(UserQuestionTool.class.getSimpleName() + " bean is missing");
-		}
-		this.userQuestionTool = questionTool;
 		this.toolExecutors = executors;
+		this.toolCatalog = toolCatalog;
+		// Fail fast when the settings catalogue names a tool no bean provides.
+		toolCatalog.validateAgainst(executors.keySet());
 	}
 
 	/** Wraps file-mutating tools so their execution pings the UI's workspace feed. */
@@ -568,12 +569,18 @@ public class HarnessService {
 	 */
 	public AgentToolset toolsFor(Set<String> allowedNames) {
 		Set<String> allowed = allowedNames == null ? Set.of() : Set.copyOf(allowedNames);
+		Set<String> disabled = userSettingsService.get().disabledToolGroups();
 		Set<String> seen = new HashSet<>();
 		List<ToolSpecification> specifications = new ArrayList<>();
 		Map<String, ToolExecutor> executors = new LinkedHashMap<>();
 		for (ToolSpecification specification : toolSpecifications) {
 			String name = specification.name();
-			if (AgentGuardrails.FORBIDDEN_TOOLS.contains(name) || !allowed.contains(name) || !seen.add(name)) {
+			// The user's tool switches gate sub-agents too: an orchestrator that could not
+			// call a disabled tool must not be able to reach it by delegating to one.
+			if (AgentGuardrails.FORBIDDEN_TOOLS.contains(name)
+				|| !allowed.contains(name)
+				|| !toolCatalog.isEnabled(name, disabled)
+				|| !seen.add(name)) {
 				continue;
 			}
 			ToolExecutor executor = toolExecutors.get(name);
@@ -613,13 +620,15 @@ public class HarnessService {
 	}
 
 	private List<ToolSpecification> availableTools() {
+		Set<String> disabled = userSettingsService.get().disabledToolGroups();
 		Set<String> names = new HashSet<>();
 		List<ToolSpecification> combined = new ArrayList<>();
 		for (ToolSpecification specification : toolSpecifications) {
-			if (names.add(specification.name())) {
+			if (toolCatalog.isEnabled(specification.name(), disabled) && names.add(specification.name())) {
 				combined.add(specification);
 			}
 		}
+		// MCP tools are governed by their own per-server switch, not by this one.
 		for (ToolSpecification specification : mcpManager.toolSpecifications()) {
 			if (names.add(specification.name())) {
 				combined.add(specification);
@@ -642,6 +651,11 @@ public class HarnessService {
 			// Not a local tool; the MCP manager answers unknown tools the same way.
 			// MCP results are unbounded upstream, so cap them before they hit the context.
 			return capMcpOutput(request.name(), mcpManager.executeTool(request));
+		}
+		if (!toolCatalog.isEnabled(request.name(), userSettingsService.get().disabledToolGroups())) {
+			// The spec was withheld from the model, so reaching here means it invented the
+			// call anyway. Refusing keeps "switched off" honest rather than advisory.
+			return "Error: " + request.name() + " is disabled in castiel settings and cannot be used.";
 		}
 		try {
 			return executor.execute(request, null);

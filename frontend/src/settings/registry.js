@@ -1,4 +1,4 @@
-import { Bot, Cpu, Plug, ShieldAlert } from "@lucide/vue";
+import { Bot, Cpu, Plug, ShieldAlert, Wrench } from "@lucide/vue";
 
 /**
  * The settings tree, in sidebar order. It is the single source of truth for
@@ -58,6 +58,15 @@ export const SETTINGS_TREE = [
 			"MCP servers give the agent extra tools such as a headless browser or proxy access. They are declared in the mcp.json file, which castiel watches and reloads automatically.",
 		keywords: ["mcp.json", "tools", "obscura", "caido", "browser", "proxy", "config file"],
 		component: () => import("@/components/settings/sections/McpServersSection.vue"),
+	},
+	{
+		id: "tools",
+		title: "Tools",
+		icon: Wrench,
+		description:
+			"The tools the agent can call. Switching one off hides it from the model, sub-agents included.",
+		keywords: ["bash", "shell", "files", "web", "search", "cvss", "kali", "sub-agent", "background", "disable"],
+		component: () => import("@/components/settings/sections/ToolsSection.vue"),
 	},
 	{
 		id: "sub-agents",
