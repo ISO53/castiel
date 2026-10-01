@@ -26,17 +26,32 @@
 			</p>
 		</template>
 
-		<SettingsField id="llamacpp_api_url" label="API URL">
+		<SettingsField
+			id="llamacpp_api_url"
+			label="API URL"
+			hint="Where castiel reaches llama.cpp."
+			control-class="w-72"
+		>
 			<Input id="llamacpp_api_url" v-model="form.apiUrl" type="url" placeholder="http://localhost:8080"
 				autocomplete="off" spellcheck="false" />
 		</SettingsField>
 
-		<SettingsField id="llamacpp_context" label="Context Window" hint="Default: Discovered from the server">
+		<SettingsField
+			id="llamacpp_context"
+			label="Context Window"
+			hint="Tokens the model reads at once."
+			control-class="w-72"
+		>
 			<Input id="llamacpp_context" v-model.number="form.contextWindow" type="number" min="1"
 				placeholder="8192" />
 		</SettingsField>
 
-		<SettingsField id="llamacpp_api_key" label="API key">
+		<SettingsField
+			id="llamacpp_api_key"
+			label="API key"
+			hint="Only if the server sets --api-key."
+			control-class="w-72"
+		>
 			<Input id="llamacpp_api_key" v-model="form.apiKey" type="password" placeholder="sk-..."
 				autocomplete="off" spellcheck="false" />
 		</SettingsField>

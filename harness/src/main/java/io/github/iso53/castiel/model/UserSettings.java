@@ -11,18 +11,22 @@ import java.util.Map;
  * @param providers         Provider id → config (ids are UI-defined, e.g. {@code llama.cpp}).
  * @param activeProviderId  Provider the UI preselects for new chats.
  * @param workerModel       Provider/model sub-agents run on, picked by the user in settings.
- * @param defaultMaxRounds  Default tool-round budget for one sub-agent generation (2–32).
+ * @param kaliModel         Provider/model the Kali dispatch sub-agent runs on. Unlike the worker
+ *                          model there is no fallback: it must be set explicitly.
+ * @param defaultMaxRounds  Default tool-round budget for one sub-agent generation (2-64).
  */
 public record UserSettings(
 	Map<String, LlmProviderConfig> providers,
 	String activeProviderId,
 	AgentModelRef workerModel,
+	AgentModelRef kaliModel,
 	Integer defaultMaxRounds
 ) {
 
 	public UserSettings {
 		providers = providers == null ? Map.of() : Map.copyOf(providers);
 		workerModel = workerModel == null || workerModel.isBlank() ? AgentModelRef.EMPTY : workerModel;
+			kaliModel = kaliModel == null || kaliModel.isBlank() ? AgentModelRef.EMPTY : kaliModel;
 		defaultMaxRounds = defaultMaxRounds == null
 			? AgentGuardrails.DEFAULT_MAX_ROUNDS
 			: (int) Math.clamp(defaultMaxRounds.longValue(), AgentGuardrails.MIN_MAX_ROUNDS, AgentGuardrails.MAX_MAX_ROUNDS);

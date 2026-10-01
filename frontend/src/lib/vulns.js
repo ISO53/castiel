@@ -16,34 +16,12 @@ export const VULN_BANDS = [
 ];
 
 /**
- * What each supported version actually measures, so the version picker can
- * show the difference rather than hide it behind a dropdown. The metric lists
- * mirror the vectors the harness's cvss_score tool accepts.
+ * The CVSS versions the picker offers. The active tab *is* the stored setting,
+ * so a version only needs a display label here.
  */
 export const CVSS_VERSIONS = [
-	{
-		id: "4.0",
-		label: "CVSS v4.0",
-		summary: "Current standard. Splits impact across two systems and adds metrics v3.1 lacks.",
-		base: ["AV", "AC", "AT", "PR", "UI", "VC", "VI", "VA", "SC", "SI", "SA"],
-		optional: ["E", "CR", "IR", "AR"],
-		differs: [
-			"Splits impact: the vulnerable system (VC/VI/VA) and the subsequent system (SC/SI/SA).",
-			"Adds Attack Requirements (AT) and Safety (SA); drops Scope (S).",
-			"11 base metrics against v3.1's 8.",
-		],
-	},
-	{
-		id: "3.1",
-		label: "CVSS v3.1",
-		summary: "Widely deployed predecessor. Measures the vulnerable system only.",
-		base: ["AV", "AC", "PR", "UI", "S", "C", "I", "A"],
-		optional: [],
-		differs: [
-			"One binary Scope (S) instead of the Subsequent triad.",
-			"No AT, no Safety, no subsequent impact. 8 base metrics.",
-		],
-	},
+	{ id: "4.0", label: "CVSS v4.0" },
+	{ id: "3.1", label: "CVSS v3.1" },
 ];
 
 /**

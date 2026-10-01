@@ -69,7 +69,8 @@ export const useSettingsStore = defineStore("settings", {
 		providers: {},
 		activeProviderId: null,
 		workerModel: { providerId: "", modelName: "" },
-		defaultMaxRounds: 16,
+		kaliModel: { providerId: "", modelName: "" },
+		defaultMaxRounds: 32,
 		loaded: false,
 		cvssVersion: localStorage.getItem("castiel:cvssVersion") ?? "4.0",
 	}),
@@ -113,7 +114,8 @@ export const useSettingsStore = defineStore("settings", {
 			this.providers = data.providers ?? {};
 			this.activeProviderId = data.activeProviderId ?? null;
 			this.workerModel = data.workerModel ?? { providerId: "", modelName: "" };
-			this.defaultMaxRounds = data.defaultMaxRounds ?? 16;
+			this.kaliModel = data.kaliModel ?? { providerId: "", modelName: "" };
+			this.defaultMaxRounds = data.defaultMaxRounds ?? 32;
 			this.loaded = true;
 			return data;
 		},
@@ -128,16 +130,18 @@ export const useSettingsStore = defineStore("settings", {
 			return await response.json();
 		},
 		/**
-		 * Saves the sub-agent worker model and tool-round budget. Both are
-		 * optional: blank values fall back to the harness defaults.
+		 * Saves the sub-agent settings. All three are always sent, so the endpoint
+		 * never has to reason about which fields a caller meant to change.
 		 */
-		async saveAgents(workerModel, defaultMaxRounds) {
+		async saveAgents(workerModel, kaliModel, defaultMaxRounds) {
 			const response = await fetch(`${API_BASE_URL}/agents`, {
 				method: "PUT",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					workerModel:
 						workerModel?.providerId && workerModel?.modelName ? workerModel : null,
+					kaliModel:
+						kaliModel?.providerId && kaliModel?.modelName ? kaliModel : null,
 					defaultMaxRounds: Number.isFinite(defaultMaxRounds) ? defaultMaxRounds : null,
 				}),
 			});
@@ -146,6 +150,7 @@ export const useSettingsStore = defineStore("settings", {
 			}
 			const data = await response.json();
 			this.workerModel = data.workerModel ?? this.workerModel;
+			this.kaliModel = data.kaliModel ?? this.kaliModel;
 			this.defaultMaxRounds = data.defaultMaxRounds ?? this.defaultMaxRounds;
 			return data;
 		},

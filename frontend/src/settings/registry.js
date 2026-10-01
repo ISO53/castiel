@@ -64,8 +64,20 @@ export const SETTINGS_TREE = [
 		title: "Sub-agents",
 		icon: Cpu,
 		description:
-			"Smaller models the main agent delegates mechanical work to (recon, scanning, OSINT, document formatting). Pick the model they run on and their tool-round budget.",
-		keywords: ["worker", "model", "rounds", "budget", "recon", "osint", "delegation"],
+			"Smaller models the main agent delegates mechanical work to. The worker handles recon, scanning, OSINT and document formatting; the Kali dispatcher starts the tools you pick in the Kali dialog and terminates.",
+		keywords: [
+			"worker",
+			"kali",
+			"scanner",
+			"launcher",
+			"dispatch",
+			"model",
+			"rounds",
+			"budget",
+			"recon",
+			"osint",
+			"delegation",
+		],
 		component: () => import("@/components/settings/sections/SubAgentsSection.vue"),
 	},
 	{

@@ -129,8 +129,8 @@ public class SettingsController {
 	}
 
 	/**
-	 * Replaces the sub-agent settings: the worker model and the default tool-round budget.
-	 * The rest of the settings document is untouched.
+	 * Replaces the sub-agent settings: the worker model, the Kali model and the
+	 * default tool-round budget. The rest of the document is untouched.
 	 */
 	@PutMapping("/agents")
 	public UserSettings putAgents(@RequestBody AgentUpdate body) {
@@ -143,7 +143,8 @@ public class SettingsController {
 				new UserSettings(
 					current.providers(),
 					current.activeProviderId(),
-					body.workerModel(),
+body.workerModel(),
+					body.kaliModel(),
 					body.defaultMaxRounds()
 				)
 			);
@@ -153,5 +154,5 @@ public class SettingsController {
 	}
 
 	/** Request body for {@link #putAgents}; both fields optional, nulls apply defaults. */
-	public record AgentUpdate(AgentModelRef workerModel, Integer defaultMaxRounds) {}
+	public record AgentUpdate(AgentModelRef workerModel, AgentModelRef kaliModel, Integer defaultMaxRounds) {}
 }

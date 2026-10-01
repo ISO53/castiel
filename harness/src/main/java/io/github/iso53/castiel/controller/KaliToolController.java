@@ -6,6 +6,7 @@ import io.github.iso53.castiel.agent.SubAgentRunner;
 import io.github.iso53.castiel.model.KaliTool;
 import io.github.iso53.castiel.model.KaliToolDto;
 import io.github.iso53.castiel.service.KaliToolCatalog;
+import io.github.iso53.castiel.service.UserSettingsService;
 import io.github.iso53.castiel.tool.KaliLaunchTool;
 import java.util.List;
 import java.util.Map;
@@ -31,17 +32,20 @@ public class KaliToolController {
 	private final AgentRunManager runs;
 	private final SubAgentRunner subAgentRunner;
 	private final KaliLaunchRegistry registry;
+	private final UserSettingsService userSettingsService;
 
 	public KaliToolController(
 		KaliToolCatalog catalog,
 		AgentRunManager runs,
 		SubAgentRunner subAgentRunner,
-		KaliLaunchRegistry registry
+		KaliLaunchRegistry registry,
+		UserSettingsService userSettingsService
 	) {
 		this.catalog = catalog;
 		this.runs = runs;
 		this.subAgentRunner = subAgentRunner;
 		this.registry = registry;
+		this.userSettingsService = userSettingsService;
 	}
 
 	@GetMapping
@@ -125,14 +129,17 @@ public class KaliToolController {
 				userNotes
 			) + describeTools(tools);
 
+		// Round budget is shared with every other sub-agent kind; the dispatcher is
+		// not special-cased, so the user's one setting governs all of them.
 		SubAgentRunner.RunSpec spec = new SubAgentRunner.RunSpec(
 			"kali-launcher",
+			userSettingsService.get().kaliModel(),
 			systemPrompt,
 			// No bg_start: kali_launch is the only way to start a scan, so there is no raw
 			// command line for the model to bend into a general-purpose shell.
 			Set.of(KaliLaunchTool.NAME, "bash", "read_file", "search_kali_tools"),
 			task,
-			10
+			userSettingsService.get().defaultMaxRounds()
 		);
 
 		AgentRunManager.AgentRun run = runs.create(null, "kali-launcher", taskSummary);

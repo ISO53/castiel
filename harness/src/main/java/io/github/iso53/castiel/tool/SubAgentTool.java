@@ -68,7 +68,7 @@ public class SubAgentTool implements ToolProvider {
 			"Short role prompt for the sub-agent, 2-6 sentences: its role, constraints, and where to write output"
 		) String systemPrompt,
 		@P("Tool names the sub-agent may use (local or MCP). Omit for a safe default set") List<String> allowedTools,
-		@P("Optional max tool-call rounds between 2 and 32; default comes from the harness settings") Integer maxRounds
+		@P("Optional max tool-call rounds between 2 and 64; default comes from the harness settings") Integer maxRounds
 	) {
 		if (task == null || task.isBlank()) {
 			return "Error: task is required";
@@ -105,6 +105,7 @@ public class SubAgentTool implements ToolProvider {
 
 		SubAgentRunner.RunSpec spec = new SubAgentRunner.RunSpec(
 			AgentGuardrails.WORKER_LABEL,
+			userSettingsService.get().workerModel(),
 			systemPrompt,
 			Set.copyOf(effectiveTools),
 			task,

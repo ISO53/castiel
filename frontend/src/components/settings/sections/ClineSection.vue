@@ -22,7 +22,12 @@
 			</ul>
 		</template>
 
-		<SettingsField id="cline_api_key" label="API key">
+		<SettingsField
+			id="cline_api_key"
+			label="API key"
+			hint="Create one at app.cline.bot under Settings &gt; API Keys."
+			control-class="w-72"
+		>
 			<Input id="cline_api_key" v-model="form.apiKey" type="password" placeholder="Your Cline API key"
 				autocomplete="off" spellcheck="false" />
 		</SettingsField>

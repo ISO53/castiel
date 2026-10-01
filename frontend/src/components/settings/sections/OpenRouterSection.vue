@@ -23,7 +23,12 @@
 			</ul>
 		</template>
 
-		<SettingsField id="openrouter_api_key" label="API key">
+		<SettingsField
+			id="openrouter_api_key"
+			label="API key"
+			hint="Create one at openrouter.ai/settings/keys."
+			control-class="w-72"
+		>
 			<Input id="openrouter_api_key" v-model="form.apiKey" type="password" placeholder="sk-or-..."
 				autocomplete="off" spellcheck="false" />
 		</SettingsField>

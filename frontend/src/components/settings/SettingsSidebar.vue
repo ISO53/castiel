@@ -106,12 +106,33 @@
 			</template>
 		</div>
 	</ScrollArea>
+
+		<!-- Save confirmation. Settings persist on change, so this is the only
+		     acknowledgement; it sits at the foot of the sidebar, out of the way. -->
+		<div class="shrink-0 px-3 py-2.5">
+			<Transition
+				enter-active-class="transition duration-150 ease-out"
+				enter-from-class="opacity-0 translate-y-1"
+				leave-active-class="transition duration-150 ease-in"
+				leave-to-class="opacity-0"
+			>
+				<p
+					v-if="ui.savedVisible"
+					role="status"
+					aria-live="polite"
+					class="flex items-center gap-1.5 text-[11px] text-muted-foreground"
+				>
+					<Check class="size-3 shrink-0 text-emerald-500" aria-hidden="true" />
+					Saved
+				</p>
+			</Transition>
+		</div>
 	</nav>
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from "vue";
-import { ChevronRight, Search, SearchX, X } from "@lucide/vue";
+import { Check, ChevronRight, Search, SearchX, X } from "@lucide/vue";
 import EmptyState from "@/components/EmptyState.vue";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";

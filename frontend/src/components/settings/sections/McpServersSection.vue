@@ -113,6 +113,7 @@ function statusLabel(server) {
 async function toggle(server, enabled) {
 	try {
 		await mcp.setEnabled(server.id, enabled);
+		settingsUi.flashSaved();
 	} catch {
 		// Statuses keep their last known values; the SSE feed refreshes on changes.
 	}

@@ -96,6 +96,7 @@ public class SubAgentRunner {
 	// Everything one sub-agent generation needs, resolved by the {@code sub_agent} tool.
 	public record RunSpec(
 		String label,
+		AgentModelRef model,
 		String systemPrompt,
 		Set<String> allowedTools,
 		String task,
@@ -103,6 +104,7 @@ public class SubAgentRunner {
 	) {
 		public RunSpec {
 			label = label == null || label.isBlank() ? AgentGuardrails.WORKER_LABEL : label.strip();
+			model = model == null ? AgentModelRef.EMPTY : model;
 			systemPrompt = systemPrompt == null ? "" : systemPrompt.strip();
 			allowedTools = allowedTools == null ? Set.of() : Set.copyOf(allowedTools);
 			task = task == null ? "" : task.strip();
@@ -134,7 +136,7 @@ public class SubAgentRunner {
 		// run (from the dock, or via the orchestrator's cancel fan-out) tree-kills them.
 		HarnessService.setCurrentGenerationId(run.id());
 		try {
-			StreamingChatModel model = resolveModel();
+			StreamingChatModel model = resolveModel(spec);
 			List<ChatMessage> messages = buildMessages(spec);
 			HarnessService.AgentToolset toolset = harnessProvider.getObject().toolsFor(spec.allowedTools());
 			log.info(
@@ -387,16 +389,17 @@ public class SubAgentRunner {
 		}
 	}
 
-	// Resolves the sub-agent's model: the worker model the user picked in settings.
-	private StreamingChatModel resolveModel() {
-		AgentModelRef worker = userSettingsService.get().workerModel();
-		if (worker.isBlank()) {
+	// Resolves the sub-agent's model from the spec: each kind carries the model the
+	// user picked for it, so a worker run and a Kali dispatch can differ.
+	private StreamingChatModel resolveModel(RunSpec spec) {
+		AgentModelRef ref = spec.model();
+		if (ref.isBlank()) {
 			throw new IllegalStateException(
-				"no sub-agent model configured: pick a worker model in Settings > Sub-agents"
+				"no sub-agent model configured: pick a " + spec.label() + " model in Settings > Sub-agents"
 			);
 		}
-		LlmProvider provider = llmClientFactory.create(userSettingsService.get().requireProvider(worker.providerId()));
-		return provider.chatModel(worker.modelName(), GenerationOptions.none());
+		LlmProvider provider = llmClientFactory.create(userSettingsService.get().requireProvider(ref.providerId()));
+		return provider.chatModel(ref.modelName(), GenerationOptions.none());
 	}
 
 	// System prompt (role + runtime/scope context) plus the task as the user message.

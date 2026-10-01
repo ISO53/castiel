@@ -3,6 +3,9 @@ import { DEFAULT_SETTINGS_ITEM_ID } from "@/settings/registry";
 
 const LAST_ITEM_KEY = "castiel:settingsItem";
 
+/** How long the "Saved" confirmation stays up. */
+const FLASH_MS = 1800;
+
 /**
  * Open/closed state for the settings dialog, plus the leaf it is showing.
  * Every entry point (menu, onboarding, deep links) drives this store, so the
@@ -13,6 +16,10 @@ export const useSettingsUiStore = defineStore("settingsUi", {
 		open: false,
 		activeId: localStorage.getItem(LAST_ITEM_KEY) ?? DEFAULT_SETTINGS_ITEM_ID,
 		query: "",
+		/** Monotonic counter bumped on every successful save; drives the flash. */
+		savedAt: 0,
+		/** True while the "Saved" confirmation is on screen. */
+		savedVisible: false,
 	}),
 	getters: {
 		/** True once a search term is typed; the sidebar then shows results only. */
@@ -38,6 +45,19 @@ export const useSettingsUiStore = defineStore("settingsUi", {
 			} catch {
 				// Private mode or a full quota; the leaf simply is not remembered.
 			}
+		},
+		/**
+		 * Confirms a save. Settings persist the moment they change, so this is
+		 * the only feedback the user gets that anything happened. Each new save
+		 * restarts the timer, so rapid changes keep the popup up.
+		 */
+		flashSaved() {
+			this.savedAt += 1;
+			this.savedVisible = true;
+			clearTimeout(this._flashTimer);
+			this._flashTimer = setTimeout(() => {
+				this.savedVisible = false;
+			}, FLASH_MS);
 		},
 	},
 });

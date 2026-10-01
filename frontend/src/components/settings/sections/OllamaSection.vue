@@ -21,12 +21,22 @@
 			<p>Alternatively, connect to a remote Ollama server by specifying its URL:</p>
 		</template>
 
-		<SettingsField id="ollama_api_url" label="API URL">
+		<SettingsField
+			id="ollama_api_url"
+			label="API URL"
+			hint="Where castiel reaches Ollama."
+			control-class="w-72"
+		>
 			<Input id="ollama_api_url" v-model="form.apiUrl" type="url" placeholder="http://localhost:11434"
 				autocomplete="off" spellcheck="false" />
 		</SettingsField>
 
-		<SettingsField id="ollama_context" label="Context Window" hint="Default: Discovered from the server">
+		<SettingsField
+			id="ollama_context"
+			label="Context Window"
+			hint="Tokens the model reads at once."
+			control-class="w-72"
+		>
 			<Input id="ollama_context" v-model.number="form.contextWindow" type="number" min="1"
 				placeholder="8192" />
 		</SettingsField>
