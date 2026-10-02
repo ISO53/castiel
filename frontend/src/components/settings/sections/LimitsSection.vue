@@ -1,10 +1,5 @@
 <template>
 	<div class="space-y-4">
-		<p class="text-xs leading-relaxed text-muted-foreground">
-			How hard the harness pushes in one message. These govern the main agent, not the
-			sub-agents, which have their own budget under Sub-agents.
-		</p>
-
 		<div class="divide-y divide-border">
 			<SettingsField
 				label="Tool-call rounds"
