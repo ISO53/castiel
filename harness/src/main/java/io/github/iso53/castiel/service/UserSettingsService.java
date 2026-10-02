@@ -32,7 +32,7 @@ public class UserSettingsService {
 		.enable(SerializationFeature.INDENT_OUTPUT)
 		.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
-	private volatile UserSettings settings = new UserSettings(null, null, null, null, null, null, null, null, null);
+	private volatile UserSettings settings = UserSettings.empty();
 
 	@PostConstruct
 	void loadOnStartup() {
@@ -44,7 +44,7 @@ public class UserSettingsService {
 	}
 
 	public synchronized UserSettings save(UserSettings next) {
-		settings = next != null ? next : new UserSettings(null, null, null, null, null, null, null, null, null);
+		settings = next != null ? next : UserSettings.empty();
 		writeToDisk(settings);
 		return settings;
 	}
@@ -56,7 +56,7 @@ public class UserSettingsService {
 		}
 		Map<String, LlmProviderConfig> next = new LinkedHashMap<>(settings.providers());
 		next.put(providerId.trim(), config);
-		settings = new UserSettings(next, providerId.trim(), settings.workerModel(), settings.kaliModel(), settings.defaultMaxRounds(), settings.disabledToolGroups(), settings.maxToolRounds(), settings.checkpointIntervalRounds(), settings.verbatimToolCalls());
+		settings = settings.withProviders(next, providerId.trim());
 		writeToDisk(settings);
 		return settings;
 	}
@@ -68,17 +68,7 @@ public class UserSettingsService {
 		}
 		Map<String, LlmProviderConfig> next = new LinkedHashMap<>(settings.providers());
 		next.put(providerId.trim(), config);
-		settings = new UserSettings(
-			next,
-			settings.activeProviderId(),
-			settings.workerModel(),
-			settings.kaliModel(),
-			settings.defaultMaxRounds(),
-			settings.disabledToolGroups(),
-			settings.maxToolRounds(),
-			settings.checkpointIntervalRounds(),
-			settings.verbatimToolCalls()
-		);
+		settings = settings.withProviders(next, settings.activeProviderId());
 		writeToDisk(settings);
 		return settings;
 	}
@@ -92,7 +82,7 @@ public class UserSettingsService {
 		next.remove(providerId.trim());
 		// Do not leave the UI default pointing at a removed provider.
 		String activeId = providerId.trim().equals(settings.activeProviderId()) ? null : settings.activeProviderId();
-		settings = new UserSettings(next, activeId, settings.workerModel(), settings.kaliModel(), settings.defaultMaxRounds(), settings.disabledToolGroups(), settings.maxToolRounds(), settings.checkpointIntervalRounds(), settings.verbatimToolCalls());
+		settings = settings.withProviders(next, activeId);
 		writeToDisk(settings);
 		return settings;
 	}
@@ -103,17 +93,7 @@ public class UserSettingsService {
 	 */
 	public synchronized UserSettings setDisabledToolGroups(Set<String> groupIds, ToolCatalog catalog) {
 		Set<String> accepted = groupIds == null ? Set.of() : groupIds.stream().filter(catalog::isKnownToggleable).collect(Collectors.toUnmodifiableSet());
-		settings = new UserSettings(
-			settings.providers(),
-			settings.activeProviderId(),
-			settings.workerModel(),
-			settings.kaliModel(),
-			settings.defaultMaxRounds(),
-			accepted,
-			settings.maxToolRounds(),
-			settings.checkpointIntervalRounds(),
-			settings.verbatimToolCalls()
-		);
+		settings = settings.withDisabledGroups(accepted);
 		writeToDisk(settings);
 		return settings;
 	}
@@ -121,14 +101,14 @@ public class UserSettingsService {
 	private UserSettings readFromDisk() {
 		Path file = AppPaths.settingsFile();
 		if (!Files.isRegularFile(file)) {
-			return new UserSettings(null, null, null, null, null, null, null, null, null);
+			return UserSettings.empty();
 		}
 		try {
 			UserSettings loaded = objectMapper.readValue(file.toFile(), UserSettings.class);
-			return loaded != null ? loaded : new UserSettings(null, null, null, null, null, null, null, null, null);
+			return loaded != null ? loaded : UserSettings.empty();
 		} catch (IOException ex) {
 			log.warn("Could not read settings from {}; using defaults", file, ex);
-			return new UserSettings(null, null, null, null, null, null, null, null, null);
+			return UserSettings.empty();
 		}
 	}
 
