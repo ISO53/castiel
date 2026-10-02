@@ -141,11 +141,6 @@ public final class ManagedProcess {
 		return Duration.between(startedAt, endedAt != null ? endedAt : Instant.now());
 	}
 
-	/** True when the process is alive but exits while being killed. */
-	boolean sameUnderlying(Process other) {
-		return process == other;
-	}
-
 	/**
 	 * Null while the process is still alive, otherwise its exit code. Reads the OS process
 	 * directly, so an instant exit is visible even before the exit callback updates the state.

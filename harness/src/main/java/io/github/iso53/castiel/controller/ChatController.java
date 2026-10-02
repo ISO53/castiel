@@ -70,12 +70,4 @@ public class ChatController {
 		boolean cancelled = harnessService.cancel(generationId);
 		return Mono.just(Map.of("cancelled", cancelled));
 	}
-
-	/**
-	 * Healthcheck and status verification endpoint.
-	 */
-	@GetMapping("/health")
-	public Mono<Map<String, String>> health() {
-		return Mono.just(Map.of("status", "UP", "service", "castiel Harness AI Streaming"));
-	}
 }

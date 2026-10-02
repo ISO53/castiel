@@ -38,12 +38,7 @@ public class ToolCatalog {
 		List<String> tools,
 		boolean locked,
 		boolean critical
-	) {
-
-		public ToolGroup {
-			tools = tools == null ? List.of() : List.copyOf(tools);
-		}
-	}
+	) {}
 
 	private static final List<ToolGroup> GROUPS = List.of(
 		new ToolGroup(
@@ -157,7 +152,7 @@ public class ToolCatalog {
 	}
 
 	/** The group a tool belongs to, or null when it is not declared here. */
-	public String groupOf(String toolName) {
+	private String groupOf(String toolName) {
 		return groupByTool.get(toolName);
 	}
 

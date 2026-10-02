@@ -18,6 +18,9 @@ public class FileReadTool implements ToolProvider {
 	private static final int MAX_READ_LINES = 2_000;
 	private static final int MAX_READ_CHARS = 100_000;
 
+	/** Notice appended to a file too long to hand to the model whole. */
+	private static final String TRUNCATION_NOTICE = "\n... [output truncated at %d characters]";
+
 	private final WorkspaceSession workspace;
 
 	FileReadTool(WorkspaceSession workspace) {
@@ -74,14 +77,7 @@ public class FileReadTool implements ToolProvider {
 				);
 			}
 
-			String result = out.toString();
-			if (result.length() > MAX_READ_CHARS) {
-				result =
-					result.substring(0, MAX_READ_CHARS) +
-					"\n... [output truncated at " +
-					MAX_READ_CHARS +
-					" characters]";
-			}
+			String result = Text.truncate(out.toString(), MAX_READ_CHARS, TRUNCATION_NOTICE);
 			workspace.remember(file);
 			return result;
 		} catch (IOException ex) {

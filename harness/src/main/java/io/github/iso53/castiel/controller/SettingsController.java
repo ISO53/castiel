@@ -182,7 +182,7 @@ public class SettingsController {
 				group.label(),
 				group.description(),
 				group.tools(),
-				group.locked() || !disabled.contains(group.id()),
+				toolCatalog.isGroupEnabled(group.id(), disabled),
 				group.locked(),
 				group.critical()
 			))

@@ -2,6 +2,7 @@ package io.github.iso53.castiel.tool;
 
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
+import io.github.iso53.castiel.util.Text;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
@@ -21,6 +22,9 @@ public class WebFetchTool implements ToolProvider {
 
 	private static final int MAX_FETCH_CHARS = 20_000;
 
+	/** Notice appended to a page too long to hand to the model whole. */
+	private static final String TRUNCATION_NOTICE = "\n... [truncated at %d characters]";
+
 	private static final HttpClient HTTP = HttpClient.newBuilder()
 		.connectTimeout(Duration.ofSeconds(10))
 		.followRedirects(HttpClient.Redirect.NORMAL)
@@ -34,10 +38,7 @@ public class WebFetchTool implements ToolProvider {
 			"The full page text is returned; analyze it yourself.",
 		}
 	)
-	public String webFetch(
-		@P("Absolute http(s) URL to fetch") String url,
-		@P("Optional focus hint; the full page text is returned regardless") String prompt
-	) {
+	public String webFetch(@P("Absolute http(s) URL to fetch") String url) {
 		if (url == null || url.isBlank()) {
 			return "Error: url is required";
 		}
@@ -99,13 +100,9 @@ public class WebFetchTool implements ToolProvider {
 			if (markdown.isBlank()) {
 				return "(no readable content at " + cleanedUrl + ")";
 			}
-			if (markdown.length() > MAX_FETCH_CHARS) {
-				markdown =
-					markdown.substring(0, MAX_FETCH_CHARS) + "\n... [truncated at " + MAX_FETCH_CHARS + " characters]";
-			}
-            document.title();
-            String title = document.title().isBlank() ? "(untitled)" : document.title();
-			return "# " + title + "\nURL: " + cleanedUrl + "\n\n" + markdown;
+			markdown = Text.truncate(markdown, MAX_FETCH_CHARS, TRUNCATION_NOTICE);
+			String title = document.title();
+			return "# " + (title.isBlank() ? "(untitled)" : title) + "\nURL: " + cleanedUrl + "\n\n" + markdown;
 		} catch (IllegalArgumentException ex) {
 			return "Error: invalid URL: " + cleanedUrl;
 		}
