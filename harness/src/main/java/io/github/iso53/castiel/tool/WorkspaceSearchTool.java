@@ -3,6 +3,7 @@ package io.github.iso53.castiel.tool;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import io.github.iso53.castiel.service.WorkspaceSession;
+import io.github.iso53.castiel.util.Text;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -238,7 +239,7 @@ public class WorkspaceSearchTool implements ToolProvider {
 		} catch (IOException _) {
 			return;
 		}
-		if (looksBinary(bytes)) {
+		if (Text.isBinary(bytes)) {
 			return;
 		}
 		if (bytes.length == 0) {
@@ -289,16 +290,6 @@ public class WorkspaceSearchTool implements ToolProvider {
 		Path root = workspace.root().orElseThrow();
 		String separator = System.getProperty("file.separator", "/");
 		return root.relativize(path).toString().replace(separator, "/");
-	}
-
-	private static boolean looksBinary(byte[] bytes) {
-		int limit = Math.min(bytes.length, 8192);
-		for (int i = 0; i < limit; i++) {
-			if (bytes[i] == 0) {
-				return true;
-			}
-		}
-		return false;
 	}
 
 	private static String formatResults(List<CompiledQuery> compiled, List<List<String>> results, int filesScanned) {

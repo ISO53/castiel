@@ -3,6 +3,7 @@ package io.github.iso53.castiel.service;
 import io.github.iso53.castiel.model.DirectoryListing;
 import io.github.iso53.castiel.model.FileContent;
 import io.github.iso53.castiel.model.FileEntry;
+import io.github.iso53.castiel.util.Text;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -154,7 +155,7 @@ public class FileExplorerService {
 		} catch (IOException ex) {
 			throw new IllegalArgumentException("Could not read file: " + target, ex);
 		}
-		if (looksBinary(bytes)) {
+		if (Text.isBinary(bytes)) {
 			throw new IllegalArgumentException("This looks like a binary file and cannot be opened in the editor.");
 		}
 
@@ -373,18 +374,5 @@ public class FileExplorerService {
 			return "%.1f MB".formatted(bytes / 1_000_000.0);
 		}
 		return bytes / 1000 + " kB";
-	}
-
-	/**
-	 * Cheap binary sniff: a NUL byte in the first 8 kB almost never occurs in text.
-	 */
-	private static boolean looksBinary(byte[] bytes) {
-		int limit = Math.min(bytes.length, 8192);
-		for (int index = 0; index < limit; index++) {
-			if (bytes[index] == 0) {
-				return true;
-			}
-		}
-		return false;
 	}
 }

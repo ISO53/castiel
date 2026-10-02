@@ -3,11 +3,10 @@ package io.github.iso53.castiel.tool;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import io.github.iso53.castiel.service.WorkspaceSession;
+import io.github.iso53.castiel.util.Text;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -48,7 +47,7 @@ public class FileReadTool implements ToolProvider {
 			return "Error: not a readable file: " + file;
 		}
 		try {
-			if (looksBinary(file)) {
+			if (Text.isBinary(file)) {
 				return "Error: " + file + " looks like a binary file and cannot be shown as text";
 			}
 
@@ -88,16 +87,5 @@ public class FileReadTool implements ToolProvider {
 		} catch (IOException ex) {
 			return "Error: could not read " + file + ": " + ex.getMessage();
 		}
-	}
-
-	private static boolean looksBinary(Path file) throws IOException {
-		try (InputStream in = new BufferedInputStream(Files.newInputStream(file))) {
-			for (byte b : in.readNBytes(8_192)) {
-				if (b == 0) {
-					return true;
-				}
-			}
-		}
-		return false;
 	}
 }
