@@ -16,6 +16,15 @@ export const VULN_BANDS = [
 ];
 
 /**
+ * The CVSS versions the picker offers. The active tab *is* the stored setting,
+ * so a version only needs a display label here.
+ */
+export const CVSS_VERSIONS = [
+	{ id: "4.0", label: "CVSS v4.0" },
+	{ id: "3.1", label: "CVSS v3.1" },
+];
+
+/**
  * Returns a finding's stored assessment for a version ({ vector, score }) or
  * null when the finding has none for it.
  */

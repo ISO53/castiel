@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import io.github.iso53.castiel.model.LlmProviderConfig;
 import io.github.iso53.castiel.model.UserSettings;
+import io.github.iso53.castiel.tool.ToolCatalog;
 import io.github.iso53.castiel.util.AppPaths;
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
@@ -12,6 +13,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -29,7 +32,7 @@ public class UserSettingsService {
 		.enable(SerializationFeature.INDENT_OUTPUT)
 		.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
-	private volatile UserSettings settings = new UserSettings(null, null, null, null);
+	private volatile UserSettings settings = new UserSettings(null, null, null, null, null, null, null, null, null);
 
 	@PostConstruct
 	void loadOnStartup() {
@@ -41,7 +44,7 @@ public class UserSettingsService {
 	}
 
 	public synchronized UserSettings save(UserSettings next) {
-		settings = next != null ? next : new UserSettings(null, null, null, null);
+		settings = next != null ? next : new UserSettings(null, null, null, null, null, null, null, null, null);
 		writeToDisk(settings);
 		return settings;
 	}
@@ -53,7 +56,7 @@ public class UserSettingsService {
 		}
 		Map<String, LlmProviderConfig> next = new LinkedHashMap<>(settings.providers());
 		next.put(providerId.trim(), config);
-		settings = new UserSettings(next, providerId.trim(), settings.workerModel(), settings.defaultMaxRounds());
+		settings = new UserSettings(next, providerId.trim(), settings.workerModel(), settings.kaliModel(), settings.defaultMaxRounds(), settings.disabledToolGroups(), settings.maxToolRounds(), settings.checkpointIntervalRounds(), settings.verbatimToolCalls());
 		writeToDisk(settings);
 		return settings;
 	}
@@ -69,7 +72,12 @@ public class UserSettingsService {
 			next,
 			settings.activeProviderId(),
 			settings.workerModel(),
-			settings.defaultMaxRounds()
+			settings.kaliModel(),
+			settings.defaultMaxRounds(),
+			settings.disabledToolGroups(),
+			settings.maxToolRounds(),
+			settings.checkpointIntervalRounds(),
+			settings.verbatimToolCalls()
 		);
 		writeToDisk(settings);
 		return settings;
@@ -84,7 +92,28 @@ public class UserSettingsService {
 		next.remove(providerId.trim());
 		// Do not leave the UI default pointing at a removed provider.
 		String activeId = providerId.trim().equals(settings.activeProviderId()) ? null : settings.activeProviderId();
-		settings = new UserSettings(next, activeId, settings.workerModel(), settings.defaultMaxRounds());
+		settings = new UserSettings(next, activeId, settings.workerModel(), settings.kaliModel(), settings.defaultMaxRounds(), settings.disabledToolGroups(), settings.maxToolRounds(), settings.checkpointIntervalRounds(), settings.verbatimToolCalls());
+		writeToDisk(settings);
+		return settings;
+	}
+
+	/**
+	 * Replaces the disabled tool groups. Unknown ids are dropped rather than stored, so a
+	 * catalogue rename leaves the file clean instead of accumulating dead entries.
+	 */
+	public synchronized UserSettings setDisabledToolGroups(Set<String> groupIds, ToolCatalog catalog) {
+		Set<String> accepted = groupIds == null ? Set.of() : groupIds.stream().filter(catalog::isKnownToggleable).collect(Collectors.toUnmodifiableSet());
+		settings = new UserSettings(
+			settings.providers(),
+			settings.activeProviderId(),
+			settings.workerModel(),
+			settings.kaliModel(),
+			settings.defaultMaxRounds(),
+			accepted,
+			settings.maxToolRounds(),
+			settings.checkpointIntervalRounds(),
+			settings.verbatimToolCalls()
+		);
 		writeToDisk(settings);
 		return settings;
 	}
@@ -92,14 +121,14 @@ public class UserSettingsService {
 	private UserSettings readFromDisk() {
 		Path file = AppPaths.settingsFile();
 		if (!Files.isRegularFile(file)) {
-			return new UserSettings(null, null, null, null);
+			return new UserSettings(null, null, null, null, null, null, null, null, null);
 		}
 		try {
 			UserSettings loaded = objectMapper.readValue(file.toFile(), UserSettings.class);
-			return loaded != null ? loaded : new UserSettings(null, null, null, null);
+			return loaded != null ? loaded : new UserSettings(null, null, null, null, null, null, null, null, null);
 		} catch (IOException ex) {
 			log.warn("Could not read settings from {}; using defaults", file, ex);
-			return new UserSettings(null, null, null, null);
+			return new UserSettings(null, null, null, null, null, null, null, null, null);
 		}
 	}
 

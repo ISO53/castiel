@@ -23,7 +23,6 @@
 			>
 				<HomeView v-if="tab.component === 'HomeView'" />
 				<OnboardingView v-else-if="tab.component === 'OnboardingView'" />
-				<SettingsView v-else-if="tab.component === 'SettingsView'" />
 				<FileEditorView v-else-if="tab.component === 'FileEditorView'" :path="tab.path" />
 				<NetworkView v-else-if="tab.component === 'NetworkView'" />
 				<WebAppView v-else-if="tab.component === 'WebAppView'" />
@@ -40,7 +39,6 @@ import { AppWindow } from "@lucide/vue";
 import EmptyState from "@/components/EmptyState.vue";
 import HomeView from "@/views/HomeView.vue";
 import OnboardingView from "@/views/OnboardingView.vue";
-import SettingsView from "@/views/SettingsView.vue";
 import { defineAsyncComponent } from "vue";
 
 // The editor (CodeMirror core + language chunks) only loads when a file tab opens.

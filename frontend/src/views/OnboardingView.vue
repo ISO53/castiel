@@ -65,6 +65,7 @@ import {
 	StepperTrigger,
 } from "@/components/ui/stepper";
 import { useTabsStore } from "@/stores/tabs";
+import { useSettingsUiStore } from "@/stores/settingsUi";
 
 const ONBOARDING_SEEN_KEY = "castiel.onboardingComplete";
 
@@ -98,9 +99,9 @@ export default {
 					title: "LLM Provider",
 					icon: Bot,
 					action: "Open Settings",
-					tab: "settings",
+					section: "llama.cpp",
 					body:
-						"castiel needs a language model to talk to. Open the settings view and connect one of " +
+						"castiel needs a language model to talk to. Open the settings dialog and connect one of " +
 						"the supported providers under LLM Providers."
 				},
 				{
@@ -108,10 +109,10 @@ export default {
 					title: "MCP Servers",
 					icon: Plug,
 					action: "Open Settings",
-					tab: "settings",
+					section: "mcp",
 					body:
 						"MCP servers give the agent extra tools such as a headless browser or proxy access. " +
-						"Start them yourself, then register them in the settings view under MCP Servers. " +
+						"Start them yourself, then register them in the settings dialog under MCP Servers. " +
 						"castiel highly recommends adding the Obscura and Caido MCP servers for a better " +
 						"pentesting environment.",
 				},
@@ -120,11 +121,11 @@ export default {
 					title: "Sub-agents",
 					icon: Cpu,
 					action: "Open Settings",
-					tab: "settings",
+					section: "sub-agents",
 					body:
 						"The main agent can delegate mechanical tasks like recon or scanning to smaller " +
 						"sub-agent models; it writes each one's role and toolset per task. Under " +
-						"Sub-agents in the settings view, pick the model they run on.",
+						"Sub-agents in the settings dialog, pick the model they run on.",
 				},
 				{
 					step: 5,
@@ -167,12 +168,8 @@ export default {
 			this.stepIndex++;
 		},
 		runAction(item) {
-			if (item.tab === "settings") {
-				useTabsStore().openTab({
-					value: "settings",
-					label: "Settings",
-					component: "SettingsView",
-				});
+			if (item.section) {
+				useSettingsUiStore().show(item.section);
 			}
 		},
 		close() {

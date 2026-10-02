@@ -6,7 +6,9 @@ import io.github.iso53.castiel.agent.SubAgentRunner;
 import io.github.iso53.castiel.model.KaliTool;
 import io.github.iso53.castiel.model.KaliToolDto;
 import io.github.iso53.castiel.service.KaliToolCatalog;
+import io.github.iso53.castiel.service.UserSettingsService;
 import io.github.iso53.castiel.tool.KaliLaunchTool;
+import io.github.iso53.castiel.tool.ToolCatalog;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -31,17 +33,23 @@ public class KaliToolController {
 	private final AgentRunManager runs;
 	private final SubAgentRunner subAgentRunner;
 	private final KaliLaunchRegistry registry;
+	private final UserSettingsService userSettingsService;
+	private final ToolCatalog toolCatalog;
 
 	public KaliToolController(
 		KaliToolCatalog catalog,
 		AgentRunManager runs,
 		SubAgentRunner subAgentRunner,
-		KaliLaunchRegistry registry
+		KaliLaunchRegistry registry,
+		UserSettingsService userSettingsService,
+		ToolCatalog toolCatalog
 	) {
 		this.catalog = catalog;
 		this.runs = runs;
 		this.subAgentRunner = subAgentRunner;
 		this.registry = registry;
+		this.userSettingsService = userSettingsService;
+		this.toolCatalog = toolCatalog;
 	}
 
 	@GetMapping
@@ -85,6 +93,15 @@ public class KaliToolController {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "toolIds must contain valid tool names");
 		}
 
+		// Without kali_launch the dispatcher sub-agent has no way to settle its plan, so the
+		// run would sit until the round budget expired. Refuse the dispatch instead.
+		if (!toolCatalog.isGroupEnabled("kali_launch", userSettingsService.get().disabledToolGroups())) {
+			throw new ResponseStatusException(
+				HttpStatus.CONFLICT,
+				"Kali launch is switched off in Settings > Tools. Enable it to dispatch scans."
+			);
+		}
+
 		String userNotes =
 			request.userNotes() != null && !request.userNotes().isBlank()
 				? request.userNotes().strip()
@@ -125,14 +142,17 @@ public class KaliToolController {
 				userNotes
 			) + describeTools(tools);
 
+		// Round budget is shared with every other sub-agent kind; the dispatcher is
+		// not special-cased, so the user's one setting governs all of them.
 		SubAgentRunner.RunSpec spec = new SubAgentRunner.RunSpec(
 			"kali-launcher",
+			userSettingsService.get().kaliModel(),
 			systemPrompt,
 			// No bg_start: kali_launch is the only way to start a scan, so there is no raw
 			// command line for the model to bend into a general-purpose shell.
 			Set.of(KaliLaunchTool.NAME, "bash", "read_file", "search_kali_tools"),
 			task,
-			10
+			userSettingsService.get().defaultMaxRounds()
 		);
 
 		AgentRunManager.AgentRun run = runs.create(null, "kali-launcher", taskSummary);

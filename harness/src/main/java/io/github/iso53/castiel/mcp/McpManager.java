@@ -177,9 +177,16 @@ public class McpManager {
 		if (config == null) {
 			throw new IllegalArgumentException("No registered MCP server with id " + id);
 		}
-		if (config.enabled() != enabled) {
+		boolean changed = config.enabled() != enabled;
+		if (changed) {
 			writeEnabledFlag(id, enabled);
 			reloadConfigFile();
+		}
+		if (enabled && changed) {
+			McpServerConfig refreshed = registeredConfigs.get(id);
+			if (refreshed != null && connections.get(id) == null) {
+				connect(refreshed);
+			}
 		}
 		return statuses();
 	}

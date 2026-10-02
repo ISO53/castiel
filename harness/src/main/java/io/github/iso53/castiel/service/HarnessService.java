@@ -56,10 +56,6 @@ public class HarnessService {
 	private static final Logger log = LoggerFactory.getLogger(HarnessService.class);
 
 	private static final String SYSTEM_PROMPT_PATH = "prompts/SYSTEM_PROMPT.md";
-	private static final int MAX_TOOL_ROUNDS = 256;
-
-	/** Inject a workspace-sync checkpoint reminder into the model's context every N tool rounds. */
-	private static final int CHECKPOINT_INTERVAL_ROUNDS = 12;
 
 	/** Arguments preset substituted for tool calls whose streamed arguments arrived truncated. */
 	private static final String FAULTY_TOOL_CALL_ARGUMENTS = "{}";
@@ -83,6 +79,7 @@ public class HarnessService {
 	private final WorkspaceSession workspaceSession;
 	private final AgentRunManager agentRunManager;
 	private final ProcessManager processManager;
+	private final ToolCatalog toolCatalog;
 	private final List<ToolSpecification> toolSpecifications;
 	private final Map<String, ToolExecutor> toolExecutors;
 
@@ -122,7 +119,9 @@ public class HarnessService {
 		WorkspaceSession workspaceSession,
 		AgentRunManager agentRunManager,
 		ProcessManager processManager,
-		List<ToolProvider> toolProviders
+		List<ToolProvider> toolProviders,
+		UserQuestionTool userQuestionTool,
+		ToolCatalog toolCatalog
 	) {
 		this.llmClientFactory = llmClientFactory;
 		this.userSettingsService = userSettingsService;
@@ -133,13 +132,12 @@ public class HarnessService {
 		this.agentRunManager = agentRunManager;
 		this.processManager = processManager;
 
-		UserQuestionTool questionTool = null;
+		// ask_user_question is never executed through this map: its @Tool method only declares
+		// the schema, because executeTool() intercepts the call and blocks on the user instead.
+		this.userQuestionTool = userQuestionTool;
 		this.toolSpecifications = new ArrayList<>();
 		Map<String, ToolExecutor> executors = new LinkedHashMap<>();
 		for (ToolProvider provider : toolProviders) {
-			if (provider instanceof UserQuestionTool userTool) {
-				questionTool = userTool;
-			}
 			for (Method method : provider.getClass().getMethods()) {
 				if (method.isAnnotationPresent(Tool.class)) {
 					ToolSpecification specification = ToolSpecifications.toolSpecificationFrom(method);
@@ -148,11 +146,10 @@ public class HarnessService {
 				}
 			}
 		}
-		if (questionTool == null) {
-			throw new IllegalStateException(UserQuestionTool.class.getSimpleName() + " bean is missing");
-		}
-		this.userQuestionTool = questionTool;
 		this.toolExecutors = executors;
+		this.toolCatalog = toolCatalog;
+		// Fail fast when the settings catalogue names a tool no bean provides.
+		toolCatalog.validateAgainst(executors.keySet());
 	}
 
 	/** Wraps file-mutating tools so their execution pings the UI's workspace feed. */
@@ -333,9 +330,11 @@ public class HarnessService {
 			sink.complete();
 			return;
 		}
-		if (round >= MAX_TOOL_ROUNDS) {
-			log.warn("Generation {} exceeded the {} tool call round limit", generationId, MAX_TOOL_ROUNDS);
-			sink.next(event("error", "The model exceeded " + MAX_TOOL_ROUNDS + " tool call rounds for one message."));
+
+		int limit = userSettingsService.get().maxToolRounds();
+		if (round >= limit) {
+			log.warn("Generation {} exceeded the {} tool call round limit", generationId, limit);
+			sink.next(event("error", "The model exceeded " + limit + " tool call rounds for one message."));
 			sink.complete();
 			return;
 		}
@@ -467,7 +466,8 @@ public class HarnessService {
 					}
 					// Periodic checkpoint: nudge the model to sync findings into the workspace
 					// and check app state like bg processes, sub agents etc.
-					if ((round + 1) % CHECKPOINT_INTERVAL_ROUNDS == 0) {
+					int checkpointEvery = userSettingsService.get().checkpointIntervalRounds();
+					if (checkpointEvery > 0 && (round + 1) % checkpointEvery == 0) {
 						String reminder = buildCheckpointReminder();
 						// Sent as a user turn, not a system turn: it restates a standing rule the
 						// model already has rather than issuing a new one, and user is the role
@@ -568,12 +568,18 @@ public class HarnessService {
 	 */
 	public AgentToolset toolsFor(Set<String> allowedNames) {
 		Set<String> allowed = allowedNames == null ? Set.of() : Set.copyOf(allowedNames);
+		Set<String> disabled = userSettingsService.get().disabledToolGroups();
 		Set<String> seen = new HashSet<>();
 		List<ToolSpecification> specifications = new ArrayList<>();
 		Map<String, ToolExecutor> executors = new LinkedHashMap<>();
 		for (ToolSpecification specification : toolSpecifications) {
 			String name = specification.name();
-			if (AgentGuardrails.FORBIDDEN_TOOLS.contains(name) || !allowed.contains(name) || !seen.add(name)) {
+			// The user's tool switches gate sub-agents too: an orchestrator that could not
+			// call a disabled tool must not be able to reach it by delegating to one.
+			if (AgentGuardrails.FORBIDDEN_TOOLS.contains(name)
+				|| !allowed.contains(name)
+				|| !toolCatalog.isEnabled(name, disabled)
+				|| !seen.add(name)) {
 				continue;
 			}
 			ToolExecutor executor = toolExecutors.get(name);
@@ -613,13 +619,15 @@ public class HarnessService {
 	}
 
 	private List<ToolSpecification> availableTools() {
+		Set<String> disabled = userSettingsService.get().disabledToolGroups();
 		Set<String> names = new HashSet<>();
 		List<ToolSpecification> combined = new ArrayList<>();
 		for (ToolSpecification specification : toolSpecifications) {
-			if (names.add(specification.name())) {
+			if (toolCatalog.isEnabled(specification.name(), disabled) && names.add(specification.name())) {
 				combined.add(specification);
 			}
 		}
+		// MCP tools are governed by their own per-server switch, not by this one.
 		for (ToolSpecification specification : mcpManager.toolSpecifications()) {
 			if (names.add(specification.name())) {
 				combined.add(specification);
@@ -642,6 +650,11 @@ public class HarnessService {
 			// Not a local tool; the MCP manager answers unknown tools the same way.
 			// MCP results are unbounded upstream, so cap them before they hit the context.
 			return capMcpOutput(request.name(), mcpManager.executeTool(request));
+		}
+		if (!toolCatalog.isEnabled(request.name(), userSettingsService.get().disabledToolGroups())) {
+			// The spec was withheld from the model, so reaching here means it invented the
+			// call anyway. Refusing keeps "switched off" honest rather than advisory.
+			return "Error: " + request.name() + " is disabled in castiel settings and cannot be used.";
 		}
 		try {
 			return executor.execute(request, null);
@@ -786,7 +799,7 @@ public class HarnessService {
 			messages.add(SystemMessage.from(systemPrompt));
 		}
 
-		for (ChatTurn turn : HistoryCompactor.compactTurns(turns)) {
+		for (ChatTurn turn : HistoryCompactor.compactTurns(turns, userSettingsService.get().verbatimToolCalls())) {
 			if (turn == null) {
 				continue;
 			}

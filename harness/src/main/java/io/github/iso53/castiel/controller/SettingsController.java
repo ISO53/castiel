@@ -4,7 +4,10 @@ import io.github.iso53.castiel.model.*;
 import io.github.iso53.castiel.service.ClineOAuthService;
 import io.github.iso53.castiel.service.LlmClientFactory;
 import io.github.iso53.castiel.service.UserSettingsService;
+import io.github.iso53.castiel.tool.ToolCatalog;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -17,15 +20,18 @@ import org.springframework.web.server.ResponseStatusException;
 public class SettingsController {
 
 	private final UserSettingsService userSettingsService;
+	private final ToolCatalog toolCatalog;
 	private final LlmClientFactory llmClientFactory;
 	private final ClineOAuthService clineOAuthService;
 
 	public SettingsController(
 		UserSettingsService userSettingsService,
+		ToolCatalog toolCatalog,
 		LlmClientFactory llmClientFactory,
 		ClineOAuthService clineOAuthService
 	) {
 		this.userSettingsService = userSettingsService;
+		this.toolCatalog = toolCatalog;
 		this.llmClientFactory = llmClientFactory;
 		this.clineOAuthService = clineOAuthService;
 	}
@@ -129,8 +135,8 @@ public class SettingsController {
 	}
 
 	/**
-	 * Replaces the sub-agent settings: the worker model and the default tool-round budget.
-	 * The rest of the settings document is untouched.
+	 * Replaces the sub-agent settings: the worker model, the Kali model and the
+	 * default tool-round budget. The rest of the document is untouched.
 	 */
 	@PutMapping("/agents")
 	public UserSettings putAgents(@RequestBody AgentUpdate body) {
@@ -144,7 +150,12 @@ public class SettingsController {
 					current.providers(),
 					current.activeProviderId(),
 					body.workerModel(),
-					body.defaultMaxRounds()
+					body.kaliModel(),
+					body.defaultMaxRounds(),
+					current.disabledToolGroups(),
+					Objects.requireNonNullElse(body.maxToolRounds(), current.maxToolRounds()),
+					Objects.requireNonNullElse(body.checkpointIntervalRounds(), current.checkpointIntervalRounds()),
+					Objects.requireNonNullElse(body.verbatimToolCalls(), current.verbatimToolCalls())
 				)
 			);
 		} catch (IllegalStateException ex) {
@@ -153,5 +164,62 @@ public class SettingsController {
 	}
 
 	/** Request body for {@link #putAgents}; both fields optional, nulls apply defaults. */
-	public record AgentUpdate(AgentModelRef workerModel, Integer defaultMaxRounds) {}
+	public record AgentUpdate(
+		AgentModelRef workerModel,
+		AgentModelRef kaliModel,
+		Integer defaultMaxRounds,
+		Integer maxToolRounds,
+		Integer checkpointIntervalRounds,
+		Integer verbatimToolCalls
+	) {}
+
+	/**
+	 * Lists the harness tool groups with their current state, so the UI never hardcodes
+	 * a list that the backend already owns.
+	 */
+	@GetMapping("/tools")
+	public List<ToolGroupView> listTools() {
+		Set<String> disabled = userSettingsService.get().disabledToolGroups();
+		return toolCatalog.groups().stream()
+			.map(group -> new ToolGroupView(
+				group.id(),
+				group.label(),
+				group.description(),
+				group.tools(),
+				group.locked() || !disabled.contains(group.id()),
+				group.locked(),
+				group.critical()
+			))
+			.toList();
+	}
+
+	/**
+	 * Replaces the set of disabled tool groups. Only the ids the catalogue recognises as
+	 * toggleable are stored; locked groups can never be switched off from here.
+	 */
+	@PutMapping("/tools")
+	public UserSettings putTools(@RequestBody ToolUpdate body) {
+		if (body == null) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is required");
+		}
+		try {
+			return userSettingsService.setDisabledToolGroups(body.disabledGroups(), toolCatalog);
+		} catch (IllegalStateException ex) {
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), ex);
+		}
+	}
+
+	/** Request body for {@link #putTools}. */
+	public record ToolUpdate(Set<String> disabledGroups) {}
+
+	/** One tool group as the settings UI needs it. Locked groups carry no live switch. */
+	public record ToolGroupView(
+		String id,
+		String label,
+		String description,
+		List<String> tools,
+		boolean enabled,
+		boolean locked,
+		boolean critical
+	) {}
 }

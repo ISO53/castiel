@@ -68,10 +68,21 @@ export const useSettingsStore = defineStore("settings", {
 	state: () => ({
 		providers: {},
 		activeProviderId: null,
+		workerModel: { providerId: "", modelName: "" },
+		kaliModel: { providerId: "", modelName: "" },
+		defaultMaxRounds: 32,
+		maxToolRounds: 256,
+		checkpointIntervalRounds: 32,
+		verbatimToolCalls: 32,
 		loaded: false,
+		toolGroups: [],
 		cvssVersion: localStorage.getItem("castiel:cvssVersion") ?? "4.0",
 	}),
 	getters: {
+		/** Ids of every provider that has been connected at least once. */
+		providerIds(state) {
+			return Object.keys(state.providers ?? {});
+		},
 		llamaCpp(state) {
 			return {
 				...defaultLlamaCppProvider(),
@@ -106,7 +117,102 @@ export const useSettingsStore = defineStore("settings", {
 			const data = await response.json();
 			this.providers = data.providers ?? {};
 			this.activeProviderId = data.activeProviderId ?? null;
+			this.workerModel = data.workerModel ?? { providerId: "", modelName: "" };
+			this.kaliModel = data.kaliModel ?? { providerId: "", modelName: "" };
+			this.defaultMaxRounds = data.defaultMaxRounds ?? 32;
+			this.maxToolRounds = data.maxToolRounds ?? 256;
+			this.checkpointIntervalRounds = data.checkpointIntervalRounds ?? 32;
+			this.verbatimToolCalls = data.verbatimToolCalls ?? 32;
 			this.loaded = true;
+			return data;
+		},
+		/**
+		 * Saves the harness limits. The endpoint is shared with the sub-agent section, so each
+		 * caller sends only its own fields and the backend carries the rest through.
+		 */
+		async saveLimits(limits) {
+			const response = await fetch(`${API_BASE_URL}/agents`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(limits),
+			});
+			if (!response.ok) {
+				throw new Error(await readError(response));
+			}
+			const data = await response.json();
+			this.maxToolRounds = data.maxToolRounds ?? this.maxToolRounds;
+			this.checkpointIntervalRounds = data.checkpointIntervalRounds ?? this.checkpointIntervalRounds;
+			this.verbatimToolCalls = data.verbatimToolCalls ?? this.verbatimToolCalls;
+			return data;
+		},
+		/** Lists the harness tool groups with their current enabled state. */
+		async fetchToolGroups() {
+			const response = await fetch(`${API_BASE_URL}/tools`);
+			if (!response.ok) {
+				throw new Error(await readError(response));
+			}
+			this.toolGroups = await response.json();
+			return this.toolGroups;
+		},
+		/**
+		 * Switches one tool group on or off. The backend stores the whole disabled set and
+		 * answers with the new settings, so the optimistic local flip is authoritative here.
+		 */
+		async setToolGroupEnabled(id, enabled) {
+			const group = this.toolGroups.find((entry) => entry.id === id);
+			if (!group) return;
+			const previous = group.enabled;
+			group.enabled = enabled;
+			const disabled = this.toolGroups
+				.filter((entry) => !entry.enabled)
+				.map((entry) => entry.id);
+			try {
+				const response = await fetch(`${API_BASE_URL}/tools`, {
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ disabledGroups: disabled }),
+				});
+				if (!response.ok) {
+					throw new Error(await readError(response));
+				}
+			} catch (error) {
+				group.enabled = previous;
+				throw error;
+			}
+		},
+		/** Lists the model catalog of a connected provider. */
+		async listModels(providerId) {
+			const response = await fetch(
+				`${API_BASE_URL}/providers/${encodeURIComponent(providerId)}/models`,
+			);
+			if (!response.ok) {
+				throw new Error(await readError(response));
+			}
+			return await response.json();
+		},
+		/**
+		 * Saves the sub-agent settings. All three are always sent, so the endpoint
+		 * never has to reason about which fields a caller meant to change.
+		 */
+		async saveAgents(workerModel, kaliModel, defaultMaxRounds) {
+			const response = await fetch(`${API_BASE_URL}/agents`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					workerModel:
+						workerModel?.providerId && workerModel?.modelName ? workerModel : null,
+					kaliModel:
+						kaliModel?.providerId && kaliModel?.modelName ? kaliModel : null,
+					defaultMaxRounds: Number.isFinite(defaultMaxRounds) ? defaultMaxRounds : null,
+				}),
+			});
+			if (!response.ok) {
+				throw new Error(await readError(response));
+			}
+			const data = await response.json();
+			this.workerModel = data.workerModel ?? this.workerModel;
+			this.kaliModel = data.kaliModel ?? this.kaliModel;
+			this.defaultMaxRounds = data.defaultMaxRounds ?? this.defaultMaxRounds;
 			return data;
 		},
 		/**

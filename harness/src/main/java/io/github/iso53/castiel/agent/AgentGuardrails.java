@@ -27,10 +27,10 @@ public final class AgentGuardrails {
 		"workspace_search"
 	);
 
-	public static final int DEFAULT_MAX_ROUNDS = 16;
+	public static final int DEFAULT_MAX_ROUNDS = 32;
 	public static final String WORKER_LABEL = "worker";
 	public static final int MIN_MAX_ROUNDS = 2;
-	public static final int MAX_MAX_ROUNDS = 32;
+	public static final int MAX_MAX_ROUNDS = 64;
 
 	private AgentGuardrails() {}
 }
