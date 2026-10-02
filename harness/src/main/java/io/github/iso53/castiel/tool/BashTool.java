@@ -5,6 +5,7 @@ import dev.langchain4j.agent.tool.Tool;
 import io.github.iso53.castiel.service.HarnessService;
 import io.github.iso53.castiel.service.WorkspaceSession;
 import io.github.iso53.castiel.tool.process.ProcessManager;
+import io.github.iso53.castiel.util.Text;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
@@ -21,6 +22,9 @@ public class BashTool implements ToolProvider {
 	private static final long DEFAULT_TIMEOUT_MS = 20_000;
 	private static final long MAX_TIMEOUT_MS = 60_000;
 	private static final int MAX_OUTPUT_CHARS = 50_000;
+
+	/** Notice appended to command output too long to hand to the model whole. */
+	private static final String TRUNCATION_NOTICE = "\n... [output truncated at %d characters]";
 
 	// Marker line PowerShell emits before a CLIXML-serialized stream.
 	private static final String CLIXML_MARKER = "#< CLIXML";
@@ -161,12 +165,7 @@ public class BashTool implements ToolProvider {
 			out.append("--- stderr ---\n").append(stderr).append('\n');
 		}
 		String combined = out.toString();
-		return combined.length() <= MAX_OUTPUT_CHARS
-			? combined
-			: combined.substring(0, MAX_OUTPUT_CHARS) +
-					"\n... [output truncated at " +
-					MAX_OUTPUT_CHARS +
-					" characters]";
+		return Text.truncate(combined, MAX_OUTPUT_CHARS, TRUNCATION_NOTICE);
 	}
 
 	// Normalizes stdout: LF line endings, collapsed blank runs, no trailing whitespace.

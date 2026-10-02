@@ -47,6 +47,74 @@ public record UserSettings(
 		verbatimToolCalls = verbatimToolCalls == null ? DEFAULT_VERBATIM_TOOL_CALLS : Math.max(0, verbatimToolCalls);
 	}
 
+	/**
+	 * Empty settings: no providers, every limit at its default. The single place a
+	 * blank document is built, so a new field needs no edit here.
+	 */
+	public static UserSettings empty() {
+		return new UserSettings(null, null, null, null, null, null, null, null, null);
+	}
+
+	/** Copy with a replaced provider map and UI default. */
+	public UserSettings withProviders(Map<String, LlmProviderConfig> providers, String activeProviderId) {
+		return new UserSettings(
+			providers,
+			activeProviderId,
+			workerModel,
+			kaliModel,
+			defaultMaxRounds,
+			disabledToolGroups,
+			maxToolRounds,
+			checkpointIntervalRounds,
+			verbatimToolCalls
+		);
+	}
+
+	/** Copy with the sub-agent models and round budget replaced. */
+	public UserSettings withAgents(AgentModelRef workerModel, AgentModelRef kaliModel, Integer defaultMaxRounds) {
+		return new UserSettings(
+			providers,
+			activeProviderId,
+			workerModel,
+			kaliModel,
+			defaultMaxRounds,
+			disabledToolGroups,
+			maxToolRounds,
+			checkpointIntervalRounds,
+			verbatimToolCalls
+		);
+	}
+
+	/** Copy with the disabled tool groups replaced. */
+	public UserSettings withDisabledGroups(Set<String> disabledToolGroups) {
+		return new UserSettings(
+			providers,
+			activeProviderId,
+			workerModel,
+			kaliModel,
+			defaultMaxRounds,
+			disabledToolGroups,
+			maxToolRounds,
+			checkpointIntervalRounds,
+			verbatimToolCalls
+		);
+	}
+
+	/** Copy with the harness limits replaced (null keeps the current value). */
+	public UserSettings withLimits(Integer maxToolRounds, Integer checkpointIntervalRounds, Integer verbatimToolCalls) {
+		return new UserSettings(
+			providers,
+			activeProviderId,
+			workerModel,
+			kaliModel,
+			defaultMaxRounds,
+			disabledToolGroups,
+			maxToolRounds,
+			checkpointIntervalRounds,
+			verbatimToolCalls
+		);
+	}
+
 	public LlmProviderConfig requireProvider(String providerId) {
 		LlmProviderConfig config = providers.get(providerId);
 		if (config == null) {

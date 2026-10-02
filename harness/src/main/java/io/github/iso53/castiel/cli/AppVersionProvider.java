@@ -15,7 +15,7 @@ public final class AppVersionProvider implements IVersionProvider {
 	}
 
 	/** Reads {@code Implementation-Version} from the manifest of the code source. */
-	public static String readAppVersion() {
+	private static String readAppVersion() {
 		Package pkg = AppVersionProvider.class.getPackage();
 		String version = pkg != null ? pkg.getImplementationVersion() : null;
 		return version != null ? version : "dev";

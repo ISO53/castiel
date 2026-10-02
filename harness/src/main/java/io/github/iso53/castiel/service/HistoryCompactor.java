@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.iso53.castiel.model.ChatTurn;
 import io.github.iso53.castiel.model.ToolCallPayload;
+import io.github.iso53.castiel.util.Text;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -69,12 +70,12 @@ final class HistoryCompactor {
 
 	/** Truncated preview with a notice telling the model how to get the content back. */
 	private static String preview(String text, int limit) {
-		if (text == null || text.length() <= limit) {
-			return text;
-		}
-		return text.substring(0, limit)
-			+ "\n[harness: older tool call payload compacted — original " + text.length()
-			+ " characters; repeat the call if this output is needed again]";
+		return Text.truncate(
+			text,
+			limit,
+			"\n[harness: older tool call payload compacted — original %d characters;"
+				+ " repeat the call if this output is needed again]"
+		);
 	}
 
 	// Compacts tool call arguments to a preview that stays valid JSON for providers to parse.

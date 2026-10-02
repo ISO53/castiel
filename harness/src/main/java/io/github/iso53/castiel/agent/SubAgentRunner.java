@@ -27,6 +27,7 @@ import io.github.iso53.castiel.service.HarnessService;
 import io.github.iso53.castiel.service.LlmClientFactory;
 import io.github.iso53.castiel.service.UserSettingsService;
 import io.github.iso53.castiel.service.WorkspaceSession;
+import io.github.iso53.castiel.util.Text;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -60,6 +61,9 @@ public class SubAgentRunner {
 
 	// Scope/context excerpt capped before it reaches the sub-agent's prompt.
 	private static final int CONTEXT_CHAR_CAP = 2_000;
+
+	/** Notice appended to a sub-agent result that had to be cut. */
+	private static final String CAP_NOTICE = "\n[harness: truncated at %d of %d characters]";
 
 	// Hard wall-clock limit for one sub-agent run when no tighter deadline applies.
 	private static final Duration MAX_RUNTIME = Duration.ofMinutes(30);
@@ -153,7 +157,7 @@ public class SubAgentRunner {
 			Outcome loop = loop(run, spec, model, messages, toolset);
 			run.setTotalUsage(loop.usage());
 			String summary = summaryOrTemplate(loop);
-			run.setResultSummary(cap(summary, RESULT_CHAR_CAP));
+			run.setResultSummary(Text.truncate(summary, RESULT_CHAR_CAP, CAP_NOTICE));
 			AgentRunManager.State state = switch (loop.status()) {
 				case "done" -> AgentRunManager.State.DONE;
 				case "cancelled" -> AgentRunManager.State.CANCELLED;
@@ -162,7 +166,7 @@ public class SubAgentRunner {
 			run.setState(state);
 			run.setError(loop.error());
 			log.info("Run {} ended as {} after {} rounds", run.id(), state, loop.rounds());
-			return new SubAgentOutcome(loop.status(), cap(summary, RESULT_CHAR_CAP), loop.usage(), loop.rounds());
+			return new SubAgentOutcome(loop.status(), Text.truncate(summary, RESULT_CHAR_CAP, CAP_NOTICE), loop.usage(), loop.rounds());
 		} catch (Throwable ex) {
 			// Throwable, not Exception: an Error here would otherwise escape and strand the run
 			// in RUNNING with a dead thread, leaving the cancel button with nothing to stop.
@@ -453,16 +457,9 @@ public class SubAgentRunner {
 				return "(scope not filled in yet)";
 			}
 			String excerpt = JSON.writerWithDefaultPrettyPrinter().writeValueAsString(target);
-			return cap(excerpt, CONTEXT_CHAR_CAP);
+			return Text.truncate(excerpt, CONTEXT_CHAR_CAP, CAP_NOTICE);
 		} catch (Exception ex) {
 			return "(scope unreadable: " + ex.getMessage() + ")";
 		}
-	}
-
-	private static String cap(String text, int limit) {
-		if (text.length() <= limit) {
-			return text;
-		}
-		return text.substring(0, limit) + "\n[harness: truncated at " + limit + " of " + text.length() + " characters]";
 	}
 }

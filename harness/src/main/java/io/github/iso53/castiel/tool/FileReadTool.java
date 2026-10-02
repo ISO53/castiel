@@ -3,11 +3,10 @@ package io.github.iso53.castiel.tool;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import io.github.iso53.castiel.service.WorkspaceSession;
+import io.github.iso53.castiel.util.Text;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -18,6 +17,9 @@ public class FileReadTool implements ToolProvider {
 
 	private static final int MAX_READ_LINES = 2_000;
 	private static final int MAX_READ_CHARS = 100_000;
+
+	/** Notice appended to a file too long to hand to the model whole. */
+	private static final String TRUNCATION_NOTICE = "\n... [output truncated at %d characters]";
 
 	private final WorkspaceSession workspace;
 
@@ -48,7 +50,7 @@ public class FileReadTool implements ToolProvider {
 			return "Error: not a readable file: " + file;
 		}
 		try {
-			if (looksBinary(file)) {
+			if (Text.isBinary(file)) {
 				return "Error: " + file + " looks like a binary file and cannot be shown as text";
 			}
 
@@ -75,29 +77,11 @@ public class FileReadTool implements ToolProvider {
 				);
 			}
 
-			String result = out.toString();
-			if (result.length() > MAX_READ_CHARS) {
-				result =
-					result.substring(0, MAX_READ_CHARS) +
-					"\n... [output truncated at " +
-					MAX_READ_CHARS +
-					" characters]";
-			}
+			String result = Text.truncate(out.toString(), MAX_READ_CHARS, TRUNCATION_NOTICE);
 			workspace.remember(file);
 			return result;
 		} catch (IOException ex) {
 			return "Error: could not read " + file + ": " + ex.getMessage();
 		}
-	}
-
-	private static boolean looksBinary(Path file) throws IOException {
-		try (InputStream in = new BufferedInputStream(Files.newInputStream(file))) {
-			for (byte b : in.readNBytes(8_192)) {
-				if (b == 0) {
-					return true;
-				}
-			}
-		}
-		return false;
 	}
 }

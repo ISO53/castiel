@@ -9,6 +9,7 @@ import io.github.iso53.castiel.service.KaliToolCatalog;
 import io.github.iso53.castiel.service.UserSettingsService;
 import io.github.iso53.castiel.tool.KaliLaunchTool;
 import io.github.iso53.castiel.tool.ToolCatalog;
+import io.github.iso53.castiel.util.Text;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -194,7 +195,7 @@ public class KaliToolController {
 				.append("`")
 				.append('\n');
 			if (details.summary() != null && !details.summary().isBlank()) {
-				out.append("  ").append(cap(details.summary(), 200)).append('\n');
+				out.append("  ").append(Text.truncate(details.summary(), 200, "...")).append('\n');
 			}
 		}
 		return out.toString();
@@ -234,9 +235,5 @@ public class KaliToolController {
 		if (runs.remove(run.id())) {
 			log.debug("Dispatch {} removed itself from the agent registry", run.id());
 		}
-	}
-
-	private static String cap(String text, int limit) {
-		return text.length() <= limit ? text : text.substring(0, limit) + "...";
 	}
 }

@@ -146,17 +146,13 @@ public class SettingsController {
 		try {
 			UserSettings current = userSettingsService.get();
 			return userSettingsService.save(
-				new UserSettings(
-					current.providers(),
-					current.activeProviderId(),
-					body.workerModel(),
-					body.kaliModel(),
-					body.defaultMaxRounds(),
-					current.disabledToolGroups(),
-					Objects.requireNonNullElse(body.maxToolRounds(), current.maxToolRounds()),
-					Objects.requireNonNullElse(body.checkpointIntervalRounds(), current.checkpointIntervalRounds()),
-					Objects.requireNonNullElse(body.verbatimToolCalls(), current.verbatimToolCalls())
-				)
+				current
+					.withAgents(body.workerModel(), body.kaliModel(), body.defaultMaxRounds())
+					.withLimits(
+						Objects.requireNonNullElse(body.maxToolRounds(), current.maxToolRounds()),
+						Objects.requireNonNullElse(body.checkpointIntervalRounds(), current.checkpointIntervalRounds()),
+						Objects.requireNonNullElse(body.verbatimToolCalls(), current.verbatimToolCalls())
+					)
 			);
 		} catch (IllegalStateException ex) {
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), ex);
@@ -186,7 +182,7 @@ public class SettingsController {
 				group.label(),
 				group.description(),
 				group.tools(),
-				group.locked() || !disabled.contains(group.id()),
+				toolCatalog.isGroupEnabled(group.id(), disabled),
 				group.locked(),
 				group.critical()
 			))
