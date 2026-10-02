@@ -20,21 +20,22 @@ final class HistoryCompactor {
 
 	private static final ObjectMapper JSON = new ObjectMapper();
 
-	/** Tool calls (counted from the newest backwards) kept verbatim in the model's history view. */
-	private static final int VERBATIM_TOOL_CALLS = 8;
-
 	/** Preview characters kept from each compacted result/argument in the history view. */
 	private static final int COMPACTED_PREVIEW_CHARS = 160;
 
 	private HistoryCompactor() {
 	}
 
-	static List<ChatTurn> compactTurns(List<ChatTurn> turns) {
+	/**
+	 * @param verbatimToolCalls recent tool calls kept in full; older ones shrink to previews.
+	 * Zero compacts every tool call, which is a valid (if aggressive) setting.
+	 */
+	static List<ChatTurn> compactTurns(List<ChatTurn> turns, int verbatimToolCalls) {
 		int totalCalls = 0;
 		for (ChatTurn turn : turns) {
 			totalCalls += turn.toolCalls().size();
 		}
-		int firstVerbatim = totalCalls - VERBATIM_TOOL_CALLS;
+		int firstVerbatim = totalCalls - verbatimToolCalls;
 		if (firstVerbatim <= 0) {
 			return turns;
 		}

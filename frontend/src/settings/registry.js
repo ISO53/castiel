@@ -1,4 +1,4 @@
-import { Bot, Cpu, Plug, ShieldAlert, Wrench } from "@lucide/vue";
+import { Bot, Cpu, Gauge, Plug, ShieldAlert, Wrench } from "@lucide/vue";
 
 /**
  * The settings tree, in sidebar order. It is the single source of truth for
@@ -67,6 +67,15 @@ export const SETTINGS_TREE = [
 			"The tools the agent can call. Switching one off hides it from the model, sub-agents included.",
 		keywords: ["bash", "shell", "files", "web", "search", "cvss", "kali", "sub-agent", "background", "disable"],
 		component: () => import("@/components/settings/sections/ToolsSection.vue"),
+	},
+	{
+		id: "limits",
+		title: "Limits",
+		icon: Gauge,
+		description:
+			"How hard the main agent pushes in one message: tool rounds, checkpoint reminders, and how much tool history stays untruncated.",
+		keywords: ["rounds", "budget", "checkpoint", "history", "context", "tokens", "performance"],
+		component: () => import("@/components/settings/sections/LimitsSection.vue"),
 	},
 	{
 		id: "sub-agents",

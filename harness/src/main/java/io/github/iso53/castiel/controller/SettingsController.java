@@ -6,6 +6,7 @@ import io.github.iso53.castiel.service.LlmClientFactory;
 import io.github.iso53.castiel.service.UserSettingsService;
 import io.github.iso53.castiel.tool.ToolCatalog;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -148,10 +149,13 @@ public class SettingsController {
 				new UserSettings(
 					current.providers(),
 					current.activeProviderId(),
-body.workerModel(),
+					body.workerModel(),
 					body.kaliModel(),
 					body.defaultMaxRounds(),
-					current.disabledToolGroups()
+					current.disabledToolGroups(),
+					Objects.requireNonNullElse(body.maxToolRounds(), current.maxToolRounds()),
+					Objects.requireNonNullElse(body.checkpointIntervalRounds(), current.checkpointIntervalRounds()),
+					Objects.requireNonNullElse(body.verbatimToolCalls(), current.verbatimToolCalls())
 				)
 			);
 		} catch (IllegalStateException ex) {
@@ -160,7 +164,14 @@ body.workerModel(),
 	}
 
 	/** Request body for {@link #putAgents}; both fields optional, nulls apply defaults. */
-	public record AgentUpdate(AgentModelRef workerModel, AgentModelRef kaliModel, Integer defaultMaxRounds) {}
+	public record AgentUpdate(
+		AgentModelRef workerModel,
+		AgentModelRef kaliModel,
+		Integer defaultMaxRounds,
+		Integer maxToolRounds,
+		Integer checkpointIntervalRounds,
+		Integer verbatimToolCalls
+	) {}
 
 	/**
 	 * Lists the harness tool groups with their current state, so the UI never hardcodes

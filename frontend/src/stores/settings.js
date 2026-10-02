@@ -71,6 +71,9 @@ export const useSettingsStore = defineStore("settings", {
 		workerModel: { providerId: "", modelName: "" },
 		kaliModel: { providerId: "", modelName: "" },
 		defaultMaxRounds: 32,
+		maxToolRounds: 256,
+		checkpointIntervalRounds: 32,
+		verbatimToolCalls: 32,
 		loaded: false,
 		toolGroups: [],
 		cvssVersion: localStorage.getItem("castiel:cvssVersion") ?? "4.0",
@@ -117,7 +120,29 @@ export const useSettingsStore = defineStore("settings", {
 			this.workerModel = data.workerModel ?? { providerId: "", modelName: "" };
 			this.kaliModel = data.kaliModel ?? { providerId: "", modelName: "" };
 			this.defaultMaxRounds = data.defaultMaxRounds ?? 32;
+			this.maxToolRounds = data.maxToolRounds ?? 256;
+			this.checkpointIntervalRounds = data.checkpointIntervalRounds ?? 32;
+			this.verbatimToolCalls = data.verbatimToolCalls ?? 32;
 			this.loaded = true;
+			return data;
+		},
+		/**
+		 * Saves the harness limits. The endpoint is shared with the sub-agent section, so each
+		 * caller sends only its own fields and the backend carries the rest through.
+		 */
+		async saveLimits(limits) {
+			const response = await fetch(`${API_BASE_URL}/agents`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(limits),
+			});
+			if (!response.ok) {
+				throw new Error(await readError(response));
+			}
+			const data = await response.json();
+			this.maxToolRounds = data.maxToolRounds ?? this.maxToolRounds;
+			this.checkpointIntervalRounds = data.checkpointIntervalRounds ?? this.checkpointIntervalRounds;
+			this.verbatimToolCalls = data.verbatimToolCalls ?? this.verbatimToolCalls;
 			return data;
 		},
 		/** Lists the harness tool groups with their current enabled state. */

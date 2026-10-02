@@ -56,10 +56,6 @@ public class HarnessService {
 	private static final Logger log = LoggerFactory.getLogger(HarnessService.class);
 
 	private static final String SYSTEM_PROMPT_PATH = "prompts/SYSTEM_PROMPT.md";
-	private static final int MAX_TOOL_ROUNDS = 256;
-
-	/** Inject a workspace-sync checkpoint reminder into the model's context every N tool rounds. */
-	private static final int CHECKPOINT_INTERVAL_ROUNDS = 12;
 
 	/** Arguments preset substituted for tool calls whose streamed arguments arrived truncated. */
 	private static final String FAULTY_TOOL_CALL_ARGUMENTS = "{}";
@@ -334,9 +330,11 @@ public class HarnessService {
 			sink.complete();
 			return;
 		}
-		if (round >= MAX_TOOL_ROUNDS) {
-			log.warn("Generation {} exceeded the {} tool call round limit", generationId, MAX_TOOL_ROUNDS);
-			sink.next(event("error", "The model exceeded " + MAX_TOOL_ROUNDS + " tool call rounds for one message."));
+
+		int limit = userSettingsService.get().maxToolRounds();
+		if (round >= limit) {
+			log.warn("Generation {} exceeded the {} tool call round limit", generationId, limit);
+			sink.next(event("error", "The model exceeded " + limit + " tool call rounds for one message."));
 			sink.complete();
 			return;
 		}
@@ -468,7 +466,8 @@ public class HarnessService {
 					}
 					// Periodic checkpoint: nudge the model to sync findings into the workspace
 					// and check app state like bg processes, sub agents etc.
-					if ((round + 1) % CHECKPOINT_INTERVAL_ROUNDS == 0) {
+					int checkpointEvery = userSettingsService.get().checkpointIntervalRounds();
+					if (checkpointEvery > 0 && (round + 1) % checkpointEvery == 0) {
 						String reminder = buildCheckpointReminder();
 						// Sent as a user turn, not a system turn: it restates a standing rule the
 						// model already has rather than issuing a new one, and user is the role
@@ -800,7 +799,7 @@ public class HarnessService {
 			messages.add(SystemMessage.from(systemPrompt));
 		}
 
-		for (ChatTurn turn : HistoryCompactor.compactTurns(turns)) {
+		for (ChatTurn turn : HistoryCompactor.compactTurns(turns, userSettingsService.get().verbatimToolCalls())) {
 			if (turn == null) {
 				continue;
 			}

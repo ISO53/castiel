@@ -22,8 +22,15 @@ public record UserSettings(
 	AgentModelRef workerModel,
 	AgentModelRef kaliModel,
 	Integer defaultMaxRounds,
-	Set<String> disabledToolGroups
+	Set<String> disabledToolGroups,
+	Integer maxToolRounds,
+	Integer checkpointIntervalRounds,
+	Integer verbatimToolCalls
 ) {
+
+	public static final int DEFAULT_MAX_TOOL_ROUNDS = 256;
+	public static final int DEFAULT_CHECKPOINT_INTERVAL_ROUNDS = 32;
+	public static final int DEFAULT_VERBATIM_TOOL_CALLS = 32;
 
 	public UserSettings {
 		providers = providers == null ? Map.of() : Map.copyOf(providers);
@@ -33,13 +40,12 @@ public record UserSettings(
 			? AgentGuardrails.DEFAULT_MAX_ROUNDS
 			: (int) Math.clamp(defaultMaxRounds.longValue(), AgentGuardrails.MIN_MAX_ROUNDS, AgentGuardrails.MAX_MAX_ROUNDS);
 		disabledToolGroups = disabledToolGroups == null ? Set.of() : Set.copyOf(disabledToolGroups);
+		maxToolRounds = maxToolRounds == null ? DEFAULT_MAX_TOOL_ROUNDS : Math.max(1, maxToolRounds);
+		checkpointIntervalRounds = checkpointIntervalRounds == null
+			? DEFAULT_CHECKPOINT_INTERVAL_ROUNDS
+			: Math.max(1, checkpointIntervalRounds);
+		verbatimToolCalls = verbatimToolCalls == null ? DEFAULT_VERBATIM_TOOL_CALLS : Math.max(0, verbatimToolCalls);
 	}
-
-	/**
-	 * No shorter constructor on purpose: a five-argument one would silently reset the tool
-	 * toggles to "all enabled" on every provider or agent update. Every call site therefore
-	 * passes the current value through, which makes the field impossible to lose by omission.
-	 */
 
 	public LlmProviderConfig requireProvider(String providerId) {
 		LlmProviderConfig config = providers.get(providerId);
