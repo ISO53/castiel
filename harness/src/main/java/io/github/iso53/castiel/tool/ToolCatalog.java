@@ -1,11 +1,12 @@
 package io.github.iso53.castiel.tool;
 
+import org.springframework.stereotype.Service;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.springframework.stereotype.Service;
 
 /**
  * The harness's own tools, grouped for display and individually toggleable.

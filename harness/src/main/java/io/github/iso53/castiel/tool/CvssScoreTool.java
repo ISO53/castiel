@@ -7,12 +7,13 @@ import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import io.github.iso53.castiel.service.WorkspaceEventBus;
 import io.github.iso53.castiel.service.WorkspaceSession;
+import org.springframework.stereotype.Service;
+import us.springett.cvss.Cvss;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
-import org.springframework.stereotype.Service;
-import us.springett.cvss.Cvss;
 
 /**
  * Attaches an exact CVSS assessment to a vulnerability in the workspace's

@@ -2,17 +2,20 @@ package io.github.iso53.castiel.agent;
 
 import dev.langchain4j.model.output.TokenUsage;
 import io.github.iso53.castiel.tool.process.ProcessManager;
-import java.security.SecureRandom;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
+
+import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Registry of sub-agent runs, the read side of the bottom-dock Agents view.

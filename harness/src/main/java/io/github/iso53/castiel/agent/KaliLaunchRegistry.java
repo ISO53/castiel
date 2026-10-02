@@ -1,10 +1,11 @@
 package io.github.iso53.castiel.agent;
 
+import org.springframework.stereotype.Component;
+
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.stereotype.Component;
 
 /**
  * Tracks which requested Kali tools a dispatch sub-agent has actually launched or skipped.

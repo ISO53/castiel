@@ -8,6 +8,8 @@ import io.github.iso53.castiel.agent.AgentRunManager;
 import io.github.iso53.castiel.agent.SubAgentRunner;
 import io.github.iso53.castiel.service.HarnessService;
 import io.github.iso53.castiel.service.UserSettingsService;
+import org.springframework.stereotype.Service;
+
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -15,7 +17,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.springframework.stereotype.Service;
 
 /**
  * The {@code sub_agent} tool: lets the orchestrator delegate a narrow task to a single

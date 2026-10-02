@@ -10,14 +10,15 @@ import io.github.iso53.castiel.service.HarnessService;
 import io.github.iso53.castiel.service.KaliToolCatalog;
 import io.github.iso53.castiel.tool.process.ManagedProcess;
 import io.github.iso53.castiel.tool.process.ProcessManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Pattern;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
 
 /**
  * Launches one requested Kali tool as a background process on behalf of a dispatch sub-agent.
