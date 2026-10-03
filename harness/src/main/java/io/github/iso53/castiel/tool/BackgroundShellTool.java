@@ -5,9 +5,9 @@ import dev.langchain4j.agent.tool.Tool;
 import io.github.iso53.castiel.tool.process.BoundedOutputBuffer;
 import io.github.iso53.castiel.tool.process.ManagedProcess;
 import io.github.iso53.castiel.tool.process.ProcessManager;
+import io.github.iso53.castiel.util.Text;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -245,16 +245,7 @@ public class BackgroundShellTool implements ToolProvider {
 	}
 
 	private static String formatRuntime(ManagedProcess entry) {
-		Duration runtime = entry.runtime();
-		long seconds = runtime.toSeconds();
-		if (seconds < 60) {
-			return seconds + "s elapsed";
-		}
-		long minutes = seconds / 60;
-		if (minutes < 90) {
-			return minutes + "m elapsed";
-		}
-		return "%dh%02dm elapsed".formatted(minutes / 60, minutes % 60);
+		return Text.runtime(entry.runtime().toSeconds()) + " elapsed";
 	}
 
 	private static String exitCodeSuffix(ManagedProcess entry) {

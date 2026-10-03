@@ -4,8 +4,9 @@ import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import io.github.iso53.castiel.model.KaliToolDto;
 import io.github.iso53.castiel.service.KaliToolCatalog;
-import java.util.List;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * Lets the orchestrator and sub-agents search the Kali Linux security tools catalog by keyword,

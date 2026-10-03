@@ -71,6 +71,7 @@ export const useSettingsStore = defineStore("settings", {
 		workerModel: { providerId: "", modelName: "" },
 		kaliModel: { providerId: "", modelName: "" },
 		defaultMaxRounds: 32,
+		subAgentTimeoutMinutes: 30,
 		maxToolRounds: 256,
 		checkpointIntervalRounds: 32,
 		verbatimToolCalls: 32,
@@ -120,6 +121,7 @@ export const useSettingsStore = defineStore("settings", {
 			this.workerModel = data.workerModel ?? { providerId: "", modelName: "" };
 			this.kaliModel = data.kaliModel ?? { providerId: "", modelName: "" };
 			this.defaultMaxRounds = data.defaultMaxRounds ?? 32;
+			this.subAgentTimeoutMinutes = data.subAgentTimeoutMinutes ?? 30;
 			this.maxToolRounds = data.maxToolRounds ?? 256;
 			this.checkpointIntervalRounds = data.checkpointIntervalRounds ?? 32;
 			this.verbatimToolCalls = data.verbatimToolCalls ?? 32;
@@ -191,10 +193,10 @@ export const useSettingsStore = defineStore("settings", {
 			return await response.json();
 		},
 		/**
-		 * Saves the sub-agent settings. All three are always sent, so the endpoint
+		 * Saves the sub-agent settings. All four are always sent, so the endpoint
 		 * never has to reason about which fields a caller meant to change.
 		 */
-		async saveAgents(workerModel, kaliModel, defaultMaxRounds) {
+		async saveAgents(workerModel, kaliModel, defaultMaxRounds, subAgentTimeoutMinutes) {
 			const response = await fetch(`${API_BASE_URL}/agents`, {
 				method: "PUT",
 				headers: { "Content-Type": "application/json" },
@@ -204,6 +206,9 @@ export const useSettingsStore = defineStore("settings", {
 					kaliModel:
 						kaliModel?.providerId && kaliModel?.modelName ? kaliModel : null,
 					defaultMaxRounds: Number.isFinite(defaultMaxRounds) ? defaultMaxRounds : null,
+					subAgentTimeoutMinutes: Number.isFinite(subAgentTimeoutMinutes)
+						? subAgentTimeoutMinutes
+						: null,
 				}),
 			});
 			if (!response.ok) {
@@ -213,6 +218,7 @@ export const useSettingsStore = defineStore("settings", {
 			this.workerModel = data.workerModel ?? this.workerModel;
 			this.kaliModel = data.kaliModel ?? this.kaliModel;
 			this.defaultMaxRounds = data.defaultMaxRounds ?? this.defaultMaxRounds;
+			this.subAgentTimeoutMinutes = data.subAgentTimeoutMinutes ?? this.subAgentTimeoutMinutes;
 			return data;
 		},
 		/**

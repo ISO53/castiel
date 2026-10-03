@@ -1,8 +1,9 @@
 package io.github.iso53.castiel.cli;
 
-import java.util.concurrent.Callable;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
+
+import java.util.concurrent.Callable;
 
 /**
  * castiel command line interface. Parsed in {@code main()} before Spring starts so

@@ -2,17 +2,19 @@ package io.github.iso53.castiel.agent;
 
 import dev.langchain4j.model.output.TokenUsage;
 import io.github.iso53.castiel.tool.process.ProcessManager;
-import java.security.SecureRandom;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
+
+import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Comparator;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Registry of sub-agent runs, the read side of the bottom-dock Agents view.
@@ -58,7 +60,6 @@ public class AgentRunManager {
 	public static final class AgentRun {
 
 		private final String id;
-		private final String parentGenerationId;
 		private final String profile;
 		private final String task;
 		private final Instant startedAt = Instant.now();
@@ -75,21 +76,21 @@ public class AgentRunManager {
 		private volatile TokenUsage totalUsage = new TokenUsage(0, 0, 0);
 		private volatile String resultSummary = "";
 		private volatile String error = "";
+		// Workspace-relative path the summary was persisted to
+		private volatile String resultPath = "";
+		// Set once agent_read hands this run's result to the orchestrator. Mirrors
+		// ManagedProcess.seenByAgent: it drives the UNREAD marker and lets a collected
+		// run be dropped from the registry instead of lingering forever.
+		private volatile boolean seenByAgent = false;
 
-		AgentRun(String id, String parentGenerationId, String profile, String task) {
+		AgentRun(String id, String profile, String task) {
 			this.id = id;
-			this.parentGenerationId = parentGenerationId;
 			this.profile = profile;
 			this.task = task;
 		}
 
 		public String id() {
 			return id;
-		}
-
-		// Chat generation id of the orchestrator that spawned this run; used for cancel fan-out.
-		public String parentGenerationId() {
-			return parentGenerationId;
 		}
 
 		public String profile() {
@@ -165,6 +166,21 @@ public class AgentRunManager {
 			return error;
 		}
 
+		/** Workspace-relative path of the persisted summary, or empty if none was written. */
+		public String resultPath() {
+			return resultPath;
+		}
+
+		/** Whether the orchestrator already collected this run's result via {@code agent_read}. */
+		public boolean isSeenByAgent() {
+			return seenByAgent;
+		}
+
+		/** Marks the result as collected. The run stays readable until it is removed. */
+		public void markSeenByAgent() {
+			this.seenByAgent = true;
+		}
+
 		public boolean isFinished() {
 			return state == State.DONE || state == State.FAILED || state == State.CANCELLED;
 		}
@@ -181,6 +197,10 @@ public class AgentRunManager {
 			this.totalUsage = totalUsage == null ? new TokenUsage(0, 0, 0) : totalUsage;
 		}
 
+		void setResultPath(String resultPath) {
+			this.resultPath = resultPath == null ? "" : resultPath;
+		}
+
 		void setResultSummary(String resultSummary) {
 			this.resultSummary = resultSummary;
 		}
@@ -193,26 +213,18 @@ public class AgentRunManager {
 	// id -> run.
 	private final ConcurrentMap<String, AgentRun> runs = new ConcurrentHashMap<>();
 
-	// parentGenerationId -> child run ids, for cancel fan-out from the orchestrator.
-	private final ConcurrentMap<String, Set<String>> childrenByParent = new ConcurrentHashMap<>();
-
 	// Fan-out of registry change pings for the UI's SSE feed.
 	private final Sinks.Many<String> changes = Sinks.many().replay().latest();
 
 	/**
 	 * Registers a new run in the QUEUED state and pings the UI.
 	 *
-	 * @param parentGenerationId Chat generation of the orchestrator; used for cancel fan-out.
-	 * @param profile            Profile display name, or {@code custom} for orchestrator-defined agents.
-	 * @param task               The task the sub-agent was given.
+	 * @param profile Profile display name, or {@code custom} for orchestrator-defined agents.
+	 * @param task    The task the sub-agent was given.
 	 */
-	public AgentRun create(String parentGenerationId, String profile, String task) {
-		String parent = parentGenerationId == null ? "" : parentGenerationId.strip();
-		AgentRun run = new AgentRun(newId(), parent, profile, task.strip());
+	public AgentRun create(String profile, String task) {
+		AgentRun run = new AgentRun(newId(), profile, task.strip());
 		runs.put(run.id(), run);
-		if (!parent.isBlank()) {
-			childrenByParent.computeIfAbsent(parent, key -> ConcurrentHashMap.newKeySet()).add(run.id());
-		}
 		evictOverflow();
 		notifyChange();
 		return run;
@@ -232,6 +244,29 @@ public class AgentRunManager {
 		return id == null ? null : runs.get(id);
 	}
 
+	/**
+	 * Marks a run's result as collected by the orchestrator, refreshing the UI's UNREAD
+	 * flag. A no-op for an unknown id so a stale read never throws at the caller.
+	 */
+	public void markSeen(String id) {
+		AgentRun run = get(id);
+		if (run == null) {
+			return;
+		}
+		run.markSeenByAgent();
+		notifyChange();
+	}
+
+	/** Finished runs whose result the orchestrator has not collected yet. */
+	public List<AgentRun> unreadFinished() {
+		return list().stream().filter(run -> run.isFinished() && !run.isSeenByAgent()).toList();
+	}
+
+	/** Live runs (QUEUED or RUNNING), oldest first. */
+	public List<AgentRun> live() {
+		return list().stream().filter(run -> !run.isFinished()).toList();
+	}
+
 	// Requests cancellation; the runner honors the flag between rounds and inside callbacks.
 	public boolean cancel(String id) {
 		AgentRun run = get(id);
@@ -242,24 +277,6 @@ public class AgentRunManager {
 		// Kill any foreground shells this run's tool calls left behind.
 		processes.killByGeneration(id);
 		return true;
-	}
-
-	// Cancels every live child run of the given orchestrator generation.
-	public void cancelByParent(String parentGenerationId) {
-		if (parentGenerationId == null) {
-			return;
-		}
-		Set<String> children = childrenByParent.get(parentGenerationId);
-		if (children == null) {
-			return;
-		}
-		for (String id : children) {
-			AgentRun run = runs.get(id);
-			if (run != null && !run.isFinished()) {
-				run.cancelled().set(true);
-				processes.killByGeneration(id);
-			}
-		}
 	}
 
 	// Drops a finished run from the registry; live runs must be cancelled first.

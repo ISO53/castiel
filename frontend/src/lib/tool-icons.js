@@ -31,6 +31,9 @@ export const TOOL_ICONS = {
 	workspace_info: Info,
 	workspace_search: FolderSearch,
 	sub_agent: Bot,
+	agent_list: Bot,
+	agent_read: Bot,
+	agent_kill: Bot,
 	ask_user_question: MessageCircleQuestionMark,
 	search_kali_tools: PackageSearch,
 };

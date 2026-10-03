@@ -156,7 +156,7 @@ public class KaliToolController {
 			userSettingsService.get().defaultMaxRounds()
 		);
 
-		AgentRunManager.AgentRun run = runs.create(null, "kali-launcher", taskSummary);
+		AgentRunManager.AgentRun run = runs.create("kali-launcher", taskSummary);
 		// Register what was requested so coverage can be verified once the run is over.
 		registry.register(run.id(), tools);
 		log.info("Dispatch {} requested for tools {}", run.id(), tools);
