@@ -6,9 +6,14 @@ import java.util.Set;
 public final class AgentGuardrails {
 
 	// Tools no sub-agent may ever receive, regardless of what the orchestrator allows.
+	// agent_* is here for the same reason bg_* is: a sub-agent may not inspect, collect
+	// or kill runs other than its own, or it would be able to steer its siblings.
 	public static final Set<String> FORBIDDEN_TOOLS = Set.of(
 		"ask_user_question",
 		"sub_agent",
+		"agent_list",
+		"agent_read",
+		"agent_kill",
 		"edit_file",
 		"cvss_score",
 		"bg_list",
@@ -31,6 +36,8 @@ public final class AgentGuardrails {
 	public static final String WORKER_LABEL = "worker";
 	public static final int MIN_MAX_ROUNDS = 2;
 	public static final int MAX_MAX_ROUNDS = 64;
+	public static final int MIN_TIMEOUT_MINUTES = 1;
+	public static final int MAX_TIMEOUT_MINUTES = 240;
 
 	private AgentGuardrails() {}
 }

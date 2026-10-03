@@ -48,4 +48,20 @@ public final class Text {
 		}
 		return text.substring(0, limit) + noticeFormat.formatted(limit, text.length());
 	}
+
+	/**
+	 * Elapsed time as one short phrase, e.g. {@code 45s}, {@code 12m}, {@code 1h05m}.
+	 * One rule for every runtime the agent and the UI read, so a process and a
+	 * sub-agent never phrase the same duration differently.
+	 */
+	public static String runtime(long seconds) {
+		long minutes = seconds / 60;
+		if (minutes < 1) {
+			return seconds + "s";
+		}
+		if (minutes < 60) {
+			return minutes + "m";
+		}
+		return "%dh%02dm".formatted(minutes / 60, minutes % 60);
+	}
 }

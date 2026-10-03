@@ -297,9 +297,9 @@ public class HarnessService {
 		}
 		state.cancelled.set(true);
 		log.info("Generation {} cancelled", generationId);
-		// Any sub-agents spawned by this generation stop with it.
-		agentRunManager.cancelByParent(generationId);
-		// Foreground tool shells (bash etc.) spawned by this generation die with it too.
+		// Sub-agents are background work now: they deliberately outlive the turn that started
+		// them, so a cancelled generation must NOT take them down with it. Only the foreground
+		// tool shells (bash etc.) that this generation is still blocked on die with it.
 		processManager.killByGeneration(generationId);
 		if (state.recorder != null) {
 			state.recorder.flushPending(); // Keep whatever had already streamed when stopping.
@@ -555,6 +555,17 @@ public class HarnessService {
 			sb.append("You also have some background processes to look at too.\n");
 			sb.append("You have ").append(unseenCount).append(" unseen background processes.\n");
 			sb.append("You have ").append(totalRunning).append(" still running background processes.\n");
+			sb.append("Use bg_list to see them all and bg_read to collect the finished ones.");
+		}
+
+		// Warn the agent about any running/un-read sub-agent runs
+		int liveAgents = agentRunManager.live().size();
+		int unreadAgents = agentRunManager.unreadFinished().size();
+		if (liveAgents > 0 || unreadAgents > 0) {
+			sb.append("You also have sub-agent runs going.\n");
+			sb.append("You have ").append(liveAgents).append(" sub-agent run(s) still working.\n");
+			sb.append("You have ").append(unreadAgents).append(" finished sub-agent result(s) you have not collected.\n");
+			sb.append("Use agent_list to see them and agent_read to collect the finished ones.\n");
 		}
 
 		sb.append("After doing the checkpoint tasks, then carry on with your remaining work.");

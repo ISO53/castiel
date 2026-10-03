@@ -20,6 +20,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -33,11 +35,12 @@ import java.util.concurrent.TimeUnit;
  * Runs one sub-agent generation: a short prompt, a filtered toolset, and a small model,
  * driven through the same tool-calling discipline as the orchestrator loop.
  *
- * <p>A run is foreground from the orchestrator's point of view (its tool call blocks until
- * the sub-agent finishes), but executes on its own virtual thread so the caller's HTTP
- * handler thread merely joins it. Each round streams from the model, but the tokens are
- * discarded: the run reports only the phase it is in, plus a final summary, so the
- * bottom-dock Agents view stays a monitor rather than a second transcript viewer.
+ * <p>A run is background: it executes on its own virtual thread and outlives the orchestrator
+ * turn that started it, so the caller never blocks and never sees the outcome directly — it
+ * reads the result back out of the {@link AgentRunManager} registry. Each round streams from
+ * the model, but the tokens are discarded: the run reports only the phase it is in, plus a
+ * final summary, so the bottom-dock Agents view stays a monitor rather than a second
+ * transcript viewer.
  */
 @Service
 public class SubAgentRunner {
@@ -53,10 +56,14 @@ public class SubAgentRunner {
 	/** Notice appended to a sub-agent result that had to be cut. */
 	private static final String CAP_NOTICE = "\n[harness: truncated at %d of %d characters]";
 
-	// Hard wall-clock limit for one sub-agent run when no tighter deadline applies.
-	private static final Duration MAX_RUNTIME = Duration.ofMinutes(30);
-
 	private static final ObjectMapper JSON = new ObjectMapper();
+
+	/**
+	 * Where run summaries are written inside a workspace. Deliberately not {@code evidence/}:
+	 * a summary is a work log, not captured material, and that folder is contractually limited
+	 * to artifacts registered in {@code evidence.json}.
+	 */
+	private static final String AGENTS_FOLDER = "agents";
 
 	private final ObjectProvider<HarnessService> harnessProvider;
 	private final LlmClientFactory llmClientFactory;
@@ -103,8 +110,58 @@ public class SubAgentRunner {
 		}
 	}
 
-	// What a finished run reports back to the orchestrator's tool result.
-	public record SubAgentOutcome(String status, String summary, TokenUsage usage, int rounds) {}
+	/**
+	 * Writes the run's final summary to {@code <workspace>/agents/<run-id>.md}, with a short
+	 * provenance header. Best-effort: a run is already finished at this point, so a failed
+	 * write must never turn a good result into a failed one.
+	 */
+	private void persistSummary(AgentRunManager.AgentRun run, RunSpec spec, String summary) {
+		Path root = workspace.root().orElse(null);
+		if (root == null) {
+			log.debug("No workspace open; run {} summary was not persisted", run.id());
+			return;
+		}
+		try {
+			Path dir = root.resolve(AGENTS_FOLDER);
+			Files.createDirectories(dir);
+			Path target = dir.resolve(run.id() + ".md");
+			Files.writeString(target, summaryDocument(run, spec, summary), StandardCharsets.UTF_8);
+			run.setResultPath(AGENTS_FOLDER + "/" + target.getFileName());
+			log.info("Persisted run {} summary to {}", run.id(), target);
+		} catch (IOException | RuntimeException ex) {
+			log.warn("Could not persist the summary for run {}: {}", run.id(), ex.getMessage());
+		}
+	}
+
+	/** The persisted file: a provenance header, then the summary exactly as the model wrote it. */
+	private String summaryDocument(AgentRunManager.AgentRun run, RunSpec spec, String summary) {
+		return (
+			"# Sub-agent run " +
+			run.id() +
+			"\n\n" +
+			"- Kind: " +
+			spec.label() +
+			"\n" +
+			"- Status: " +
+			run.state().name() +
+			"\n" +
+			"- Started: " +
+			run.startedAt() +
+			"\n" +
+			"- Duration: " +
+			Text.runtime(run.runtimeSeconds()) +
+			"\n" +
+			"- Tokens: " +
+			run.totalUsage().totalTokenCount() +
+			"\n\n" +
+			"## Task\n\n" +
+			spec.task() +
+			"\n\n" +
+			"## Summary\n\n" +
+			summary +
+			"\n"
+		);
+	}
 
 	// Mutable accumulator for one executed run.
 	private record Outcome(
@@ -116,11 +173,12 @@ public class SubAgentRunner {
 	) {}
 
 	/**
-	 * Executes {@code spec} on behalf of {@code run}, blocking until the sub-agent finishes,
-	 * the wall clock expires, or the run is cancelled. Always leaves the run in a terminal
-	 * state and returns an outcome the caller can render into its tool result.
+	 * Executes {@code spec} on behalf of {@code run} on the calling thread, returning only
+	 * once the sub-agent finishes, the wall clock expires, or the run is cancelled. Always
+	 * leaves the run in a terminal state; the caller reads the result off the run itself,
+	 * which is why there is nothing to return.
 	 */
-	public SubAgentOutcome execute(AgentRunManager.AgentRun run, RunSpec spec) {
+	public void execute(AgentRunManager.AgentRun run, RunSpec spec) {
 		long startNanos = System.nanoTime();
 		run.setState(AgentRunManager.State.RUNNING);
 		runs.notifyChange();
@@ -153,8 +211,12 @@ public class SubAgentRunner {
 			};
 			run.setState(state);
 			run.setError(loop.error());
+			// The summary only lives in the registry until agent_read collects it, and the
+			// registry is capped and evicted. Write it to the workspace so a result the
+			// orchestrator never gets around to reading is still there afterwards.
+			persistSummary(run, spec, summary);
 			log.info("Run {} ended as {} after {} rounds", run.id(), state, loop.rounds());
-			return new SubAgentOutcome(loop.status(), Text.truncate(summary, RESULT_CHAR_CAP, CAP_NOTICE), loop.usage(), loop.rounds());
+			return;
 		} catch (Throwable ex) {
 			// Throwable, not Exception: an Error here would otherwise escape and strand the run
 			// in RUNNING with a dead thread, leaving the cancel button with nothing to stop.
@@ -162,7 +224,7 @@ public class SubAgentRunner {
 			log.warn("Sub-agent run {} failed: {}", run.id(), message, ex);
 			run.setError(message);
 			run.setState(AgentRunManager.State.FAILED);
-			return new SubAgentOutcome("failed", "Error: " + message, run.totalUsage(), -1);
+			return;
 		} finally {
 			HarnessService.setCurrentGenerationId(null);
 			// Last resort: never leave a run marked running once its thread is gone.
@@ -187,7 +249,12 @@ public class SubAgentRunner {
 		List<ChatMessage> messages,
 		HarnessService.AgentToolset toolset
 	) {
-		long deadlineNanos = System.nanoTime() + MAX_RUNTIME.toNanos();
+		// Wall-clock ceiling on the whole run, from the user's Settings > Sub-agents value.
+		// The round budget is the real bound; this only guarantees a provider stream that
+		// never answers cannot park this thread forever. A run is background now, so nothing
+		// else observes the thread — this deadline is what surfaces a hung model as FAILED.
+		Duration maxRuntime = Duration.ofMinutes(userSettingsService.get().subAgentTimeoutMinutes());
+		long deadlineNanos = System.nanoTime() + maxRuntime.toNanos();
 		List<ChatMessage> thread = new ArrayList<>(messages);
 		TokenUsage total = new TokenUsage(0, 0, 0);
 		int round = 0;
@@ -202,7 +269,7 @@ public class SubAgentRunner {
 				log.warn("Run {} stopped at round {}: wall-clock limit reached", run.id(), round + 1);
 				return new Outcome(
 					"failed",
-					"wall-clock limit of " + MAX_RUNTIME.toMinutes() + " min reached",
+					"wall-clock limit of " + maxRuntime.toMinutes() + " min reached",
 					"",
 					total,
 					round

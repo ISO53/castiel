@@ -85,8 +85,8 @@ public class ToolCatalog {
 		new ToolGroup(
 			"sub_agent",
 			"Sub-agents",
-			"Delegates narrow mechanical work to a sub-agent running its own model.",
-			List.of("sub_agent"),
+			"Delegates narrow mechanical work to sub-agents running their own model in the background.",
+			List.of("sub_agent", "agent_list", "agent_read", "agent_kill"),
 			false,
 			false
 		),
@@ -157,10 +157,14 @@ public class ToolCatalog {
 		return groupByTool.get(toolName);
 	}
 
-	/** Whether a group is switched on right now. Locked groups are always on. */
+	/**
+	 * Whether a group is switched on right now. Locked groups are always on, whatever
+	 * {@code disabledGroups} says — the user cannot switch them off, and a hand-edited
+	 * settings file must not be able to either.
+	 */
 	public boolean isGroupEnabled(String groupId, Set<String> disabledGroups) {
 		ToolGroup group = byId.get(groupId);
-		return group != null && !group.locked() && !disabledGroups.contains(groupId);
+		return group != null && (group.locked() || !disabledGroups.contains(groupId));
 	}
 
 	/**

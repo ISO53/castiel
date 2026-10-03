@@ -76,6 +76,7 @@ public class AgentRunController {
 			row.put("endedAt", run.endedAt().toEpochMilli());
 		}
 		row.put("resultSummary", run.resultSummary());
+		row.put("resultPath", run.resultPath());
 		row.put("error", run.error());
 		return row;
 	}

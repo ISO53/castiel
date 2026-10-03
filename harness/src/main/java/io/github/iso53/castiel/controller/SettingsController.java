@@ -147,7 +147,12 @@ public class SettingsController {
 			UserSettings current = userSettingsService.get();
 			return userSettingsService.save(
 				current
-					.withAgents(body.workerModel(), body.kaliModel(), body.defaultMaxRounds())
+					.withAgents(
+						body.workerModel(),
+						body.kaliModel(),
+						body.defaultMaxRounds(),
+						Objects.requireNonNullElse(body.subAgentTimeoutMinutes(), current.subAgentTimeoutMinutes())
+					)
 					.withLimits(
 						Objects.requireNonNullElse(body.maxToolRounds(), current.maxToolRounds()),
 						Objects.requireNonNullElse(body.checkpointIntervalRounds(), current.checkpointIntervalRounds()),
@@ -164,6 +169,7 @@ public class SettingsController {
 		AgentModelRef workerModel,
 		AgentModelRef kaliModel,
 		Integer defaultMaxRounds,
+		Integer subAgentTimeoutMinutes,
 		Integer maxToolRounds,
 		Integer checkpointIntervalRounds,
 		Integer verbatimToolCalls

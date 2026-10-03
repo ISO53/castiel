@@ -16,6 +16,21 @@
 					placeholder="32"
 				/>
 			</SettingsField>
+
+			<SettingsField
+				label="Run timeout"
+				hint="Wall-clock minutes one sub-agent run may take (1-240). Runs work in the background, so this is a safety net against a model that never answers, not a normal limit."
+			>
+				<Input
+					id="agent_timeout_minutes"
+					v-model.number="timeoutMinutes"
+					type="number"
+					min="1"
+					max="240"
+					class="w-20 text-right"
+					placeholder="30"
+				/>
+			</SettingsField>
 		</div>
 
 		<!-- Heading and description sit flush left; only the Provider/Model rows are indented. -->
@@ -94,6 +109,7 @@ const providerIds = computed(() => settings.providerIds);
 const worker = reactive({ ...settings.workerModel });
 const kali = reactive({ ...settings.kaliModel });
 const maxRounds = ref(settings.defaultMaxRounds);
+const timeoutMinutes = ref(settings.subAgentTimeoutMinutes);
 // Each picker refetches its own catalog; the two never share one.
 const workerModels = ref([]);
 const kaliModels = ref([]);
@@ -128,12 +144,19 @@ function loadKaliModels(providerId, previous) {
 }
 
 /**
- * Persists the three settings as soon as any of them changes. Debounced so
+ * Persists these settings as soon as any of them changes. Debounced so
  * typing a number or arrow-keying through rounds is one request, not one per
  * keystroke.
  */
 watch(
-	() => [worker.providerId, worker.modelName, kali.providerId, kali.modelName, maxRounds.value],
+	() => [
+		worker.providerId,
+		worker.modelName,
+		kali.providerId,
+		kali.modelName,
+		maxRounds.value,
+		timeoutMinutes.value,
+	],
 	(_value, previous) => {
 		// The first run mirrors the loaded settings; nothing has changed yet.
 		if (!previous) return;
@@ -147,7 +170,12 @@ function persist() {
 	persistTimer = setTimeout(async () => {
 		error.value = "";
 		try {
-			await settings.saveAgents(worker, kali, Math.trunc(Number(maxRounds.value)));
+			await settings.saveAgents(
+				worker,
+				kali,
+				Math.trunc(Number(maxRounds.value)),
+				Math.trunc(Number(timeoutMinutes.value)),
+			);
 			settingsUi.flashSaved();
 		} catch (err) {
 			error.value = err instanceof Error ? err.message : String(err);
