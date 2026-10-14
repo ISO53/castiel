@@ -1,6 +1,7 @@
 <script setup>
 import {
 	Bot,
+	Crosshair,
 	FolderTree,
 	History,
 	LayoutGrid,
@@ -11,10 +12,12 @@ import { ref } from "vue";
 import { Button } from "@/components/ui/button";
 import { useDocksStore } from "@/stores/docks";
 import kaliLogo from "@/assets/kali.svg";
+import AttackDialog from "@/components/AttackDialog.vue";
 import KaliToolsDialog from "@/components/KaliToolsDialog.vue";
 
 const docks = useDocksStore();
 const kaliDialogOpen = ref(false);
+const attackDialogOpen = ref(false);
 
 // One entry per selectable view, grouped by host dock. Adding a view
 // (e.g. agents in the bottom dock) is a single registration here.
@@ -68,6 +71,17 @@ function isViewActive(dock, entry) {
 			>
 				<img :src="kaliLogo" class="size-3.5 shrink-0" alt="kali-logo" aria-hidden="true" />
 			</Button>
+
+			<Button
+				variant="ghost"
+				size="icon-sm"
+				class="active:translate-y-0!"
+				aria-label="MITRE ATT&CK"
+				title="MITRE ATT&CK techniques"
+				@click="attackDialogOpen = true"
+			>
+				<Crosshair class="size-3.5 shrink-0" aria-hidden="true" />
+			</Button>
 		</div>
 
 		<!-- Bottom and right dock views, separated by a line -->
@@ -102,5 +116,6 @@ function isViewActive(dock, entry) {
 		</div>
 
 		<KaliToolsDialog v-model:open="kaliDialogOpen" />
+		<AttackDialog v-model:open="attackDialogOpen" />
 	</footer>
 </template>
