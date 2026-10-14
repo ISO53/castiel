@@ -62,26 +62,22 @@ public class ProcessManager {
 	 * Starts {@code command} in the workspace root under the platform shell and begins
 	 * tracking it. Output drains into the bounded buffer; stdin stays open until exit.
 	 *
+	 * <p>{@code ownerRunId} records the sub-agent run that owns the process, or null for
+	 * a user or orchestrator start. {@code shared} marks it visible to the orchestrator
+	 * while its owning run is live; an unshared process goes public once the run ends.
+	 *
 	 * <p>Windows note: commands are passed via {@code -EncodedCommand} (base64 UTF-16LE)
 	 * because plain {@code -Command} mangles embedded double quotes through the Java →
 	 * CreateProcess → PowerShell argument-quoting chain, breaking any command that quotes
 	 * strings.
 	 */
-	public ManagedProcess start(String command, String purpose) throws IOException {
-		return start(command, purpose, null);
-	}
-
-	/**
-	 * Starts {@code command} and records which sub-agent run owns it, so launch coverage can be
-	 * verified later without parsing the command line.
-	 */
-	public ManagedProcess start(String command, String purpose, String ownerRunId) throws IOException {
+	public ManagedProcess start(String command, String purpose, String ownerRunId, boolean shared) throws IOException {
 		ProcessBuilder builder = shellCommand(command);
 		builder.directory(workspace.root().map(Path::toFile).orElse(null));
 
 		Process process = builder.start();
 		String id = newId();
-		ManagedProcess entry = new ManagedProcess(id, process, command, purpose.strip(), ownerRunId);
+		ManagedProcess entry = new ManagedProcess(id, process, command, purpose.strip(), ownerRunId, shared);
 		processes.put(id, entry);
 
 		Thread.ofVirtual().name("bg-out-" + id).start(() -> drain(entry, false));
@@ -181,6 +177,21 @@ public class ProcessManager {
 	/** Agent-facing kill via {@code bg_kill}. */
 	public String kill(String id) {
 		return kill(id, "the agent");
+	}
+
+	// Kills every live process owned by the run. Used when its run is cancelled.
+	public int killOwnedBy(String ownerRunId) {
+		if (ownerRunId == null) {
+			return 0;
+		}
+		int killed = 0;
+		for (ManagedProcess entry : list()) {
+			if (ownerRunId.equals(entry.ownerRunId()) && entry.isRunning()) {
+				kill(entry.id(), "the run being cancelled");
+				killed++;
+			}
+		}
+		return killed;
 	}
 
 	// generationId or sub-agent run id -> foreground tool shells spawned by that generation.

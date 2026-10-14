@@ -574,7 +574,7 @@ public class HarnessService {
 
 	/**
 	 * Builds a filtered toolset for a sub-agent: the local tools and MCP tools whose names
-	 * are allowed, with forbidden tools (user questions, nesting, edit_file) always removed.
+	 * are allowed, with forbidden tools (user questions, nesting, run control) always removed.
 	 * File-mutating executors keep their workspace-notify decorations.
 	 */
 	public AgentToolset toolsFor(Set<String> allowedNames) {

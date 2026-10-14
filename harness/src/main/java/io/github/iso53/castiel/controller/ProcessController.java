@@ -62,7 +62,9 @@ public class ProcessController {
 		try {
 			ManagedProcess entry = manager.start(
 					request.command().strip(),
-					ProcessManager.USER_START_PREFIX + description);
+					ProcessManager.USER_START_PREFIX + description,
+					null,
+					true);
 			return Mono.just(toRow(entry));
 		} catch (IOException ex) {
 			return Mono.error(new ResponseStatusException(
@@ -84,6 +86,8 @@ public class ProcessController {
 		row.put("exitCode", entry.exitCode());
 		row.put("runtimeSeconds", entry.runtime().toSeconds());
 		row.put("startedAt", entry.startedAt().toEpochMilli());
+		row.put("ownerRunId", entry.ownerRunId());
+		row.put("shared", entry.isSharedWithOrchestrator());
 		return row;
 	}
 

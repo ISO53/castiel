@@ -58,6 +58,9 @@ public class SubAgentRunner {
 
 	private static final ObjectMapper JSON = new ObjectMapper();
 
+	// Round counts left at which the run gets a budget warning; each fires once.
+	private static final int[] WARNING_LEFTS = {32, 16, 4};
+
 	/**
 	 * Where run summaries are written inside a workspace. Deliberately not {@code evidence/}:
 	 * a summary is a work log, not captured material, and that folder is contractually limited
@@ -258,6 +261,8 @@ public class SubAgentRunner {
 		List<ChatMessage> thread = new ArrayList<>(messages);
 		TokenUsage total = new TokenUsage(0, 0, 0);
 		int round = 0;
+		// Index into WARNING_LEFTS: the next budget warning still to fire.
+		int warned = 0;
 
 		for (; round < spec.maxRounds(); round++) {
 			if (run.cancelled().get()) {
@@ -279,6 +284,17 @@ public class SubAgentRunner {
 			// Opened the next round: the previous phase is over, so say so before the model
 			// starts producing. Covers the gap between a tool returning and the first token.
 			enterActivity(run, AgentRunManager.Activity.WORKING);
+
+			// Budget warning fires once when this many rounds remain after this round.
+			int left = spec.maxRounds() - round - 1;
+			if (warned < WARNING_LEFTS.length && left <= WARNING_LEFTS[warned]) {
+				thread.add(UserMessage.from(left <= WARNING_LEFTS[2]
+					? "[harness] Only " + left + " round(s) left. Stop exploring, save your findings, "
+						+ "and write your final summary now."
+					: "[harness] " + left + " of your " + spec.maxRounds() + " rounds remain. Prioritize "
+						+ "your goal and start saving findings to the workspace."));
+				warned++;
+			}
 
 			ChatRequest request = ChatRequest.builder()
 				.messages(thread)
@@ -489,6 +505,13 @@ public class SubAgentRunner {
 			.append("\n## Rules\n")
 			.append("- Stay strictly inside the target scope above; refuse out-of-scope actions.\n")
 			.append("- Do not exploit anything and do not send attack payloads unless your role allows it.\n")
+			.append("- Your budget is ")
+			.append(spec.maxRounds())
+			.append(" tool-call rounds; the harness warns you as it runs low.\n")
+			.append("- Workspace files you did not create belong to the orchestrator. Read them, but edit\n")
+			.append("  only files you created; report needed changes to other files in your summary.\n")
+			.append("- Background processes you start are private to you while you run. They become visible\n")
+			.append("  to the orchestrator when you finish; cancelling your run kills them.\n")
 			.append("- Save anything worth keeping into the workspace (under evidence/ for raw output)\n")
 			.append("  before you finish, then end with a terse summary of what you found and where\n")
 			.append("  you saved it. Your final message is returned to the orchestrator as your result.\n");

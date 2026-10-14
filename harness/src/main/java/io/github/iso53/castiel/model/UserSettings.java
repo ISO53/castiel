@@ -14,7 +14,7 @@ import java.util.Set;
  * @param workerModel       Provider/model sub-agents run on, picked by the user in settings.
  * @param kaliModel         Provider/model the Kali dispatch sub-agent runs on. Unlike the worker
  *                          model there is no fallback: it must be set explicitly.
- * @param defaultMaxRounds  Default tool-round budget for one sub-agent generation (2-64).
+ * @param defaultMaxRounds  Default tool-round budget for one sub-agent generation (24-256).
  * @param subAgentTimeoutMinutes Wall-clock ceiling for one sub-agent run (1-240). The round
  *                              budget is the real bound; this only stops a provider stream
  *                              that never answers from parking the worker thread.
@@ -36,7 +36,7 @@ public record UserSettings(
 	public static final int DEFAULT_MAX_TOOL_ROUNDS = 256;
 	public static final int DEFAULT_CHECKPOINT_INTERVAL_ROUNDS = 32;
 	public static final int DEFAULT_VERBATIM_TOOL_CALLS = 32;
-	public static final int DEFAULT_SUB_AGENT_TIMEOUT_MINUTES = 30;
+	public static final int DEFAULT_SUB_AGENT_TIMEOUT_MINUTES = 60;
 	public static final boolean DEFAULT_CHECK_FOR_UPDATES_ON_STARTUP = true;
 
 	public UserSettings {

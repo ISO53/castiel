@@ -137,7 +137,11 @@ public class KaliLaunchTool implements ToolProvider {
 		log.info("Run {} launching '{}' as: {}", runId, id, command);
 		ManagedProcess entry;
 		try {
-			entry = processes.start(command, PURPOSE_PREFIX + (purpose == null || purpose.isBlank() ? id : purpose.strip()), runId);
+			entry = processes.start(
+					command,
+					PURPOSE_PREFIX + (purpose == null || purpose.isBlank() ? id : purpose.strip()),
+					runId,
+					true);
 		} catch (IOException ex) {
 			log.warn("Run {} could not start '{}': {}", runId, id, ex.getMessage());
 			plan.settle(id, KaliLaunchRegistry.Outcome.FAILED, "could not start: " + ex.getMessage());

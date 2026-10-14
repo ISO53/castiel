@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { ChevronDown, SquareX, Terminal as TerminalIcon, Trash2 } from "@lucide/vue";
+import { Bot, ChevronDown, SquareX, Terminal as TerminalIcon, Trash2 } from "@lucide/vue";
 import { Terminal } from "@/components/ai-elements/terminal";
 import { Button } from "@/components/ui/button";
 import DataTable from "@/components/views/DataTable.vue";
@@ -10,10 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useProcessesStore } from "@/stores/processes";
+import { useAgentsStore } from "@/stores/agents";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { dotClass, dotTitle } from "@/lib/dock-dots";
 
 const store = useProcessesStore();
+const agents = useAgentsStore();
 const workspace = useWorkspaceStore();
 
 // One-second clock so live rows recompute their runtime without server polling.
@@ -22,6 +24,8 @@ let ticker = null;
 
 onMounted(() => {
 	store.startFeed();
+	// One fetch: the owner badge tooltip shows the owning run's task when available.
+	agents.fetchList();
 	ticker = setInterval(() => {
 		nowSeconds.value = Math.floor(Date.now() / 1000);
 	}, 1000);
@@ -120,6 +124,12 @@ function shortId(id) {
 	const text = id ?? "";
 	return text.length > 16 ? text.slice(0, 9) + "…" + text.slice(-5) : text;
 }
+
+// Tooltip for the sub-agent owner badge; falls back to the raw run id.
+function ownerTitle(runId) {
+	const run = agents.rows.find((entry) => entry.id === runId);
+	return run?.task ? `Sub-agent ${shortId(runId)}: ${run.task}` : `Sub-agent ${shortId(runId)}`;
+}
 </script>
 
 <template>
@@ -163,8 +173,12 @@ function shortId(id) {
 					<span class="inline-block size-1.5 rounded-full" :class="dotClass(row.state)"
 						:title="dotTitle(row.state)" />
 				</template>
-				<template #cell-id="{ value }">
-					<span class="block truncate font-mono" :title="value">{{ shortId(value) }}</span>
+				<template #cell-id="{ row, value }">
+					<span class="flex items-center gap-1">
+						<span class="block truncate font-mono" :title="value">{{ shortId(value) }}</span>
+						<Bot v-if="row.ownerRunId" :size="12" class="shrink-0 text-zinc-500"
+							:title="ownerTitle(row.ownerRunId)" />
+					</span>
 				</template>
 				<template #cell-pid="{ value }">
 					<span class="block truncate font-mono text-zinc-400">{{ value }}</span>

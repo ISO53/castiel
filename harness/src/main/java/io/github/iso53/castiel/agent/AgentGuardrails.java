@@ -6,20 +6,16 @@ import java.util.Set;
 public final class AgentGuardrails {
 
 	// Tools no sub-agent may ever receive, regardless of what the orchestrator allows.
-	// agent_* is here for the same reason bg_* is: a sub-agent may not inspect, collect
-	// or kill runs other than its own, or it would be able to steer its siblings.
+	// agent_* is here for the same reason sub_agent is: a sub-agent may not inspect,
+	// collect or steer runs other than its own. Background-process tools ARE allowed,
+	// but ownership-scoped to the run that started each process.
 	public static final Set<String> FORBIDDEN_TOOLS = Set.of(
 		"ask_user_question",
 		"sub_agent",
 		"agent_list",
 		"agent_read",
 		"agent_kill",
-		"edit_file",
-		"cvss_score",
-		"bg_list",
-		"bg_read",
-		"bg_send",
-		"bg_kill"
+		"cvss_score"
 	);
 
 	// Toolset used when the orchestrator does not specify one: mechanical, read/write basics.
@@ -27,15 +23,21 @@ public final class AgentGuardrails {
 		"bash",
 		"read_file",
 		"write_file",
+		"edit_file",
 		"web_fetch",
 		"web_search",
-		"workspace_search"
+		"workspace_search",
+		"bg_start",
+		"bg_list",
+		"bg_read",
+		"bg_send",
+		"bg_kill"
 	);
 
-	public static final int DEFAULT_MAX_ROUNDS = 32;
+	public static final int DEFAULT_MAX_ROUNDS = 128;
 	public static final String WORKER_LABEL = "worker";
-	public static final int MIN_MAX_ROUNDS = 2;
-	public static final int MAX_MAX_ROUNDS = 64;
+	public static final int MIN_MAX_ROUNDS = 24;
+	public static final int MAX_MAX_ROUNDS = 256;
 	public static final int MIN_TIMEOUT_MINUTES = 1;
 	public static final int MAX_TIMEOUT_MINUTES = 240;
 
