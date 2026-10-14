@@ -107,6 +107,14 @@ public class ToolCatalog {
 			false
 		),
 		new ToolGroup(
+			"attack",
+			"MITRE ATT&CK",
+			"Looks up adversary techniques and real-world procedures in the bundled MITRE ATT&CK catalog.",
+			List.of("search_attack", "attack_detail"),
+			false,
+			false
+		),
+		new ToolGroup(
 			"kali_launch",
 			"Kali launch",
 			"Starts the Kali tools you picked in the Kali dialog as background scans.",

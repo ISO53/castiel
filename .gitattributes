@@ -2,3 +2,7 @@
 * text=auto
 # Shell scripts must stay LF; a CRLF checkout breaks them on Linux and macOS.
 *.sh text eol=lf
+# Generated catalogs: single-line JSON, machine-written, never hand-edited. Hide
+# the one-line diff so regenerations review as one changed file, not one giant line.
+kali-tools.json -diff
+attack-techniques.json -diff

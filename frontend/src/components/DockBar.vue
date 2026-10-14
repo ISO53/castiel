@@ -10,11 +10,14 @@ import {
 import { ref } from "vue";
 import { Button } from "@/components/ui/button";
 import { useDocksStore } from "@/stores/docks";
-import kaliLogo from "@/assets/kali.svg";
+import KaliLogo from "@/components/logos/KaliLogo.vue";
+import AttackLogo from "@/components/logos/AttackLogo.vue";
+import AttackDialog from "@/components/AttackDialog.vue";
 import KaliToolsDialog from "@/components/KaliToolsDialog.vue";
 
 const docks = useDocksStore();
 const kaliDialogOpen = ref(false);
+const attackDialogOpen = ref(false);
 
 // One entry per selectable view, grouped by host dock. Adding a view
 // (e.g. agents in the bottom dock) is a single registration here.
@@ -61,12 +64,23 @@ function isViewActive(dock, entry) {
 			<Button
 				variant="ghost"
 				size="icon-sm"
-				class="active:translate-y-0!"
+				class="w-auto px-2 active:translate-y-0!"
 				aria-label="Kali Linux Tools"
 				title="Kali Linux Tools"
 				@click="kaliDialogOpen = true"
 			>
-				<img :src="kaliLogo" class="size-3.5 shrink-0" alt="kali-logo" aria-hidden="true" />
+				<KaliLogo class="h-[14.7px]! w-auto!" />
+			</Button>
+
+			<Button
+				variant="ghost"
+				size="icon-sm"
+				class="w-auto px-2.5 active:translate-y-0!"
+				aria-label="MITRE ATT&CK"
+				title="MITRE ATT&CK techniques"
+				@click="attackDialogOpen = true"
+			>
+				<AttackLogo class="h-3! w-auto!" />
 			</Button>
 		</div>
 
@@ -102,5 +116,6 @@ function isViewActive(dock, entry) {
 		</div>
 
 		<KaliToolsDialog v-model:open="kaliDialogOpen" />
+		<AttackDialog v-model:open="attackDialogOpen" />
 	</footer>
 </template>
