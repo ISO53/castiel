@@ -1,2 +1,4 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+# Shell scripts must stay LF; a CRLF checkout breaks them on Linux and macOS.
+*.sh text eol=lf

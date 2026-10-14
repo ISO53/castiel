@@ -1,5 +1,6 @@
 package io.github.iso53.castiel.cli;
 
+import io.github.iso53.castiel.update.UpdateCli;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -24,8 +25,16 @@ public final class CastielCommand implements Callable<Integer> {
 	@Option(names = "--debug", description = "Enable debug logging for castiel.")
 	public boolean debug;
 
+	/** Runs the update check flow instead of a normal boot. */
+	@Option(names = "--check-update", description = "Compare this build with the latest GitHub release and install a newer one.")
+	public boolean checkUpdate;
+
 	@Override
 	public Integer call() {
+		if (checkUpdate) {
+			// A dedicated flow that owns the terminal; a normal boot never follows it.
+			return UpdateCli.run();
+		}
 		// Normal boot: Spring takes over after this returns 0.
 		return 0;
 	}
