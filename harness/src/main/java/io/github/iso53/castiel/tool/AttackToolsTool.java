@@ -2,6 +2,7 @@ package io.github.iso53.castiel.tool;
 
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
+import io.github.iso53.castiel.model.AttackTactic;
 import io.github.iso53.castiel.model.AttackTechnique;
 import io.github.iso53.castiel.service.AttackCatalog;
 import java.util.List;
@@ -46,6 +47,13 @@ public class AttackToolsTool implements ToolProvider {
 		if (query == null || query.isBlank()) {
 			return "Error: query is required";
 		}
+		if (tactic != null && !tactic.isBlank() && catalog.resolveTactic(tactic).isEmpty()) {
+			String valid = catalog.tactics().stream().map(AttackTactic::name).reduce((a, b) -> a + ", " + b).orElse("");
+			return "Unknown tactic '" + tactic.strip() + "'. Valid tactics: " + valid;
+		}
+		if (platform != null && !platform.isBlank() && !catalog.isKnownPlatform(platform)) {
+			return "Unknown platform '" + platform.strip() + "'. Valid platforms: " + String.join(", ", catalog.platforms());
+		}
 		int max = limit == null ? 8 : Math.clamp(limit, 1, 15);
 		List<AttackTechnique> results = catalog.search(query, tactic, platform, max);
 
@@ -56,6 +64,11 @@ public class AttackToolsTool implements ToolProvider {
 		StringBuilder out = new StringBuilder("Found ").append(results.size()).append(" technique(s):\n\n");
 		for (AttackTechnique technique : results) {
 			out.append("- ").append(technique.id()).append(" ").append(technique.name());
+			if (technique.parent() != null) {
+				// Mark the hierarchy level: the parent has no concrete procedure of its own;
+				// the sub-technique is usually the actionable one.
+				out.append(" (sub of ").append(technique.parent()).append(")");
+			}
 			out.append(" [").append(displayTactics(technique)).append("]");
 			if (!technique.platforms().isEmpty()) {
 				out.append(" (").append(String.join(", ", technique.platforms())).append(")");
@@ -70,9 +83,8 @@ public class AttackToolsTool implements ToolProvider {
 		name = DETAIL_NAME,
 		value = {
 			"Returns one MITRE ATT&CK technique's playbook: real-world procedure examples attributed to",
-			"known adversary groups and malware, the tools commonly associated with it, required",
-			"privileges, and a detection note. Technique IDs must be taken from search_attack results,",
-			"never invented.",
+			"known adversary groups and malware, the tools commonly associated with it, and a reference",
+			"link. Technique IDs must be taken from search_attack results, never invented.",
 		}
 	)
 	public String detail(@P("ATT&CK technique id, e.g. 'T1021.002'") String techniqueId) {

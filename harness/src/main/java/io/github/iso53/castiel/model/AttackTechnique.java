@@ -15,6 +15,7 @@ import java.util.List;
  * @param parent              Parent technique id for sub-techniques, or {@code null}.
  * @param tactics             ATT&CK tactic shortnames the technique serves (e.g. {@code lateral-movement}).
  * @param platforms           Platforms the technique applies to (e.g. {@code Windows}).
+ * @param keywords            Derived search keywords (acronyms like {@code wmi}), possibly empty.
  * @param summary             One capped sentence describing the technique.
  * @param detection           Capped detection note, or empty.
  * @param permissionsRequired Privileges the technique demands (e.g. {@code Administrator}).
@@ -29,6 +30,7 @@ public record AttackTechnique(
 	String parent,
 	List<String> tactics,
 	List<String> platforms,
+	List<String> keywords,
 	String summary,
 	String detection,
 	List<String> permissionsRequired,
@@ -42,6 +44,7 @@ public record AttackTechnique(
 	public AttackTechnique {
 		tactics = tactics == null ? List.of() : List.copyOf(tactics);
 		platforms = platforms == null ? List.of() : List.copyOf(platforms);
+		keywords = keywords == null ? List.of() : List.copyOf(keywords);
 		permissionsRequired = permissionsRequired == null ? List.of() : List.copyOf(permissionsRequired);
 		procedures = procedures == null ? List.of() : List.copyOf(procedures);
 		software = software == null ? List.of() : List.copyOf(software);

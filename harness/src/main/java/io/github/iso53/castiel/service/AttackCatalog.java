@@ -27,6 +27,8 @@ public class AttackCatalog {
 	private static final Logger log = LoggerFactory.getLogger(AttackCatalog.class);
 	private static final String CATALOG_RESOURCE = "attack-techniques.json";
 	private static final Pattern WORD_PATTERN = Pattern.compile("[^a-zA-Z0-9_\\-]+");
+	/** Query filler words that match procedure text everywhere and rank nothing usefully. */
+	private static final Set<String> STOPWORDS = Set.of("the", "and", "for", "with", "via", "from", "may", "over", "using", "tool");
 	private static final ObjectMapper JSON = new ObjectMapper();
 
 	private List<AttackTechnique> techniques = List.of();
@@ -82,9 +84,46 @@ public class AttackCatalog {
 		return techniques;
 	}
 
-	/** The tactics in canonical matrix order. */
+	/** The tactics derived from the bundled data, alphabetically; the filter's valid vocabulary. */
 	public List<AttackTactic> tactics() {
 		return tactics;
+	}
+
+	/** Distinct platform names in the catalog, sorted; the platform filter's valid vocabulary. */
+	public List<String> platforms() {
+		return techniques
+			.stream()
+			.flatMap(technique -> technique.platforms().stream())
+			.distinct()
+			.sorted(String.CASE_INSENSITIVE_ORDER)
+			.toList();
+	}
+
+	/** Whether a platform filter value matches any known platform (same rule the filter uses). */
+	public boolean isKnownPlatform(String platform) {
+		if (platform == null || platform.isBlank()) {
+			return false;
+		}
+		String lowered = platform.strip().toLowerCase(Locale.ROOT);
+		return platforms().stream().anyMatch(known -> known.toLowerCase(Locale.ROOT).contains(lowered));
+	}
+
+	/**
+	 * Resolves a user-supplied tactic value (shortname like {@code lateral-movement} or display
+	 * name like {@code Lateral Movement}) to a tactic. Empty when the value is unknown, so
+	 * callers can reject it instead of silently filtering everything out.
+	 */
+	public Optional<AttackTactic> resolveTactic(String input) {
+		if (input == null || input.isBlank()) {
+			return Optional.empty();
+		}
+		String cleaned = input.strip().toLowerCase(Locale.ROOT).replace(' ', '-');
+		for (AttackTactic known : tactics) {
+			if (known.shortname().equalsIgnoreCase(cleaned) || known.name().equalsIgnoreCase(input.strip())) {
+				return Optional.of(known);
+			}
+		}
+		return Optional.empty();
 	}
 
 	/** Display name for a tactic shortname, or the input unchanged when unknown. */
@@ -126,9 +165,18 @@ public class AttackCatalog {
 
 	/** Filters by tactic/platform, ranks by query relevance; relevance order, uncapped. */
 	private List<AttackTechnique> ranked(String query, String tactic, String platform) {
-		String tacticFilter = normalizedTactic(tactic);
+		// Unknown filter values return nothing rather than silently ignoring the filter:
+		// "no results" must never masquerade as "all results".
+		Optional<AttackTactic> resolvedTactic = resolveTactic(tactic);
+		if (tactic != null && !tactic.isBlank() && resolvedTactic.isEmpty()) {
+			return List.of();
+		}
+		String tacticFilter = resolvedTactic.map(AttackTactic::shortname).orElse(null);
 		String platformFilter =
 			platform == null || platform.isBlank() ? null : platform.strip().toLowerCase(Locale.ROOT);
+		if (platformFilter != null && !isKnownPlatform(platform)) {
+			return List.of();
+		}
 
 		List<AttackTechnique> candidates = techniques
 			.stream()
@@ -156,9 +204,12 @@ public class AttackCatalog {
 		List<String> tokens = Arrays.stream(WORD_PATTERN.split(cleanQuery))
 			.map(String::strip)
 			.filter(s -> s.length() >= 2)
+			.filter(s -> !STOPWORDS.contains(s))
 			.toList();
 		if (tokens.isEmpty()) {
-			return candidates;
+			// A query of only trivial tokens ("a", "!!!") matches nothing meaningful;
+			// serving the first rows of the catalog would present arbitrary techniques.
+			return List.of();
 		}
 
 		record ScoredTechnique(AttackTechnique technique, int score) {}
@@ -173,62 +224,53 @@ public class AttackCatalog {
 		return scored.stream().map(ScoredTechnique::technique).toList();
 	}
 
-	private String normalizedTactic(String tactic) {
-		if (tactic == null || tactic.isBlank()) {
-			return null;
-		}
-		String cleaned = tactic.strip().toLowerCase(Locale.ROOT).replace(' ', '-');
-		for (AttackTactic known : tactics) {
-			if (known.shortname().equalsIgnoreCase(cleaned) || known.name().equalsIgnoreCase(tactic.strip())) {
-				return known.shortname();
-			}
-		}
-		return cleaned;
-	}
-
 	private int score(AttackTechnique technique, String cleanQuery, List<String> tokens) {
 		int score = 0;
 		String id = technique.id().toLowerCase(Locale.ROOT);
 		String name = technique.name().toLowerCase(Locale.ROOT);
-		String summary = technique.summary().toLowerCase(Locale.ROOT);
-		String detection = technique.detection().toLowerCase(Locale.ROOT);
-		String software = String.join(" ", technique.software()).toLowerCase(Locale.ROOT);
-		String procedures = technique
-			.procedures()
-			.stream()
-			.map(p -> p.source() + " " + p.text())
-			.reduce("", (a, b) -> a + " " + b)
-			.toLowerCase(Locale.ROOT);
 
 		if (id.equals(cleanQuery) || name.equals(cleanQuery)) {
 			score += 100;
 		}
 
+		List<String> nameWords = words(technique.name());
+		List<String> keywordWords = technique.keywords();
+		List<String> softwareWords = words(String.join(" ", technique.software()));
+		List<String> summaryWords = words(technique.summary());
+		List<String> procedureWords = words(
+			technique
+				.procedures()
+				.stream()
+				.map(p -> p.source() + " " + p.text())
+				.reduce("", (a, b) -> a + " " + b)
+		);
+
 		int tokensMatched = 0;
 		for (String token : tokens) {
+			List<String> variants = tokenVariants(token);
 			boolean tokenFound = false;
-			if (id.contains(token)) {
+			if (containsAny(variants, id)) {
 				score += 30;
 				tokenFound = true;
 			}
-			if (name.contains(token)) {
+			if (matchWord(nameWords, variants)) {
 				score += 30;
 				tokenFound = true;
+			} else if (matchWord(keywordWords, variants)) {
+				// Pentest shorthand ("wmi", "pth") matching a derived acronym.
+				score += 25;
+				tokenFound = true;
 			}
-			if (software.contains(token)) {
+			if (matchWord(softwareWords, variants)) {
 				score += 15;
 				tokenFound = true;
 			}
-			if (procedures.contains(token)) {
+			if (matchWord(procedureWords, variants)) {
 				score += 8;
 				tokenFound = true;
 			}
-			if (summary.contains(token)) {
+			if (matchWord(summaryWords, variants)) {
 				score += 8;
-				tokenFound = true;
-			}
-			if (detection.contains(token)) {
-				score += 3;
 				tokenFound = true;
 			}
 			if (tokenFound) {
@@ -239,5 +281,65 @@ public class AttackCatalog {
 			score += 35;
 		}
 		return score;
+	}
+
+	private static List<String> words(String text) {
+		return Arrays.stream(WORD_PATTERN.split(text == null ? "" : text.toLowerCase(Locale.ROOT)))
+			.filter(s -> !s.isEmpty())
+			.toList();
+	}
+
+	/**
+	 * Light stemming of a query token: plurals and verb forms ("shares", "queries",
+	 * "exfiltrate") against ATT&CK's singular-noun phrasing ("share", "query",
+	 * "exfiltration"). The variants are tried in addition to the raw token.
+	 */
+	private static List<String> tokenVariants(String token) {
+		List<String> variants = new ArrayList<>();
+		variants.add(token);
+		if (token.endsWith("ies") && token.length() > 4) {
+			variants.add(token.substring(0, token.length() - 3) + "y");
+		}
+		if (token.endsWith("es") && token.length() > 4) {
+			variants.add(token.substring(0, token.length() - 2));
+		}
+		if (token.endsWith("s") && token.length() > 3) {
+			variants.add(token.substring(0, token.length() - 1));
+		}
+		// Nominal/verbal suffixes: "execution" -> "execut" (matches "execute"),
+		// "exfiltrate" -> "exfiltrat" (matches "exfiltration").
+		if (token.endsWith("ion") && token.length() > 5) {
+			variants.add(token.substring(0, token.length() - 3));
+		}
+		if (token.endsWith("e") && token.length() > 5) {
+			variants.add(token.substring(0, token.length() - 1));
+		}
+		return variants;
+	}
+
+	private static boolean containsAny(List<String> variants, String text) {
+		return variants.stream().anyMatch(text::contains);
+	}
+
+	/**
+	 * Word-level match with prefix tolerance in both directions: a token matches when a
+	 * word equals one of its variants, extends it, or is extended by it, with a minimum
+	 * stem length so short tokens stay exact.
+	 */
+	private static boolean matchWord(List<String> words, List<String> variants) {
+		for (String word : words) {
+			for (String token : variants) {
+				if (word.equals(token)) {
+					return true;
+				}
+				if (word.length() >= 4 && token.startsWith(word)) {
+					return true;
+				}
+				if (token.length() >= 4 && word.startsWith(token)) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 }

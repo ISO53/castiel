@@ -100,8 +100,7 @@
 
 						<div v-else-if="!store.selected"
 							class="flex flex-1 items-center justify-center px-4 text-center text-muted-foreground">
-							Select a technique to see its real-world procedures, associated tooling and detection
-							notes.
+							Select a technique to see its real-world procedures and associated tooling.
 						</div>
 
 						<ScrollArea v-else class="min-h-0 flex-1">
