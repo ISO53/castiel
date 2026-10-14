@@ -43,6 +43,9 @@
 
 		<!-- Modal settings; mounted once so any view can open it. -->
 		<SettingsDialog />
+
+		<!-- Toasts; top-center. The update flow owns the one fixed "update" toast id. -->
+		<Toaster position="top-center" rich-colors />
 	</div>
 </template>
 
@@ -59,9 +62,11 @@ import AgentsView from "@/views/AgentsView.vue";
 import ProcessesView from "@/views/ProcessesView.vue";
 import TabbedView from "./views/TabbedView.vue";
 import SettingsDialog from "@/components/settings/SettingsDialog.vue";
+import { Toaster } from "@/components/ui/sonner";
 import { useChatsStore } from "@/stores/chats";
 import { useDocksStore } from "@/stores/docks";
 import { useTabsStore } from "@/stores/tabs";
+import { useUpdateStore } from "@/stores/update";
 
 const ONBOARDING_SEEN_KEY = "castiel.onboardingComplete";
 
@@ -92,12 +97,15 @@ export default {
 		ProcessesView,
 		TabbedView,
 		SettingsDialog,
+		Toaster,
 	},
 	setup() {
 		const docks = useDocksStore();
 		// Docks render one registered view at a time.
 		const rightView = computed(() => RIGHT_DOCK_VIEWS[docks.rightView] ?? RIGHT_DOCK_VIEWS.chat);
 		const bottomView = computed(() => BOTTOM_DOCK_VIEWS[docks.bottomView] ?? BOTTOM_DOCK_VIEWS.processes);
+		// Startup update flow: feed, markers, optional auto-check. Fires once per launch.
+		useUpdateStore().init();
 		return { docks, rightView, bottomView };
 	},
 	mounted() {

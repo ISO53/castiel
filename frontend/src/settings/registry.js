@@ -1,4 +1,4 @@
-import { Bot, Cpu, Gauge, Plug, ShieldAlert, Wrench } from "@lucide/vue";
+import { Bot, Cpu, Gauge, Plug, RefreshCw, ShieldAlert, Wrench } from "@lucide/vue";
 
 /**
  * The settings tree, in sidebar order. It is the single source of truth for
@@ -106,6 +106,15 @@ export const SETTINGS_TREE = [
 			"Findings are scored by the harness with both CVSS v4.0 and v3.1 vectors. Pick the version the vulnerabilities view shows; the choice applies to every workspace.",
 		keywords: ["cvss", "score", "severity", "v4.0", "v3.1", "vector"],
 		component: () => import("@/components/settings/sections/VulnerabilityScoringSection.vue"),
+	},
+	{
+		id: "updates",
+		title: "Updates",
+		icon: RefreshCw,
+		description:
+			"Keep castiel current: check for a new GitHub release, install it in one click, or let castiel check on its own every time it opens.",
+		keywords: ["update", "version", "release", "upgrade", "download", "github", "check", "startup"],
+		component: () => import("@/components/settings/sections/UpdatesSection.vue"),
 	},
 ];
 

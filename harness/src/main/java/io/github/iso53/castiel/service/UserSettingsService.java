@@ -98,6 +98,13 @@ public class UserSettingsService {
 		return settings;
 	}
 
+	// Replaces the update preference and writes settings to disk.
+	public synchronized UserSettings setCheckForUpdatesOnStartup(boolean value) {
+		settings = settings.withUpdatePrefs(value);
+		writeToDisk(settings);
+		return settings;
+	}
+
 	private UserSettings readFromDisk() {
 		Path file = AppPaths.settingsFile();
 		if (!Files.isRegularFile(file)) {

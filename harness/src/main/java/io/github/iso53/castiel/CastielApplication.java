@@ -21,6 +21,7 @@ public class CastielApplication {
 		CommandLine commandLine = new CommandLine(cli);
 		int exitCode = commandLine.execute(args);
 		boolean proceedToBoot = exitCode == 0
+			&& !cli.checkUpdate
 			&& !commandLine.isUsageHelpRequested()
 			&& !commandLine.isVersionHelpRequested();
 		if (!proceedToBoot) {

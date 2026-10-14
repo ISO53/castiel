@@ -29,13 +29,15 @@ public record UserSettings(
 	Set<String> disabledToolGroups,
 	Integer maxToolRounds,
 	Integer checkpointIntervalRounds,
-	Integer verbatimToolCalls
+	Integer verbatimToolCalls,
+	Boolean checkForUpdatesOnStartup
 ) {
 
 	public static final int DEFAULT_MAX_TOOL_ROUNDS = 256;
 	public static final int DEFAULT_CHECKPOINT_INTERVAL_ROUNDS = 32;
 	public static final int DEFAULT_VERBATIM_TOOL_CALLS = 32;
 	public static final int DEFAULT_SUB_AGENT_TIMEOUT_MINUTES = 30;
+	public static final boolean DEFAULT_CHECK_FOR_UPDATES_ON_STARTUP = true;
 
 	public UserSettings {
 		providers = providers == null ? Map.of() : Map.copyOf(providers);
@@ -57,6 +59,9 @@ public record UserSettings(
 			? DEFAULT_CHECKPOINT_INTERVAL_ROUNDS
 			: Math.max(1, checkpointIntervalRounds);
 		verbatimToolCalls = verbatimToolCalls == null ? DEFAULT_VERBATIM_TOOL_CALLS : Math.max(0, verbatimToolCalls);
+		checkForUpdatesOnStartup = checkForUpdatesOnStartup == null
+			? DEFAULT_CHECK_FOR_UPDATES_ON_STARTUP
+			: checkForUpdatesOnStartup;
 	}
 
 	/**
@@ -64,7 +69,7 @@ public record UserSettings(
 	 * blank document is built, so a new field needs no edit here.
 	 */
 	public static UserSettings empty() {
-		return new UserSettings(null, null, null, null, null, null, null, null, null, null);
+		return new UserSettings(null, null, null, null, null, null, null, null, null, null, null);
 	}
 
 	/** Copy with a replaced provider map and UI default. */
@@ -79,7 +84,8 @@ public record UserSettings(
 			disabledToolGroups,
 			maxToolRounds,
 			checkpointIntervalRounds,
-			verbatimToolCalls
+			verbatimToolCalls,
+			checkForUpdatesOnStartup
 		);
 	}
 
@@ -100,7 +106,8 @@ public record UserSettings(
 			disabledToolGroups,
 			maxToolRounds,
 			checkpointIntervalRounds,
-			verbatimToolCalls
+			verbatimToolCalls,
+			checkForUpdatesOnStartup
 		);
 	}
 
@@ -116,7 +123,8 @@ public record UserSettings(
 			disabledToolGroups,
 			maxToolRounds,
 			checkpointIntervalRounds,
-			verbatimToolCalls
+			verbatimToolCalls,
+			checkForUpdatesOnStartup
 		);
 	}
 
@@ -132,7 +140,25 @@ public record UserSettings(
 			disabledToolGroups,
 			maxToolRounds,
 			checkpointIntervalRounds,
-			verbatimToolCalls
+			verbatimToolCalls,
+			checkForUpdatesOnStartup
+		);
+	}
+
+	/** Copy with the check-on-startup preference replaced. */
+	public UserSettings withUpdatePrefs(boolean checkForUpdatesOnStartup) {
+		return new UserSettings(
+			providers,
+			activeProviderId,
+			workerModel,
+			kaliModel,
+			defaultMaxRounds,
+			subAgentTimeoutMinutes,
+			disabledToolGroups,
+			maxToolRounds,
+			checkpointIntervalRounds,
+			verbatimToolCalls,
+			checkForUpdatesOnStartup
 		);
 	}
 
