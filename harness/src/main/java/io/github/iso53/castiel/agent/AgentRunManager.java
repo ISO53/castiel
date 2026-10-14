@@ -274,8 +274,9 @@ public class AgentRunManager {
 			return false;
 		}
 		run.cancelled().set(true);
-		// Kill any foreground shells this run's tool calls left behind.
+		// Kill foreground shells and any background process the run started.
 		processes.killByGeneration(id);
+		processes.killOwnedBy(id);
 		return true;
 	}
 

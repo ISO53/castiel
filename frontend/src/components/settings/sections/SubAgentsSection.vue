@@ -4,16 +4,16 @@
 		<div class="divide-y divide-border">
 			<SettingsField
 				label="Tool-call rounds"
-				hint="Default budget for one sub-agent run (2-64). The agent may request more on a specific call."
+				hint="Default budget for one sub-agent run (24-256). The agent may request more on a specific call."
 			>
 				<Input
 					id="agent_max_rounds"
 					v-model.number="maxRounds"
 					type="number"
-					min="2"
-					max="64"
+					min="24"
+					max="256"
 					class="w-20 text-right"
-					placeholder="32"
+					placeholder="128"
 				/>
 			</SettingsField>
 
@@ -28,7 +28,7 @@
 					min="1"
 					max="240"
 					class="w-20 text-right"
-					placeholder="30"
+					placeholder="60"
 				/>
 			</SettingsField>
 		</div>

@@ -27,7 +27,8 @@ import org.springframework.stereotype.Service;
  * the read and control surface that replaces the old blocking result: list runs, collect a
  * finished one, kill one. Runs are tracked in the {@link AgentRunManager} registry that feeds
  * the bottom-dock Agents view. Sub-agents can never ask the user questions, spawn further
- * sub-agents, edit raw files, or reach the tracked background-process and agent tools.
+ * sub-agents, or reach the run-control and scoring tools. Background processes they start
+ * stay private to them while their run is live.
  */
 @Service
 public class SubAgentTool implements ToolProvider {
@@ -61,8 +62,8 @@ public class SubAgentTool implements ToolProvider {
 			"findings into the workspace: its summary is the only thing you get back, so anything it",
 			"fails to write down is lost. Every summary is also written to agents/<run-id>.md in the",
 			"workspace, so an uncollected result can still be recovered later with read_file.",
-			"Sub-agents cannot ask the user questions, spawn further sub-agents, edit files, or",
-			"monitor background processes or other sub-agents.",
+			"Sub-agents cannot ask the user questions, spawn further sub-agents, or monitor other",
+			"sub-agents. Background processes they start stay private while their run is live.",
 		}
 	)
 	public String runSubAgent(
@@ -73,7 +74,7 @@ public class SubAgentTool implements ToolProvider {
 			"Short role prompt for the sub-agent, 2-6 sentences: its role, constraints, and where to write output"
 		) String systemPrompt,
 		@P("Tool names the sub-agent may use (local or MCP). Omit for a safe default set") List<String> allowedTools,
-		@P("Optional max tool-call rounds between 2 and 64; default comes from the harness settings") Integer maxRounds
+		@P("Optional max tool-call rounds between 24 and 256; default comes from the harness settings") Integer maxRounds
 	) {
 		if (task == null || task.isBlank()) {
 			return "Error: task is required";

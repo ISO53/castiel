@@ -34,6 +34,8 @@ public final class ManagedProcess {
 
 	// Run id of the sub-agent generation that started this, or null for user/agent starts.
 	private final String ownerRunId;
+	// True when the orchestrator may see this process while its owning run is live.
+	private final boolean sharedWithOrchestrator;
 
 	private final Process process;
 	private final OutputStream stdin;
@@ -48,11 +50,12 @@ public final class ManagedProcess {
 	private volatile Instant endedAt;
 	private volatile boolean seenByAgent;
 
-	ManagedProcess(String id, Process process, String command, String purpose, String ownerRunId) {
+	ManagedProcess(String id, Process process, String command, String purpose, String ownerRunId, boolean sharedWithOrchestrator) {
 		this.id = id;
 		this.command = command;
 		this.purpose = purpose;
 		this.ownerRunId = ownerRunId;
+		this.sharedWithOrchestrator = sharedWithOrchestrator;
 		this.startedAt = Instant.now();
 		this.process = process;
 		this.stdin = process.getOutputStream();
@@ -78,6 +81,11 @@ public final class ManagedProcess {
 	/** Run id of the sub-agent that started this process, or null when not sub-agent owned. */
 	public String ownerRunId() {
 		return ownerRunId;
+	}
+
+	/** True when the orchestrator can see this process while the owning run is live. */
+	public boolean isSharedWithOrchestrator() {
+		return sharedWithOrchestrator;
 	}
 
 	public Instant startedAt() {

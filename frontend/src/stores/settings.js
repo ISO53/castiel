@@ -70,8 +70,8 @@ export const useSettingsStore = defineStore("settings", {
 		activeProviderId: null,
 		workerModel: { providerId: "", modelName: "" },
 		kaliModel: { providerId: "", modelName: "" },
-		defaultMaxRounds: 32,
-		subAgentTimeoutMinutes: 30,
+		defaultMaxRounds: 128,
+		subAgentTimeoutMinutes: 60,
 		maxToolRounds: 256,
 		checkpointIntervalRounds: 32,
 		verbatimToolCalls: 32,
@@ -120,8 +120,8 @@ export const useSettingsStore = defineStore("settings", {
 			this.activeProviderId = data.activeProviderId ?? null;
 			this.workerModel = data.workerModel ?? { providerId: "", modelName: "" };
 			this.kaliModel = data.kaliModel ?? { providerId: "", modelName: "" };
-			this.defaultMaxRounds = data.defaultMaxRounds ?? 32;
-			this.subAgentTimeoutMinutes = data.subAgentTimeoutMinutes ?? 30;
+			this.defaultMaxRounds = data.defaultMaxRounds ?? 128;
+			this.subAgentTimeoutMinutes = data.subAgentTimeoutMinutes ?? 60;
 			this.maxToolRounds = data.maxToolRounds ?? 256;
 			this.checkpointIntervalRounds = data.checkpointIntervalRounds ?? 32;
 			this.verbatimToolCalls = data.verbatimToolCalls ?? 32;

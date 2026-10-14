@@ -2,6 +2,8 @@ package io.github.iso53.castiel.tool;
 
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
+import io.github.iso53.castiel.agent.AgentRunManager;
+import io.github.iso53.castiel.service.HarnessService;
 import io.github.iso53.castiel.tool.process.BoundedOutputBuffer;
 import io.github.iso53.castiel.tool.process.ManagedProcess;
 import io.github.iso53.castiel.tool.process.ProcessManager;
@@ -36,12 +38,64 @@ public class BackgroundShellTool implements ToolProvider {
 	private static final int MAX_STARTUP_OUTPUT_CHARS = 2_000;
 
 	private final ProcessManager manager;
+	private final AgentRunManager runs;
 
-	/** Agent-read cursor per process so bg_read returns deltas across calls. */
+	/** Read cursor per caller scope and process, so bg_read returns deltas across calls. */
 	private final Map<String, Long> agentCursors = new ConcurrentHashMap<>();
 
-	public BackgroundShellTool(ProcessManager manager) {
+	public BackgroundShellTool(ProcessManager manager, AgentRunManager runs) {
 		this.manager = manager;
+		this.runs = runs;
+	}
+
+	// Caller scope: the sub-agent run id, or a fixed id for the orchestrator's shared view.
+	private static final String ORCHESTRATOR = "orchestrator";
+
+	private String scope() {
+		String genId = HarnessService.currentGenerationId();
+		return genId != null && runs.get(genId) != null ? genId : ORCHESTRATOR;
+	}
+
+	// True when the owning run is still tracked and working.
+	private boolean runLive(String ownerRunId) {
+		AgentRunManager.AgentRun run = runs.get(ownerRunId);
+		return run != null && !run.isFinished();
+	}
+
+	// Ownership view: a sub-agent sees only its own processes; the orchestrator sees
+	// every process not private to a live run.
+	private boolean canSee(ManagedProcess entry) {
+		String scope = scope();
+		if (!ORCHESTRATOR.equals(scope)) {
+			return scope.equals(entry.ownerRunId());
+		}
+		if (entry.ownerRunId() == null || entry.isSharedWithOrchestrator()) {
+			return true;
+		}
+		return !runLive(entry.ownerRunId());
+	}
+
+	// A finished process is collected (auto-removed) when the reader owns it, or when no
+	// live run owns it. Never removes a process owned by a still-working run.
+	private boolean mayCollect(ManagedProcess entry) {
+		String scope = scope();
+		if (!ORCHESTRATOR.equals(scope)) {
+			return scope.equals(entry.ownerRunId());
+		}
+		return entry.ownerRunId() == null || !runLive(entry.ownerRunId());
+	}
+
+	// Lookup with the caller's ownership filter applied.
+	private ManagedProcess visible(String id) {
+		ManagedProcess entry = manager.get(id);
+		if (entry == null) {
+			throw new IllegalArgumentException("No tracked process with id " + id + "; check bg_list");
+		}
+		if (!canSee(entry)) {
+			throw new IllegalArgumentException(
+				"Process " + id + " is not visible to you; you can only manage the processes you started");
+		}
+		return entry;
 	}
 
 	@Tool(
@@ -56,6 +110,7 @@ public class BackgroundShellTool implements ToolProvider {
 			"shell such as `powershell -Command \"...\"` or `bash -c \"...\"` makes the outer",
 			"shell expand your variables first and the command fails to parse.",
 			"For commands finishing within ~1 minute prefer the plain bash tool.",
+			"A start from a sub-agent is private to that run; the orchestrator sees the process when the run ends.",
 		}
 	)
 	public String start(
@@ -69,7 +124,10 @@ public class BackgroundShellTool implements ToolProvider {
 			return "Error: purpose is required; describe what the process does and its expected duration";
 		}
 		try {
-			ManagedProcess entry = manager.start(command, purpose);
+			// Sub-agent starts are private to the run; user and orchestrator starts are shared.
+			String scope = scope();
+			boolean shared = ORCHESTRATOR.equals(scope);
+			ManagedProcess entry = manager.start(command, purpose, shared ? null : scope, shared);
 			boolean alive = awaitStartup(entry);
 			String started =
 				"Started " +
@@ -77,6 +135,9 @@ public class BackgroundShellTool implements ToolProvider {
 				" (pid " +
 				entry.osPid() +
 				"). It keeps running across your turns; the user sees it in the Processes view.";
+			if (!shared) {
+				started += " It is private to you while you run.";
+			}
 			if (alive) {
 				return started;
 			}
@@ -117,13 +178,13 @@ public class BackgroundShellTool implements ToolProvider {
 	@Tool(
 		name = "bg_list",
 		value = {
-			"Lists every background process you started with its id, OS pid, purpose, expected",
-			"vs elapsed runtime, and state. Finished-but-unread entries remain listed until you",
-			"read them with bg_read or the user removes them.",
+			"Lists the background processes visible to you, with id, OS pid, purpose, expected vs",
+			"elapsed runtime, and state. Finished-but-unread entries remain listed until you read",
+			"them with bg_read or the user removes them.",
 		}
 	)
 	public String list() {
-		List<ManagedProcess> entries = manager.list();
+		List<ManagedProcess> entries = manager.list().stream().filter(this::canSee).toList();
 		if (entries.isEmpty()) {
 			return "No background processes are tracked right now.";
 		}
@@ -160,14 +221,14 @@ public class BackgroundShellTool implements ToolProvider {
 	}
 
 	String read(String processId, Integer maxChars) {
-		ManagedProcess entry = require(processId);
+		ManagedProcess entry = visible(processId);
 		int requested = maxChars == null ? DEFAULT_READ_CHARS : maxChars;
 		int cap = (int) Math.clamp((long) requested, 100L, (long) MAX_READ_CHARS);
 		manager.markSeen(entry.id());
 		BoundedOutputBuffer.Page page = entry.output().read(cursorFor(entry), cap);
-		// The harness keeps one shared cursor per entry for agent reads:
-		// next call resumes exactly where this one stopped.
-		agentCursors.put(entry.id(), page.cursor());
+		// One read cursor per caller scope and process, so one caller's read never
+		// consumes another caller's delta.
+		agentCursors.put(cursorKey(entry.id()), page.cursor());
 		StringBuilder out = new StringBuilder();
 		out.append(entry.id())
 			.append(" | pid ")
@@ -184,9 +245,13 @@ public class BackgroundShellTool implements ToolProvider {
 		}
 		if (!entry.isRunning()) {
 			out.append("\nThis process is finished");
-			if (entry.isSeenByAgent()) {
-				manager.remove(entry.id());
-				out.append("; it was removed from tracking.");
+			if (mayCollect(entry)) {
+				if (entry.isSeenByAgent()) {
+					manager.remove(entry.id());
+					out.append("; it was removed from tracking.");
+				}
+			} else {
+				out.append("; its owning run is still active, so it stays tracked.");
 			}
 		}
 		return out.toString();
@@ -208,7 +273,7 @@ public class BackgroundShellTool implements ToolProvider {
 		if (input == null || input.isEmpty()) {
 			return "Error: input is required";
 		}
-		ManagedProcess entry = require(processId);
+		ManagedProcess entry = visible(processId);
 		boolean queued = manager.sendInput(entry.id(), expandKeys(input));
 		return queued
 			? "Input delivered to " + entry.id() + "; use bg_read shortly to see the reaction."
@@ -225,6 +290,7 @@ public class BackgroundShellTool implements ToolProvider {
 	)
 	public String kill(@P("Registry id from bg_start/bg_list") String processId) {
 		try {
+			visible(processId);
 			return manager.kill(processId);
 		} catch (IllegalArgumentException ex) {
 			return "Error: " + ex.getMessage();
@@ -232,8 +298,13 @@ public class BackgroundShellTool implements ToolProvider {
 	}
 
 	private long cursorFor(ManagedProcess entry) {
-		Long cursor = agentCursors.get(entry.id());
+		Long cursor = agentCursors.get(cursorKey(entry.id()));
 		return cursor == null ? 0L : cursor;
+	}
+
+	// Cursors are keyed per caller scope, so reads never consume another caller's delta.
+	private String cursorKey(String processId) {
+		return scope() + ":" + processId;
 	}
 
 	private ManagedProcess require(String id) {
