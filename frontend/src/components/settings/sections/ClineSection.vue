@@ -75,6 +75,23 @@
 					{{ starting ? "Starting..." : "Sign in with Cline" }}
 				</Button>
 			</div>
+
+			<Separator />
+
+			<div class="space-y-2 text-xs leading-relaxed text-muted-foreground">
+				<p>
+					Models prefixed with <code>cline-pass/</code> are ClinePass subscription models: they
+					require an active ClinePass subscription ($9.99/month) and are metered against 5-hour,
+					weekly and monthly usage windows.
+					<a class="underline underline-offset-2 hover:text-foreground"
+						href="https://app.cline.bot/dashboard/subscription?personal=true" target="_blank"
+						rel="noreferrer">View Billing & Usage</a>
+					<span class="mx-1">&middot;</span>
+					<a class="underline underline-offset-2 hover:text-foreground"
+						href="https://app.cline.bot/onboarding/individual-plan" target="_blank"
+						rel="noreferrer">Subscribe to ClinePass</a>
+				</p>
+			</div>
 		</template>
 	</ProviderSection>
 </template>
