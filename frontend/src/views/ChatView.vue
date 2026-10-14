@@ -214,10 +214,18 @@
 								<ModelSelectorContent title="Select model" class="sm:max-w-xl">
 									<ModelSelectorInput v-model="modelSearch" placeholder="Search models…" />
 									<ModelSelectorList>
-										<ModelSelectorEmpty v-if="!visibleModels.length">No models found.
+										<ModelSelectorEmpty v-if="!regularModels.length && !clinePassModels.length">No models found.
 										</ModelSelectorEmpty>
-										<ModelSelectorGroup :heading="providerId ?? 'Models'">
-											<ModelSelectorItem v-for="model in visibleModels" :key="model.name"
+										<ModelSelectorGroup v-if="regularModels.length" :heading="providerId ?? 'Models'">
+											<ModelSelectorItem v-for="model in regularModels" :key="model.name"
+												:value="model.name" @select="selectModel(model.name)">
+												<img v-if="providerLogo(providerId)" :src="providerLogo(providerId)"
+													class="size-3.5 shrink-0" alt="" aria-hidden="true" />
+												<ModelSelectorName>{{ model.name }}</ModelSelectorName>
+											</ModelSelectorItem>
+										</ModelSelectorGroup>
+										<ModelSelectorGroup v-if="clinePassModels.length" heading="ClinePass">
+											<ModelSelectorItem v-for="model in clinePassModels" :key="model.name"
 												:value="model.name" @select="selectModel(model.name)">
 												<img v-if="providerLogo(providerId)" :src="providerLogo(providerId)"
 													class="size-3.5 shrink-0" alt="" aria-hidden="true" />
@@ -486,13 +494,13 @@ export default {
 		},
 		// Rendering hundreds of command items (OpenRouter catalogs 400+ models) makes the
 		// dialog mount crawl, so we filter and cap the list ourselves. The search box
-		// covers everything beyond the cap.
-		visibleModels() {
-			const query = this.modelSearch.trim().toLowerCase();
-			const filtered = query
-				? this.models.filter((model) => model.name.toLowerCase().includes(query))
-				: this.models;
-			return filtered.slice(0, 100);
+		// covers everything beyond the cap. Models tagged with a category (e.g. ClinePass)
+		// render as their own group, so each bucket keeps its own search and cap.
+		regularModels() {
+			return this.cappedBucket(this.models.filter((model) => model.category !== "clinepass"));
+		},
+		clinePassModels() {
+			return this.cappedBucket(this.models.filter((model) => model.category === "clinepass"));
 		},
 		// A response was requested but nothing streamed yet. Show the loader.
 		assistantIdle() {
@@ -551,6 +559,14 @@ export default {
 	},
 	methods: {
 		providerLogo,
+		// Applies the picker's search filter and render cap to one model bucket.
+		cappedBucket(models) {
+			const query = this.modelSearch.trim().toLowerCase();
+			const filtered = query
+				? models.filter((model) => model.name.toLowerCase().includes(query))
+				: models;
+			return filtered.slice(0, 100);
+		},
 		applySession(session) {
 			if (this.streaming) return;
 			this.currentChatId = session.id;

@@ -1,6 +1,7 @@
 package io.github.iso53.castiel.controller;
 
 import io.github.iso53.castiel.model.*;
+import io.github.iso53.castiel.service.ClineModelCatalog;
 import io.github.iso53.castiel.service.ClineOAuthService;
 import io.github.iso53.castiel.service.LlmClientFactory;
 import io.github.iso53.castiel.service.UserSettingsService;
@@ -23,17 +24,20 @@ public class SettingsController {
 	private final ToolCatalog toolCatalog;
 	private final LlmClientFactory llmClientFactory;
 	private final ClineOAuthService clineOAuthService;
+	private final ClineModelCatalog clineModelCatalog;
 
 	public SettingsController(
 		UserSettingsService userSettingsService,
 		ToolCatalog toolCatalog,
 		LlmClientFactory llmClientFactory,
-		ClineOAuthService clineOAuthService
+		ClineOAuthService clineOAuthService,
+		ClineModelCatalog clineModelCatalog
 	) {
 		this.userSettingsService = userSettingsService;
 		this.toolCatalog = toolCatalog;
 		this.llmClientFactory = llmClientFactory;
 		this.clineOAuthService = clineOAuthService;
+		this.clineModelCatalog = clineModelCatalog;
 	}
 
 	@GetMapping
@@ -78,7 +82,13 @@ public class SettingsController {
 	@GetMapping("/providers/{id}/models")
 	public List<ModelInfo> listModels(@PathVariable("id") String id) {
 		try {
-			return llmClientFactory.create(userSettingsService.get().requireProvider(id)).listModels();
+			List<ModelInfo> models = llmClientFactory.create(userSettingsService.get().requireProvider(id)).listModels();
+			// ClinePass models share the Cline provider's endpoint and credentials but are
+			// absent from its /models list; they come from Cline's public model feed.
+			if ("cline".equalsIgnoreCase(id)) {
+				models = clineModelCatalog.mergedWith(models);
+			}
+			return models;
 		} catch (IllegalArgumentException ex) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
 		} catch (Exception ex) {
