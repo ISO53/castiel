@@ -5,9 +5,7 @@
 			<DialogHeader class="p-2.5">
 				<div class="flex items-center justify-between pr-6">
 					<div class="flex items-center gap-2.5">
-						<div class="flex size-8 shrink-0 items-center justify-center rounded-md border bg-muted/40">
-							<Crosshair class="size-5 text-foreground" aria-hidden="true" />
-						</div>
+						<MitreAttackLogo class="h-11 w-auto shrink-0 text-foreground" aria-hidden="true" />
 						<div>
 							<DialogTitle class="text-base font-semibold text-foreground">MITRE ATT&CK</DialogTitle>
 							<DialogDescription class="text-xs text-muted-foreground">
@@ -174,7 +172,7 @@
 
 <script setup>
 import { onMounted, ref, watch } from "vue";
-import { Crosshair, ExternalLink, RefreshCw, Search, X } from "@lucide/vue";
+import { ExternalLink, RefreshCw, Search, X } from "@lucide/vue";
 import {
 	Dialog,
 	DialogContent,
@@ -185,6 +183,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
+import MitreAttackLogo from "@/components/logos/MitreAttackLogo.vue";
 import { useAttackStore } from "@/stores/attack";
 
 const props = defineProps({ open: { type: Boolean, required: true } });

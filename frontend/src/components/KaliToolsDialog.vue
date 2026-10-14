@@ -5,7 +5,7 @@
 			<DialogHeader class="p-2.5">
 				<div class="flex items-center justify-between pr-6">
 					<div class="flex items-center gap-2.5">
-						<img :src="kaliLogo" class="size-8 shrink-0" alt="" aria-hidden="true" />
+						<KaliLogo class="h-11 w-auto shrink-0" aria-hidden="true" />
 						<div>
 							<DialogTitle class="text-base font-semibold text-foreground">Kali Linux Tools</DialogTitle>
 							<DialogDescription class="text-xs text-muted-foreground">
@@ -285,7 +285,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import kaliLogo from "@/assets/kali.svg";
+import KaliLogo from "@/components/logos/KaliLogo.vue";
 import { useKaliToolsStore } from "@/stores/kaliTools";
 import { useDocksStore } from "@/stores/docks";
 
