@@ -63,9 +63,10 @@ cd packaging
 Settings are overridden with castiel's own command line flags:
 
 ```sh
-castiel --debug     # debug logging for castiel and LLM/MCP traffic
-castiel --version   # print version and exit
-castiel --help      # all flags
+castiel --debug			# debug logging for castiel and LLM/MCP traffic
+castiel --version		# print version and exit
+castiel --help			# all flags
+castiel --check-update	# checks the latest version from github releases
 ```
 
 ## Usage
