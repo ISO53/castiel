@@ -16,6 +16,7 @@
     <img src="https://img.shields.io/badge/license-GNU-black.svg?style=round-square" alt="License">
   </a>
   <img src="https://img.shields.io/github/languages/code-size/ISO53/castiel?style=round-square&color=black" alt="GitHub code size in bytes">
+  <img src="https://img.shields.io/endpoint?url=https://ghloc.dev/api/ISO53/castiel/badge&color=black&style=round-square" alt="lines count">
 </p>
 
 # castiel
