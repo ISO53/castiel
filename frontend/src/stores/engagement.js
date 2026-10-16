@@ -2,13 +2,12 @@ import { defineStore } from "pinia";
 
 const API_BASE_URL = `${window.location.origin}/api/engagement`;
 
-/** Display metadata for the five engagement phases, in order. */
+/** Display metadata for the four engagement phases, in order. */
 export const ENGAGEMENT_PHASES = [
 	{ value: 1, short: "Planning", label: "Planning & Pre-Engagement" },
 	{ value: 2, short: "Recon", label: "Reconnaissance" },
 	{ value: 3, short: "Scanning", label: "Scanning & Vulnerability Assessment" },
 	{ value: 4, short: "Exploitation", label: "Exploitation" },
-	{ value: 5, short: "Wrap-Up", label: "Wrap-Up" },
 ];
 
 async function readError(response) {
@@ -24,7 +23,7 @@ async function readError(response) {
 export const useEngagementStore = defineStore("engagement", {
 	state: () => ({
 		phase: null,
-		totalPhases: 5,
+		totalPhases: 4,
 		loading: false,
 		error: "",
 	}),
@@ -40,7 +39,7 @@ export const useEngagementStore = defineStore("engagement", {
 				if (!response.ok) throw new Error(await readError(response));
 				const data = await response.json();
 				this.phase = data.phase ?? null;
-				this.totalPhases = data.totalPhases ?? 5;
+				this.totalPhases = data.totalPhases ?? 4;
 			} catch (err) {
 				this.phase = null;
 				this.error = err.message;

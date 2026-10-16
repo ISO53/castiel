@@ -27,11 +27,6 @@
 				<span class="fctl-dot"></span>
 				<span class="fctl-label">Exploit</span>
 			</div>
-			<div class="fctl-link"></div>
-			<div class="fctl-step todo">
-				<span class="fctl-dot"></span>
-				<span class="fctl-label">Wrap-Up</span>
-			</div>
 		</div>
 	</div>
 </template>

@@ -23,14 +23,13 @@ public class EngagementService {
 
 	public static final String ENGAGEMENT_FILE = "engagement.json";
 	public static final int FIRST_PHASE = 1;
-	public static final int LAST_PHASE = 5;
+	public static final int LAST_PHASE = 4;
 
 	private static final List<String> PHASE_NAMES = List.of(
 		"Planning & Pre-Engagement",
 		"Reconnaissance",
 		"Scanning & Vulnerability Assessment",
-		"Exploitation",
-		"Wrap-Up"
+		"Exploitation"
 	);
 
 	private static final List<String> PHASE_SUMMARIES = List.of(
@@ -42,8 +41,7 @@ public class EngagementService {
 			+ " vulnerabilities.json. Never write a CVSS score yourself: after recording a"
 			+ " finding, call cvss_score with a CVSS v4.0 and a CVSS v3.1 vector for it.",
 		"Attempt to exploit confirmed vulnerabilities. Report every attempt and result to"
-			+ " the user; stop when told to.",
-		"The engagement is finished. Summarize results and follow the user's direction."
+			+ " the user; stop when told to."
 	);
 
 	private static final ObjectMapper JSON = new ObjectMapper();
