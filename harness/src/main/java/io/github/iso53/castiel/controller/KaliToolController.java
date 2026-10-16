@@ -5,6 +5,7 @@ import io.github.iso53.castiel.agent.KaliLaunchRegistry;
 import io.github.iso53.castiel.agent.SubAgentRunner;
 import io.github.iso53.castiel.model.KaliTool;
 import io.github.iso53.castiel.model.KaliToolDto;
+import io.github.iso53.castiel.service.EngagementService;
 import io.github.iso53.castiel.service.KaliToolCatalog;
 import io.github.iso53.castiel.service.UserSettingsService;
 import io.github.iso53.castiel.tool.KaliLaunchTool;
@@ -36,6 +37,7 @@ public class KaliToolController {
 	private final KaliLaunchRegistry registry;
 	private final UserSettingsService userSettingsService;
 	private final ToolCatalog toolCatalog;
+	private final EngagementService engagementService;
 
 	public KaliToolController(
 		KaliToolCatalog catalog,
@@ -43,7 +45,8 @@ public class KaliToolController {
 		SubAgentRunner subAgentRunner,
 		KaliLaunchRegistry registry,
 		UserSettingsService userSettingsService,
-		ToolCatalog toolCatalog
+		ToolCatalog toolCatalog,
+		EngagementService engagementService
 	) {
 		this.catalog = catalog;
 		this.runs = runs;
@@ -51,6 +54,7 @@ public class KaliToolController {
 		this.registry = registry;
 		this.userSettingsService = userSettingsService;
 		this.toolCatalog = toolCatalog;
+		this.engagementService = engagementService;
 	}
 
 	@GetMapping
@@ -100,6 +104,21 @@ public class KaliToolController {
 			throw new ResponseStatusException(
 				HttpStatus.CONFLICT,
 				"Kali launch is switched off in Settings > Tools. Enable it to dispatch scans."
+			);
+		}
+
+		// Phase gate: scans unlock with Reconnaissance. The UI hides the launch button in
+		// phase 1; this keeps the endpoint honest for anyone calling it directly.
+		int phase = engagementService.currentPhase().phase();
+		int unlock = toolCatalog.minPhase(KaliLaunchTool.NAME);
+		if (phase < unlock) {
+			throw new ResponseStatusException(
+				HttpStatus.CONFLICT,
+				"Kali scans unlock in phase "
+					+ unlock
+					+ " ("
+					+ EngagementService.describe(unlock).name()
+					+ "). Advance the engagement phase to dispatch scans."
 			);
 		}
 

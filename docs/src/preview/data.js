@@ -57,7 +57,6 @@ export const PHASES = [
 	{ value: 2, short: "Recon" },
 	{ value: 3, short: "Scanning" },
 	{ value: 4, short: "Exploitation" },
-	{ value: 5, short: "Wrap-Up" },
 ];
 
 export const INITIAL_PROMPT_HEADER =

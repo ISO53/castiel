@@ -29,10 +29,12 @@ public class WorkspaceInfoTool implements ToolProvider {
 
 	private final WorkspaceSession workspace;
 	private final EngagementService engagement;
+	private final ToolCatalog toolCatalog;
 
-	WorkspaceInfoTool(WorkspaceSession workspace, EngagementService engagement) {
+	WorkspaceInfoTool(WorkspaceSession workspace, EngagementService engagement, ToolCatalog toolCatalog) {
 		this.workspace = workspace;
 		this.engagement = engagement;
+		this.toolCatalog = toolCatalog;
 	}
 
 	@Tool(
@@ -66,6 +68,22 @@ public class WorkspaceInfoTool implements ToolProvider {
 		info.append("Phase ").append(phase.phase()).append(" of ").append(phase.totalPhases())
 			.append(": ").append(phase.name()).append('\n');
 		info.append(phase.summary()).append('\n');
+
+		List<ToolCatalog.ToolGroup> locked = toolCatalog.lockedGroups(phase.phase());
+		if (!locked.isEmpty()) {
+			info.append("\n## Locked tools\n");
+			info.append("The harness offers only the tools the current phase needs. These groups are")
+				.append(" withheld until the user advances the phase:\n");
+			for (ToolCatalog.ToolGroup group : locked) {
+				info.append("- ")
+					.append(group.label())
+					.append(" (")
+					.append(String.join(", ", group.tools()))
+					.append(") unlocks in phase ")
+					.append(group.minPhase())
+					.append('\n');
+			}
+		}
 
 		info.append("\n## Engagement documents\n");
 		for (String document : ENGAGEMENT_DOCUMENTS) {

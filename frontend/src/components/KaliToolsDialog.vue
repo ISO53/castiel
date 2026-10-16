@@ -251,7 +251,7 @@
 							@click="$emit('update:open', false)">
 							Cancel
 						</Button>
-						<Button size="sm" :disabled="selectedToolsList.length === 0 || store.launching"
+						<Button size="sm" :disabled="scansLocked || selectedToolsList.length === 0 || store.launching"
 							@click="handleLaunch">
 							<RefreshCw v-if="store.launching" class="mr-1.5 size-3.5 animate-spin" />
 							<span>{{ store.launching ? "Dispatching..." : "Launch Background Tools" }}</span>
@@ -288,6 +288,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import KaliLogo from "@/components/logos/KaliLogo.vue";
 import { useKaliToolsStore } from "@/stores/kaliTools";
 import { useDocksStore } from "@/stores/docks";
+import { useEngagementStore } from "@/stores/engagement";
 
 const props = defineProps({
 	open: { type: Boolean, required: true },
@@ -297,6 +298,7 @@ const emit = defineEmits(["update:open"]);
 
 const store = useKaliToolsStore();
 const docks = useDocksStore();
+const engagement = useEngagementStore();
 
 const step = ref(1);
 const searchQuery = ref("");
@@ -318,6 +320,9 @@ watch(
 		if (isOpen) {
 			step.value = 1;
 			launchError.value = "";
+			// Fresh phase read, so the launch guard is honest even if the menu bar's
+			// engagement state is stale.
+			engagement.fetch();
 			if (!store.tools.length) {
 				store.fetchTools();
 			}
@@ -391,8 +396,15 @@ function toggleSelectAllVisible() {
 	}
 }
 
+// Scans unlock with Reconnaissance; the phase bar is the only transition path.
+const scansLocked = computed(() => engagement.phase === 1);
+
 async function handleLaunch() {
 	launchError.value = "";
+	if (scansLocked.value) {
+		launchError.value = "Kali scans unlock in phase 2 (Reconnaissance). Advance the engagement phase first.";
+		return;
+	}
 	try {
 		await store.launchTools(store.selectedIds, store.userNotes);
 		emit("update:open", false);
