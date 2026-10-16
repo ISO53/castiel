@@ -33,6 +33,10 @@ public class CastielApplication {
 			System.setProperty("spring.profiles.active", "debug");
 			application.setAdditionalProfiles("debug");
 		}
+		if (cli.port != null) {
+			// System properties outrank application.yaml, so the flag wins over 8081.
+			System.setProperty("server.port", String.valueOf(cli.port));
+		}
 
 		// Spring gets no args: castiel owns the command line.
 		Environment env = application.run().getEnvironment();

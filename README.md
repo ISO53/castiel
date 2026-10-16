@@ -38,6 +38,8 @@ Grab the archive for your OS from the [GitHub Releases](https://github.com/ISO53
 
 Open http://localhost:8081 and start working.
 
+Prefer a different port? Run `castiel --port 3000` (or `-p 3000`).
+
 ### Development
 
 Run the two parts in separate terminals, both with hot reload:
