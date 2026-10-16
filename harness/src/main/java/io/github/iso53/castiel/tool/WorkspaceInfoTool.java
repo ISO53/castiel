@@ -4,7 +4,6 @@ import dev.langchain4j.agent.tool.Tool;
 import io.github.iso53.castiel.model.EngagementPhase;
 import io.github.iso53.castiel.service.EngagementService;
 import io.github.iso53.castiel.service.WorkspaceSession;
-import io.github.iso53.castiel.tool.ToolCatalog;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Files;
