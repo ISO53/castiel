@@ -110,6 +110,8 @@ public class HarnessService {
 		volatile TurnRecorder recorder;
 	}
 
+	private final EngagementService engagementService;
+
 	public HarnessService(
 		LlmClientFactory llmClientFactory,
 		UserSettingsService userSettingsService,
@@ -121,7 +123,8 @@ public class HarnessService {
 		ProcessManager processManager,
 		List<ToolProvider> toolProviders,
 		UserQuestionTool userQuestionTool,
-		ToolCatalog toolCatalog
+		ToolCatalog toolCatalog,
+		EngagementService engagementService
 	) {
 		this.llmClientFactory = llmClientFactory;
 		this.userSettingsService = userSettingsService;
@@ -148,6 +151,7 @@ public class HarnessService {
 		}
 		this.toolExecutors = executors;
 		this.toolCatalog = toolCatalog;
+		this.engagementService = engagementService;
 		// Fail fast when the settings catalogue names a tool no bean provides.
 		toolCatalog.validateAgainst(executors.keySet());
 	}
@@ -580,16 +584,22 @@ public class HarnessService {
 	public AgentToolset toolsFor(Set<String> allowedNames) {
 		Set<String> allowed = allowedNames == null ? Set.of() : Set.copyOf(allowedNames);
 		Set<String> disabled = userSettingsService.get().disabledToolGroups();
+		// Phase snapshot: a run keeps the toolset of the phase it started in, so a phase
+		// change mid-run never rewrites a delegation that was made in good faith.
+		int phase = engagementService.currentPhase().phase();
 		Set<String> seen = new HashSet<>();
 		List<ToolSpecification> specifications = new ArrayList<>();
 		Map<String, ToolExecutor> executors = new LinkedHashMap<>();
 		for (ToolSpecification specification : toolSpecifications) {
 			String name = specification.name();
 			// The user's tool switches gate sub-agents too: an orchestrator that could not
-			// call a disabled tool must not be able to reach it by delegating to one.
+			// call a disabled tool must not be able to reach it by delegating to one. The
+			// phase gate works the same way: a phase-1 orchestrator cannot slip a scanner's
+			// toolset into a sub-agent's allowlist.
 			if (AgentGuardrails.FORBIDDEN_TOOLS.contains(name)
 				|| !allowed.contains(name)
 				|| !toolCatalog.isEnabled(name, disabled)
+				|| !toolCatalog.isPhaseAllowed(name, phase)
 				|| !seen.add(name)) {
 				continue;
 			}
@@ -602,7 +612,7 @@ public class HarnessService {
 		}
 		for (ToolSpecification specification : mcpManager.toolSpecifications()) {
 			String name = specification.name();
-			if (!allowed.contains(name) || !seen.add(name)) {
+			if (phase < ToolCatalog.MCP_MIN_PHASE || !allowed.contains(name) || !seen.add(name)) {
 				continue;
 			}
 			specifications.add(specification);
@@ -613,7 +623,30 @@ public class HarnessService {
 
 	/** Executes one MCP tool with the same output cap the orchestrator loop applies. */
 	public String executeMcpTool(ToolExecutionRequest request) {
+		int phase = engagementService.currentPhase().phase();
+		if (phase < ToolCatalog.MCP_MIN_PHASE) {
+			// Every MCP path (orchestrator and sub-agents) funnels through here.
+			return phaseRefusal("MCP tool " + request.name(), phase, ToolCatalog.MCP_MIN_PHASE);
+		}
 		return capMcpOutput(request.name(), mcpManager.executeTool(request));
+	}
+
+	/**
+	 * Structured refusal for a phase-gated tool call: names the current phase, the phase the
+	 * tool unlocks in, and routes the model through the human lead instead of inviting retries.
+	 */
+	private String phaseRefusal(String toolName, int currentPhase, int unlockPhase) {
+		return "Error: "
+			+ toolName
+			+ " is not available in phase "
+			+ currentPhase
+			+ " ("
+			+ EngagementService.describe(currentPhase).name()
+			+ "); it unlocks in phase "
+			+ unlockPhase
+			+ " ("
+			+ EngagementService.describe(unlockPhase).name()
+			+ "). If this work belongs there, ask the user to advance the engagement phase.";
 	}
 
 	/** Current chat generation id for tool execution on this thread; used by sub-agent tools. */
@@ -631,17 +664,25 @@ public class HarnessService {
 
 	private List<ToolSpecification> availableTools() {
 		Set<String> disabled = userSettingsService.get().disabledToolGroups();
+		// Re-read per round, so a phase change the user makes mid-generation applies
+		// from the next model round on.
+		int phase = engagementService.currentPhase().phase();
 		Set<String> names = new HashSet<>();
 		List<ToolSpecification> combined = new ArrayList<>();
 		for (ToolSpecification specification : toolSpecifications) {
-			if (toolCatalog.isEnabled(specification.name(), disabled) && names.add(specification.name())) {
+			if (toolCatalog.isEnabled(specification.name(), disabled)
+				&& toolCatalog.isPhaseAllowed(specification.name(), phase)
+				&& names.add(specification.name())) {
 				combined.add(specification);
 			}
 		}
-		// MCP tools are governed by their own per-server switch, not by this one.
-		for (ToolSpecification specification : mcpManager.toolSpecifications()) {
-			if (names.add(specification.name())) {
-				combined.add(specification);
+		// MCP tools are governed by their own per-server switch, not by this one,
+		// and unlock with Reconnaissance: they are arbitrary target-interactive tools.
+		if (phase >= ToolCatalog.MCP_MIN_PHASE) {
+			for (ToolSpecification specification : mcpManager.toolSpecifications()) {
+				if (names.add(specification.name())) {
+					combined.add(specification);
+				}
 			}
 		}
 		return combined;
@@ -666,6 +707,12 @@ public class HarnessService {
 			// The spec was withheld from the model, so reaching here means it invented the
 			// call anyway. Refusing keeps "switched off" honest rather than advisory.
 			return "Error: " + request.name() + " is disabled in castiel settings and cannot be used.";
+		}
+		int phase = engagementService.currentPhase().phase();
+		if (!toolCatalog.isPhaseAllowed(request.name(), phase)) {
+			// Same honesty rule, per phase: the spec was withheld from the model, so reaching
+			// here means it invented the call.
+			return phaseRefusal(request.name(), phase, toolCatalog.minPhase(request.name()));
 		}
 		try {
 			return executor.execute(request, null);

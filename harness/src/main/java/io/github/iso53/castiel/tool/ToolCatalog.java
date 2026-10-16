@@ -25,12 +25,16 @@ public class ToolCatalog {
 
 	/**
 	 * One user-facing group: its label, the tool names behind it, whether it may be disabled,
-	 * and whether disabling it deserves a warning.
+	 * whether disabling it deserves a warning, and the phase the group unlocks at.
 	 *
 	 * <p>{@code critical} is not "the app stops working" -- nothing here does that. It marks the
 	 * groups whose absence costs correctness rather than convenience: findings go unscored, or
 	 * long-running work becomes impossible. The user-facing consequence text is deliberately
 	 * generic, so this flag decides only *whether* to warn, never what to say.
+	 *
+	 * <p>{@code minPhase} is the strict-phasing floor: before the engagement reaches this phase,
+	 * the group's tools are withheld from the model entirely (and refused if called), so a
+	 * planning-phase agent never sees a scanner's toolset. 1 means available from the start.
 	 */
 	public record ToolGroup(
 		String id,
@@ -38,8 +42,15 @@ public class ToolCatalog {
 		String description,
 		List<String> tools,
 		boolean locked,
-		boolean critical
+		boolean critical,
+		int minPhase
 	) {}
+
+	/**
+	 * Connected MCP tools are not catalog groups (per-server switches govern them) and are
+	 * arbitrary target-interactive tools, so they all unlock with Reconnaissance.
+	 */
+	public static final int MCP_MIN_PHASE = 2;
 
 	private static final List<ToolGroup> GROUPS = List.of(
 		new ToolGroup(
@@ -48,7 +59,8 @@ public class ToolCatalog {
 			"Runs commands in the workspace. PowerShell on Windows, bash elsewhere.",
 			List.of("bash"),
 			true,
-			false
+			false,
+			1
 		),
 		new ToolGroup(
 			"files",
@@ -56,7 +68,8 @@ public class ToolCatalog {
 			"Reads, writes and edits workspace files. Every view is fed by the JSON the agent writes.",
 			List.of("read_file", "write_file", "edit_file"),
 			true,
-			false
+			false,
+			1
 		),
 		new ToolGroup(
 			"workspace_info",
@@ -64,7 +77,8 @@ public class ToolCatalog {
 			"Describes the workspace directory layout and what is missing from it.",
 			List.of("workspace_info"),
 			true,
-			false
+			false,
+			1
 		),
 		new ToolGroup(
 			"web",
@@ -72,7 +86,8 @@ public class ToolCatalog {
 			"Fetches pages and searches the web for background research.",
 			List.of("web_fetch", "web_search"),
 			false,
-			false
+			false,
+			1
 		),
 		new ToolGroup(
 			"workspace_search",
@@ -80,7 +95,8 @@ public class ToolCatalog {
 			"Greps the workspace for files and content matching a query.",
 			List.of("workspace_search"),
 			false,
-			true
+			true,
+			1
 		),
 		new ToolGroup(
 			"sub_agent",
@@ -88,7 +104,8 @@ public class ToolCatalog {
 			"Delegates narrow mechanical work to sub-agents running their own model in the background.",
 			List.of("sub_agent", "agent_list", "agent_read", "agent_kill"),
 			false,
-			false
+			false,
+			2
 		),
 		new ToolGroup(
 			"cvss_score",
@@ -96,7 +113,8 @@ public class ToolCatalog {
 			"Computes official CVSS v4.0 and v3.1 scores and attaches them to findings.",
 			List.of("cvss_score"),
 			false,
-			true
+			true,
+			3
 		),
 		new ToolGroup(
 			"kali_tools",
@@ -104,7 +122,8 @@ public class ToolCatalog {
 			"Searches the Kali tool catalog to find a purpose-built binary for a job.",
 			List.of("search_kali_tools"),
 			false,
-			false
+			false,
+			2
 		),
 		new ToolGroup(
 			"attack",
@@ -112,7 +131,8 @@ public class ToolCatalog {
 			"Looks up adversary techniques and real-world procedures in the bundled MITRE ATT&CK catalog.",
 			List.of("search_attack", "attack_detail"),
 			false,
-			false
+			false,
+			3
 		),
 		new ToolGroup(
 			"kali_launch",
@@ -120,7 +140,8 @@ public class ToolCatalog {
 			"Starts the Kali tools you picked in the Kali dialog as background scans.",
 			List.of("kali_launch"),
 			false,
-			true
+			true,
+			2
 		),
 		new ToolGroup(
 			"ask_user_question",
@@ -128,7 +149,8 @@ public class ToolCatalog {
 			"Lets the agent ask you a multiple-choice question and wait for your answer.",
 			List.of("ask_user_question"),
 			false,
-			false
+			false,
+			1
 		),
 		new ToolGroup(
 			"background",
@@ -136,7 +158,8 @@ public class ToolCatalog {
 			"Starts long-running commands and reads, sends to, and kills them.",
 			List.of("bg_start", "bg_list", "bg_read", "bg_send", "bg_kill"),
 			false,
-			true
+			true,
+			2
 		)
 	);
 
@@ -173,6 +196,26 @@ public class ToolCatalog {
 	public boolean isGroupEnabled(String groupId, Set<String> disabledGroups) {
 		ToolGroup group = byId.get(groupId);
 		return group != null && (group.locked() || !disabledGroups.contains(groupId));
+	}
+
+	/**
+	 * Whether a tool is unlocked at the given engagement phase. Undeclared tools are always
+	 * allowed: the phase policy, like the user switches, only speaks for tools it declares.
+	 */
+	public boolean isPhaseAllowed(String toolName, int phase) {
+		return phase >= minPhase(toolName);
+	}
+
+	/** The phase a tool unlocks at; 1 when the catalogue does not declare the tool. */
+	public int minPhase(String toolName) {
+		String groupId = groupOf(toolName);
+		ToolGroup group = groupId == null ? null : byId.get(groupId);
+		return group == null ? 1 : group.minPhase();
+	}
+
+	/** Groups whose tools are not yet unlocked at the given phase, in display order. */
+	public List<ToolGroup> lockedGroups(int phase) {
+		return GROUPS.stream().filter(group -> phase < group.minPhase()).toList();
 	}
 
 	/**

@@ -58,6 +58,8 @@ Every engagement moves sequentially through four phases:
 
 The user moves between phases from the UI. You never switch phases on your own initiative.
 
+Tool availability follows the phase: the harness offers only the tools the current phase needs. Planning provides the document, research, and shell tools. Reconnaissance adds background processes, sub-agents, Kali tool discovery and launch, and every connected MCP server. Scanning & Vulnerability Assessment adds MITRE ATT&CK lookups and CVSS scoring. If a tool you expect is missing from your toolset, the engagement is not in the right phase for it: ask the human lead to advance the phase.
+
 ---
 
 ## The Workspace Documents
