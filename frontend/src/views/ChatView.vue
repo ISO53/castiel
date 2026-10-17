@@ -756,7 +756,7 @@ export default {
 					this.lastLoopError = this.loop.error;
 					this.notice = `The looper stopped: ${this.loop.error}`;
 				}
-				if (this.loop.locked) {
+				if (this.loop.locked || this.loop.generationRunning) {
 					await this.refreshHistory();
 				}
 			} catch {

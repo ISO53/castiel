@@ -90,7 +90,6 @@ public class LooperService {
 	private LoopState state = LoopState.STOPPED;
 	private String phaseLabel = "";
 	private String looperRunId;
-	private String generationId;
 	private long graceUntil;
 	private int cycles;
 	private String error;
@@ -139,16 +138,17 @@ public class LooperService {
 		return status(this.chatId);
 	}
 
-	/** Unlocks the chat: cancels live work and breaks the loop. */
+	/** Unlocks the chat: stops future cycles. A live generation finishes on its own. */
 	public synchronized Map<String, Object> unlock(String requestedChatId) {
 		if (requestedChatId == null || !requestedChatId.equals(chatId)) {
 			return status(requestedChatId);
 		}
 		stopPoller();
-		cancelLiveWork();
+		if (looperRunId != null) {
+			runs.cancel(looperRunId);
+		}
 		chatId = null;
 		looperRunId = null;
-		generationId = null;
 		error = null;
 		state = LoopState.STOPPED;
 		log.info("Chat unlocked from the loop");
@@ -274,13 +274,10 @@ public class LooperService {
 			graceUntil = System.currentTimeMillis() + GRACE_MS;
 			cycles++;
 			// Subscribe server-side: the stream persists everything on its own, so the
-			// events themselves are discarded here.
+			// events themselves are discarded here. A live generation is never cancelled
+			// by the loop; unlocking or a failure only stops future cycles.
 			harness.stream(request).subscribe(
-				event -> {
-					if ("start".equals(event.event()) && generationId == null) {
-						generationId = extractGenerationId(event.data());
-					}
-				},
+				event -> {},
 				ex -> stopLoop("Generation failed: " + ex.getMessage()),
 				() -> {}
 			);
@@ -297,21 +294,12 @@ public class LooperService {
 		}
 		log.warn("Looper stopped for chat {}: {}", chatId, reason);
 		stopPoller();
-		cancelLiveWork();
-		looperRunId = null;
-		generationId = null;
-		state = LoopState.STOPPED;
-		error = reason;
-	}
-
-	// Cancels the looper run and the looper-initiated generation, if either is live.
-	private void cancelLiveWork() {
 		if (looperRunId != null) {
 			runs.cancel(looperRunId);
 		}
-		if (generationId != null) {
-			harness.cancel(generationId);
-		}
+		looperRunId = null;
+		state = LoopState.STOPPED;
+		error = reason;
 	}
 
 	private void startPoller() {
@@ -411,16 +399,6 @@ public class LooperService {
 			text = text.substring(newline + 1).strip();
 		}
 		return Text.truncate(text.strip(), settings.get().looperDirectiveCap(), "\n[harness: directive truncated]");
-	}
-
-	// The generation id from the stream's start event, for cancel support.
-	private static String extractGenerationId(String data) {
-		try {
-			var node = new com.fasterxml.jackson.databind.ObjectMapper().readTree(data);
-			return node.path("id").asText(null);
-		} catch (IOException ex) {
-			return null;
-		}
 	}
 
 	// Frozen at lock time; the looper may never suggest leaving this phase.
