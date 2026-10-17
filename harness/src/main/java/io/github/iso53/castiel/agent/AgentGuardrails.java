@@ -18,6 +18,14 @@ public final class AgentGuardrails {
 		"cvss_score"
 	);
 
+	// Label of the harness-driven looper run; also its profile name in the dock.
+	public static final String LOOPER_LABEL = "looper";
+
+	// The looper may watch sub-agent runs (agent_list) but nothing else from the forbidden set.
+	public static final Set<String> LOOPER_FORBIDDEN_TOOLS = FORBIDDEN_TOOLS.stream()
+		.filter(name -> !"agent_list".equals(name))
+		.collect(java.util.stream.Collectors.toUnmodifiableSet());
+
 	// Toolset used when the orchestrator does not specify one: mechanical, read/write basics.
 	public static final Set<String> DEFAULT_TOOLS = Set.of(
 		"bash",

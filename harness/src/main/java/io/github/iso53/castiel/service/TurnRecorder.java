@@ -45,7 +45,7 @@ final class TurnRecorder {
 	}
 
 	/** Loads or creates the session file and appends the user turn that starts this generation. */
-	synchronized void startUserTurn(String content, String providerId, String modelName, String reasoningEffort) {
+	synchronized void startUserTurn(String content, String providerId, String modelName, String reasoningEffort, String origin) {
 		ChatSession loaded;
 		try {
 			loaded = chatPersistence.loadChat(chatId);
@@ -55,7 +55,7 @@ final class TurnRecorder {
 		List<io.github.iso53.castiel.model.ChatMessage> messages =
 			loaded == null ? new ArrayList<>() : new ArrayList<>(loaded.messages());
 		messages.add(new io.github.iso53.castiel.model.ChatMessage(
-			UUID.randomUUID().toString(), "user", List.of(ChatMessagePart.text(content))));
+			UUID.randomUUID().toString(), "user", List.of(ChatMessagePart.text(content)), origin));
 		String title = loaded != null
 			? loaded.title()
 			: content.isBlank() ? "New Chat" : content.substring(0, Math.min(content.length(), 80)).trim();
@@ -154,7 +154,7 @@ final class TurnRecorder {
 			return;
 		}
 		io.github.iso53.castiel.model.ChatMessage assistant =
-			new io.github.iso53.castiel.model.ChatMessage(assistantId, "assistant", List.copyOf(parts));
+			new io.github.iso53.castiel.model.ChatMessage(assistantId, "assistant", List.copyOf(parts), null);
 		List<io.github.iso53.castiel.model.ChatMessage> messages = new ArrayList<>(session.messages());
 		if (assistantSaved) {
 			messages.set(messages.size() - 1, assistant);

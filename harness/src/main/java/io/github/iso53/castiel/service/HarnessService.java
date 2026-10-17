@@ -108,6 +108,10 @@ public class HarnessService {
 		volatile TokenUsage totalUsage;
 		// Set for session-aware generations; null means the stream is not persisted.
 		volatile TurnRecorder recorder;
+		// Owning chat id, so the looper can watch which chats have a live generation.
+		volatile String chatId;
+		// Tool names withheld from the model for this generation (looper turns).
+		volatile Set<String> excludedTools = Set.of();
 	}
 
 	private final EngagementService engagementService;
@@ -258,11 +262,23 @@ public class HarnessService {
 			recorder = new TurnRecorder(chatId, chatPersistence);
 			ChatTurn lastTurn = request.messages().getLast();
 			if ("user".equalsIgnoreCase(lastTurn.role())) {
-				recorder.startUserTurn(lastTurn.content(), request.providerId().trim(), modelName, request.reasoningEffort());
+				recorder.startUserTurn(lastTurn.content(), request.providerId().trim(), modelName, request.reasoningEffort(), request.origin());
 			}
 		}
 
-		return openGeneration(provider, modelName, options, messages, recorder);
+		// Looper-submitted turns run without ask_user_question: the operator may be away,
+		// and a question nobody can answer would park the loop until its timeout.
+		Set<String> excludedTools = "looper".equals(request.origin()) ? Set.of(UserQuestionTool.NAME) : Set.of();
+
+		return openGeneration(provider, modelName, options, messages, recorder, chatId, excludedTools);
+	}
+
+	/** True when a generation is live for the given chat id. */
+	public boolean isGenerating(String chatId) {
+		if (chatId == null) {
+			return false;
+		}
+		return generations.values().stream().anyMatch(state -> chatId.equals(state.chatId));
 	}
 
 	/** Spawns a full model generation with its own cancellable id and streaming state. */
@@ -271,11 +287,15 @@ public class HarnessService {
 		String modelName,
 		GenerationOptions options,
 		List<ChatMessage> messages,
-		TurnRecorder recorder
+		TurnRecorder recorder,
+		String chatId,
+		Set<String> excludedTools
 	) {
 		String generationId = UUID.randomUUID().toString();
 		GenerationState state = new GenerationState();
 		state.recorder = recorder;
+		state.chatId = chatId;
+		state.excludedTools = excludedTools == null ? Set.of() : Set.copyOf(excludedTools);
 		generations.put(generationId, state);
 
 		return Flux.create(sink -> {
@@ -347,7 +367,7 @@ public class HarnessService {
 		StreamingChatModel model = provider.chatModel(modelName, options);
 
 		model.chat(
-			ChatRequest.builder().messages(messages).toolSpecifications(availableTools()).build(),
+			ChatRequest.builder().messages(messages).toolSpecifications(filteredTools(state)).build(),
 			new StreamingChatResponseHandler() {
 				@Override
 				public void onPartialThinking(PartialThinking partialThinking, PartialThinkingContext context) {
@@ -582,6 +602,23 @@ public class HarnessService {
 	 * File-mutating executors keep their workspace-notify decorations.
 	 */
 	public AgentToolset toolsFor(Set<String> allowedNames) {
+		return toolsetFor(allowedNames, AgentGuardrails.FORBIDDEN_TOOLS);
+	}
+
+	/**
+	 * Toolset for the looper run. Same gate as {@link #toolsFor}, but the looper may
+	 * watch sub-agent runs, so {@code agent_list} is allowed for it.
+	 */
+	public AgentToolset looperToolsFor(Set<String> allowedNames) {
+		return toolsetFor(allowedNames, AgentGuardrails.LOOPER_FORBIDDEN_TOOLS);
+	}
+
+	/**
+	 * Builds a filtered toolset for a sub-agent: the local tools and MCP tools whose names
+	 * are allowed, with forbidden tools (user questions, nesting, run control) always removed.
+	 * File-mutating executors keep their workspace-notify decorations.
+	 */
+	private AgentToolset toolsetFor(Set<String> allowedNames, Set<String> forbidden) {
 		Set<String> allowed = allowedNames == null ? Set.of() : Set.copyOf(allowedNames);
 		Set<String> disabled = userSettingsService.get().disabledToolGroups();
 		// Phase snapshot: a run keeps the toolset of the phase it started in, so a phase
@@ -596,7 +633,7 @@ public class HarnessService {
 			// call a disabled tool must not be able to reach it by delegating to one. The
 			// phase gate works the same way: a phase-1 orchestrator cannot slip a scanner's
 			// toolset into a sub-agent's allowlist.
-			if (AgentGuardrails.FORBIDDEN_TOOLS.contains(name)
+			if (forbidden.contains(name)
 				|| !allowed.contains(name)
 				|| !toolCatalog.isEnabled(name, disabled)
 				|| !toolCatalog.isPhaseAllowed(name, phase)
@@ -686,6 +723,15 @@ public class HarnessService {
 			}
 		}
 		return combined;
+	}
+
+	/** The orchestrator's tools with this generation's excluded names removed. */
+	private List<ToolSpecification> filteredTools(GenerationState state) {
+		List<ToolSpecification> tools = availableTools();
+		if (state.excludedTools.isEmpty()) {
+			return tools;
+		}
+		return tools.stream().filter(tool -> !state.excludedTools.contains(tool.name())).toList();
 	}
 
 	private String executeTool(ToolExecutionRequest request, int index) {

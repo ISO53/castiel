@@ -79,9 +79,10 @@ public class ChatPersistenceService {
 	}
 
 	/**
-	 * Loads a full chat session by id from the active workspace.
+	 * Loads a full chat session by id from the active workspace. Synchronized with
+	 * {@link #saveChat}, so a reader never sees a half-written session file.
 	 */
-	public ChatSession loadChat(String id) {
+	public synchronized ChatSession loadChat(String id) {
 		Path target = resolveChatFile(id);
 		if (!Files.isRegularFile(target)) {
 			throw new IllegalArgumentException("Chat not found: " + id);
