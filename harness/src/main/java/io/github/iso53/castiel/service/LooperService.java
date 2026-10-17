@@ -161,6 +161,7 @@ public class LooperService {
 		// A failure keeps the chat context around until the next lock or unlock, so the
 		// operator can read why the loop stopped.
 		String reportedError = requestedChatId != null && requestedChatId.equals(chatId) ? error : null;
+		String liveGeneration = harness.currentGenerationId(requestedChatId);
 		return Map.of(
 			"locked",
 			locked,
@@ -168,6 +169,8 @@ public class LooperService {
 			locked ? state.name() : "STOPPED",
 			"generationRunning",
 			harness.isGenerating(requestedChatId),
+			"generationId",
+			liveGeneration == null ? "" : liveGeneration,
 			"cycles",
 			locked ? cycles : 0,
 			"error",

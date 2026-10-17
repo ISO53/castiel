@@ -163,7 +163,7 @@
 			<p v-if="notice" class="mb-2 text-xs text-amber-500">{{ notice }}</p>
 			<p v-if="error" class="mb-2 text-xs text-destructive">{{ error }}</p>
 			<PromptInput class="w-full rounded-none" @submit="handlePromptSubmit">
-				<PromptInputTextarea :disabled="!ready || streaming || loopBusy" :placeholder="composerPlaceholder"
+				<PromptInputTextarea :disabled="!ready || generationBusy" :placeholder="composerPlaceholder"
 					class="min-h-16" />
 				<PromptInputFooter class="mt-2 items-center justify-between gap-2 border-none">
 					<PromptInputTools class="min-w-0 flex-1">
@@ -255,7 +255,7 @@
 						<LockOpen v-else class="size-3.5" />
 						<span>{{ loop.locked ? (looperActive ? "Nudging…" : "Looping") : "Loop" }}</span>
 					</Button>
-					<PromptInputSubmit :status="streaming ? 'streaming' : 'ready'" :disabled="!ready"
+					<PromptInputSubmit :status="generationBusy ? 'streaming' : 'ready'" :disabled="!ready"
 						@click="handleSubmitClick" />
 				</PromptInputFooter>
 			</PromptInput>
@@ -446,7 +446,7 @@ export default {
 			error: "",
 			notice: "",
 			// Looper loop state for the open chat, mirrored from the harness.
-			loop: { locked: false, state: "STOPPED", generationRunning: false, cycles: 0, error: "" },
+			loop: { locked: false, state: "STOPPED", generationRunning: false, generationId: "", cycles: 0, error: "" },
 			lastLoopError: "",
 			historySignature: "",
 			loopTimer: null,
@@ -541,9 +541,9 @@ export default {
 		looperActive() {
 			return this.loop.locked && this.loop.state === "LOOPER_RUNNING";
 		},
-		// A looper-driven generation is running: the composer waits, like during a stream.
-		loopBusy() {
-			return this.loop.locked && this.loop.generationRunning;
+		// Any live generation (streaming or looper-driven) owns the composer.
+		generationBusy() {
+			return this.streaming || this.loop.generationRunning;
 		},
 	},
 	async mounted() {
@@ -695,7 +695,7 @@ export default {
 			}
 		},
 		handleWindowKeydown(event) {
-			if (event.key === "Escape" && this.streaming) {
+			if (event.key === "Escape" && this.generationBusy) {
 				event.preventDefault();
 				this.stopGeneration();
 			}
@@ -703,17 +703,29 @@ export default {
 		// Tells the harness to cancel the generation (aborting the provider stream and any
 		// pending tool rounds), then drops the SSE connection itself.
 		async stopGeneration() {
-			if (!this.streaming) return;
-			const controller = this.abortController;
-			this.abortController = null;
-			if (this.generationId) {
-				try {
-					await fetch(`${CHAT_API}/${encodeURIComponent(this.generationId)}/cancel`, { method: "POST" });
-				} catch {
-					// Best effort. Aborting the local stream is enough to stop the UI.
+			if (this.streaming) {
+				const controller = this.abortController;
+				this.abortController = null;
+				if (this.generationId) {
+					try {
+						await fetch(`${CHAT_API}/${encodeURIComponent(this.generationId)}/cancel`, { method: "POST" });
+					} catch {
+						// Best effort. Aborting the local stream is enough to stop the UI.
+					}
 				}
+				controller?.abort();
+			} else if (this.loop.generationRunning) {
+				// A looper-driven generation: cancel it by id. Stopping also breaks the loop.
+				if (this.loop.generationId) {
+					try {
+						await fetch(`${CHAT_API}/${encodeURIComponent(this.loop.generationId)}/cancel`, { method: "POST" });
+					} catch {
+						// Best effort; the loop status endpoint still reports the real state.
+					}
+				}
+			} else {
+				return;
 			}
-			controller?.abort();
 			if (this.loop.locked) {
 				// Stopping also breaks the loop, or the looper would start it again.
 				this.loop.locked = false;
@@ -749,6 +761,7 @@ export default {
 					locked: status.locked ?? false,
 					state: status.state ?? "STOPPED",
 					generationRunning: status.generationRunning ?? false,
+					generationId: status.generationId ?? "",
 					cycles: status.cycles ?? 0,
 					error: status.error ?? "",
 				};
@@ -771,8 +784,13 @@ export default {
 				if (!response.ok) return;
 				const session = await response.json();
 				const mapped = this.mapHistoryMessages(session);
+				// Char-based signature: the looper's transcript grows inside one part, so a
+				// part count alone would miss mid-round growth.
 				const last = mapped[mapped.length - 1];
-				const signature = `${mapped.length}:${last ? last.parts.length : 0}`;
+				const size = last
+					? last.parts.reduce((total, part) => total + (part.text?.length ?? part.result?.length ?? 0), 0)
+					: 0;
+				const signature = `${mapped.length}:${last ? last.parts.length : 0}:${size}`;
 				if (signature !== this.historySignature) {
 					this.historySignature = signature;
 					this.messages = mapped;
@@ -781,9 +799,9 @@ export default {
 				// Transient; the next poll retries.
 			}
 		},
-		// While streaming the submit button acts as a stop button.
+		// While a generation runs, the submit button acts as a stop button.
 		handleSubmitClick(event) {
-			if (!this.streaming) return;
+			if (!this.generationBusy) return;
 			event.preventDefault();
 			event.stopPropagation();
 			this.stopGeneration();
@@ -942,7 +960,7 @@ export default {
 			this.error = "";
 			this.lastLoopError = "";
 			this.historySignature = "";
-			this.loop = { locked: false, state: "STOPPED", generationRunning: false, cycles: 0, error: "" };
+			this.loop = { locked: false, state: "STOPPED", generationRunning: false, generationId: "", cycles: 0, error: "" };
 			this.loadingModels = true;
 
 			try {

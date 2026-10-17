@@ -13,6 +13,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Persists the messages of one session-aware generation to the chat file as they
@@ -38,6 +42,20 @@ final class TurnRecorder {
 	private StringBuilder openPart;
 	private String openPartType;
 	private boolean assistantSaved;
+	// Index of the open part in parts; -1 when no part is open.
+	private int openPartIndex = -1;
+	// Set once the message is final; stops the periodic flush.
+	private boolean closed;
+	private ScheduledFuture<?> flushTask;
+
+	// Shared daemon scheduler; each task lives at most one flush cycle.
+	private static final ScheduledExecutorService FLUSH_SCHEDULER =
+		Executors.newSingleThreadScheduledExecutor(task -> {
+			Thread thread = new Thread(task, "turn-flush");
+			thread.setDaemon(true);
+			return thread;
+		});
+	private static final long FLUSH_DELAY_MS = 1500;
 
 	TurnRecorder(String chatId, ChatPersistenceService chatPersistence) {
 		this.chatId = chatId;
@@ -79,7 +97,7 @@ final class TurnRecorder {
 		}
 		if (openPart != null && !openPartType.equals(type)) {
 			boolean wasThinking = "thinking".equals(openPartType);
-			flushOpenPart();
+			closeOpenPart();
 			if (wasThinking && "text".equals(type)) {
 				// Mirror the frontend: drop the newlines right after a thinking block.
 				text = text.replaceFirst("^[\r\n]+", "");
@@ -91,24 +109,78 @@ final class TurnRecorder {
 		if (openPart == null) {
 			openPart = new StringBuilder();
 			openPartType = type;
+			openPartIndex = parts.size();
 		}
 		openPart.append(text);
+		scheduleFlush();
 	}
 
-	/** Moves any buffered text into the parts list; called when a round completes. */
+	/** Persists any buffered text; called when a round completes and by the flush task. */
 	synchronized void flushRoundText() {
-		flushOpenPart();
+		cancelFlushTask();
+		persistOpenPart();
+		saveAssistantMessage();
 	}
 
 	/** Persists the assistant message so far. Also used on cancel to keep partial output. */
 	synchronized void flushPending() {
-		flushOpenPart();
+		cancelFlushTask();
+		closed = true;
+		closeOpenPart();
 		// Fill in results for tool calls that never completed.
 		parts.replaceAll(part ->
 		    "tool".equals(part.type()) && part.result() == null
 		        ? part.withResult(INTERRUPTED_RESULT)
 		        : part
 			);
+		saveAssistantMessage();
+	}
+
+	// Writes the open part into the message in place, without closing it.
+	private void persistOpenPart() {
+		if (openPart == null || openPart.isEmpty()) {
+			return;
+		}
+		ChatMessagePart part = "thinking".equals(openPartType)
+			? ChatMessagePart.thinking(openPart.toString())
+			: ChatMessagePart.text(openPart.toString());
+		if (openPartIndex >= 0 && openPartIndex < parts.size()) {
+			parts.set(openPartIndex, part);
+		} else {
+			parts.add(part);
+			openPartIndex = parts.size() - 1;
+		}
+	}
+
+	// Persists the open part and closes it; the next chunk opens a new one.
+	private void closeOpenPart() {
+		persistOpenPart();
+		openPart = null;
+		openPartType = null;
+		openPartIndex = -1;
+	}
+
+	// Schedules one delayed persist so long model rounds still land in the chat file.
+	private void scheduleFlush() {
+		if (flushTask != null && !flushTask.isDone()) {
+			return;
+		}
+		flushTask = FLUSH_SCHEDULER.schedule(this::periodicFlush, FLUSH_DELAY_MS, TimeUnit.MILLISECONDS);
+	}
+
+	private void cancelFlushTask() {
+		if (flushTask != null) {
+			flushTask.cancel(false);
+			flushTask = null;
+		}
+	}
+
+	// Timer flush; never closes the open part, so streaming keeps filling it.
+	private synchronized void periodicFlush() {
+		if (closed) {
+			return;
+		}
+		persistOpenPart();
 		saveAssistantMessage();
 	}
 

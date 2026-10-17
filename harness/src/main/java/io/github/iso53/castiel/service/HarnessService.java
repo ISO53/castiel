@@ -281,6 +281,18 @@ public class HarnessService {
 		return generations.values().stream().anyMatch(state -> chatId.equals(state.chatId));
 	}
 
+	/** The id of the live generation for the chat, or null when none runs. */
+	public String currentGenerationId(String chatId) {
+		if (chatId == null) {
+			return null;
+		}
+		return generations.entrySet().stream()
+			.filter(entry -> chatId.equals(entry.getValue().chatId))
+			.map(Map.Entry::getKey)
+			.findFirst()
+			.orElse(null);
+	}
+
 	/** Spawns a full model generation with its own cancellable id and streaming state. */
 	private Flux<ServerSentEvent<String>> openGeneration(
 		LlmProvider provider,
