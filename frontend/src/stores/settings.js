@@ -75,6 +75,7 @@ export const useSettingsStore = defineStore("settings", {
 		maxToolRounds: 256,
 		checkpointIntervalRounds: 32,
 		verbatimToolCalls: 32,
+		pocMinStars: 25,
 		loaded: false,
 		toolGroups: [],
 		cvssVersion: localStorage.getItem("castiel:cvssVersion") ?? "4.0",
@@ -125,6 +126,7 @@ export const useSettingsStore = defineStore("settings", {
 			this.maxToolRounds = data.maxToolRounds ?? 256;
 			this.checkpointIntervalRounds = data.checkpointIntervalRounds ?? 32;
 			this.verbatimToolCalls = data.verbatimToolCalls ?? 32;
+			this.pocMinStars = data.pocMinStars ?? 25;
 			this.loaded = true;
 			return data;
 		},
@@ -181,6 +183,23 @@ export const useSettingsStore = defineStore("settings", {
 				group.enabled = previous;
 				throw error;
 			}
+		},
+		/**
+		 * Replaces the PoC star threshold exploit_search filters by. The backend echoes
+		 * back the clamped value it stored.
+		 */
+		async setPocMinStars(value) {
+			const response = await fetch(`${API_BASE_URL}/tools/poc-min-stars`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ pocMinStars: value }),
+			});
+			if (!response.ok) {
+				throw new Error(await readError(response));
+			}
+			const data = await response.json();
+			this.pocMinStars = data.pocMinStars ?? this.pocMinStars;
+			return data;
 		},
 		/** Lists the model catalog of a connected provider. */
 		async listModels(providerId) {

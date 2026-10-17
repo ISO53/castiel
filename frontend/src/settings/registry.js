@@ -73,8 +73,8 @@ export const SETTINGS_TREE = [
 		title: "Limits",
 		icon: Gauge,
 		description:
-			"How hard the main agent pushes in one message: tool rounds, checkpoint reminders, and how much tool history stays untruncated.",
-		keywords: ["rounds", "budget", "checkpoint", "history", "context", "tokens", "performance"],
+			"How hard the main agent pushes in one message: tool rounds, checkpoint reminders, how much tool history stays untruncated, and the minimum star count for exploit search results.",
+		keywords: ["rounds", "budget", "checkpoint", "history", "context", "tokens", "performance", "poc", "stars", "exploit", "threshold"],
 		component: () => import("@/components/settings/sections/LimitsSection.vue"),
 	},
 	{

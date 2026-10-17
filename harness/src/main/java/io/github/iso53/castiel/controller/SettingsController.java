@@ -224,6 +224,25 @@ public class SettingsController {
 	/** Request body for {@link #putTools}. */
 	public record ToolUpdate(Set<String> disabledGroups) {}
 
+	/**
+	 * Replaces the PoC star threshold exploit_search filters by. A null value applies
+	 * the default.
+	 */
+	@PutMapping("/tools/poc-min-stars")
+	public UserSettings putPocMinStars(@RequestBody PocMinStarsUpdate body) {
+		if (body == null) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is required");
+		}
+		try {
+			return userSettingsService.setPocMinStars(body.pocMinStars());
+		} catch (IllegalStateException ex) {
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), ex);
+		}
+	}
+
+	/** Request body for {@link #putPocMinStars}. */
+	public record PocMinStarsUpdate(Integer pocMinStars) {}
+
 	/** One tool group as the settings UI needs it. Locked groups carry no live switch. */
 	public record ToolGroupView(
 		String id,

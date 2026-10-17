@@ -3,6 +3,7 @@
 // plug icon, so every call always renders with an appropriate glyph.
 import {
 	Bot,
+	Bug,
 	FilePen,
 	FilePlus,
 	FileText,
@@ -12,6 +13,7 @@ import {
 	Link2,
 	MessageCircleQuestionMark,
 	Plug,
+	ShieldAlert,
 	SquareTerminal,
 	FolderSearch,
 } from "@lucide/vue";
@@ -36,6 +38,9 @@ export const TOOL_ICONS = {
 	agent_kill: Bot,
 	ask_user_question: MessageCircleQuestionMark,
 	search_kali_tools: PackageSearch,
+	vuln_search: ShieldAlert,
+	vuln_detail: ShieldAlert,
+	exploit_search: Bug,
 };
 
 export function toolIcon(name) {
