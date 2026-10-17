@@ -61,6 +61,12 @@ public class SubAgentRunner {
 	// Round counts left at which the run gets a budget warning; each fires once.
 	private static final int[] WARNING_LEFTS = {32, 16, 4};
 
+	// The first line of a run's final reply must be exactly this marker
+	private static final String FINAL_MARKER = "DONE";
+
+	// Free reminder rounds a run may spend on producing a valid final answer
+	private static final int MAX_FINAL_RETRIES = 3;
+
 	/**
 	 * Where run summaries are written inside a workspace. Deliberately not {@code evidence/}:
 	 * a summary is a work log, not captured material, and that folder is contractually limited
@@ -263,8 +269,10 @@ public class SubAgentRunner {
 		int round = 0;
 		// Index into WARNING_LEFTS: the next budget warning still to fire.
 		int warned = 0;
+		// Free reminder rounds spent so far on collecting a valid final answer.
+		int nudges = 0;
 
-		for (; round < spec.maxRounds(); round++) {
+		rounds: while (true) {
 			if (run.cancelled().get()) {
 				log.info("Run {} stopped before round {}: cancel was requested", run.id(), round + 1);
 				return new Outcome("cancelled", "", "", total, round);
@@ -286,8 +294,9 @@ public class SubAgentRunner {
 			enterActivity(run, AgentRunManager.Activity.WORKING);
 
 			// Budget warning fires once when this many rounds remain after this round.
+			// Task rounds only: the free delivery rounds after the budget never warn.
 			int left = spec.maxRounds() - round - 1;
-			if (warned < WARNING_LEFTS.length && left <= WARNING_LEFTS[warned]) {
+			if (round < spec.maxRounds() && warned < WARNING_LEFTS.length && left <= WARNING_LEFTS[warned]) {
 				thread.add(UserMessage.from(left <= WARNING_LEFTS[2]
 					? "[harness] Only " + left + " round(s) left. Stop exploring, save your findings, "
 						+ "and write your final summary now."
@@ -316,11 +325,50 @@ public class SubAgentRunner {
 			total = TokenUsage.sum(total, roundResult.usage());
 
 			AiMessage ai = roundResult.message();
-			if (!ai.hasToolExecutionRequests()) {
-				String summary =
-					ai.text() == null || ai.text().isBlank() ? "(the sub-agent returned an empty answer)" : ai.text();
-				log.info("Run {} finished in round {}: the model asked for no further tools", run.id(), round + 1);
-				return new Outcome("done", "", summary, total, round + 1);
+			// Past the task budget nothing executes anymore: a delivery round exists only
+			// to collect the final answer, so tool calls there count as a missing one.
+			boolean deliveryOnly = round >= spec.maxRounds();
+			if (!ai.hasToolExecutionRequests() || deliveryOnly) {
+				String text = ai.hasToolExecutionRequests() ? "" : ai.text();
+				if (isValidFinal(text)) {
+					log.info("Run {} finished in round {}: valid final answer", run.id(), round + 1);
+					return new Outcome("done", "", text, total, round + 1);
+				}
+				if (nudges < MAX_FINAL_RETRIES) {
+					nudges++;
+					log.info(
+						"Run {} round {} came back without a valid final answer; reminder {} of {} sent",
+						run.id(),
+						round + 1,
+						nudges,
+						MAX_FINAL_RETRIES
+					);
+					// An invalid final message never enters the thread: some providers reject
+					// an assistant message with neither text nor tool calls, and the re-asked
+					// summary replaces it anyway.
+					thread.add(UserMessage.from(deliveryOnly ? forcedSummaryNudge(spec) : finalAnswerNudge()));
+					round++;
+					continue;
+				}
+				log.warn(
+					"Run {} refused to produce a valid final answer: {} reminder(s) exhausted",
+					run.id(),
+					MAX_FINAL_RETRIES
+				);
+				return new Outcome(
+					"done",
+					"the sub-agent refused to end with the " + FINAL_MARKER
+						+ " protocol: no valid final answer after " + MAX_FINAL_RETRIES + " reminder(s)",
+					"(the sub-agent refused to deliver a final answer: it was reminded "
+						+ MAX_FINAL_RETRIES
+						+ " time(s) to reply with "
+						+ FINAL_MARKER
+						+ " and a summary, and still did not. Its tool work and any files it saved"
+						+ " are still in the workspace; see the agents/ folder and the workspace"
+						+ " files it created for what it did.)",
+					total,
+					round + 1
+				);
 			}
 
 			thread.add(ai);
@@ -341,30 +389,43 @@ public class SubAgentRunner {
 					log.info("Run {} stopped after round {}: cancel was requested", run.id(), round + 1);
 					return new Outcome("cancelled", "", "", total, round + 1);
 				}
-				// The run signalled it has nothing left to do; skip the final summary round.
+				// The run signalled it has nothing left to do: ask for the summary instead of
+				// silently discarding whatever it meant to report.
 				if (run.isStopRequested()) {
-					log.info("Run {} stopped after round {}: it requested to stop", run.id(), round + 1);
+					if (nudges < MAX_FINAL_RETRIES) {
+						nudges++;
+						log.info(
+							"Run {} stopped on request at round {}; asking for its final summary",
+							run.id(),
+							round + 1
+						);
+						thread.add(UserMessage.from(stopRequestedNudge()));
+						round++;
+						continue rounds;
+					}
+					log.warn("Run {} stopped on request at round {} with no reminders left", run.id(), round + 1);
 					return new Outcome(
 						"done",
 						"",
-						"The run finished its tool work and stopped on request.",
+						"The run finished its tool work and stopped on request without a valid final answer.",
 						total,
 						round + 1
 					);
 				}
 			}
+			round++;
+			// The budget just ended and the model is still calling tools: hand it a free
+			// delivery round instead of ending with a canned partial-work note.
+			if (round >= spec.maxRounds() && nudges < MAX_FINAL_RETRIES) {
+				nudges++;
+				log.info(
+					"Run {} used its budget of {} rounds while still calling tools; asking for its final summary",
+					run.id(),
+					spec.maxRounds()
+				);
+				thread.add(UserMessage.from(forcedSummaryNudge(spec)));
+			}
 		}
-
-		log.info("Run {} exhausted its budget of {} rounds without settling", run.id(), spec.maxRounds());
-		return new Outcome(
-			"done",
-			"",
-			"The sub-agent used its full tool-round budget of " +
-				spec.maxRounds() +
-				" without producing a final answer. Partial work only; re-delegate a narrower task if needed.",
-			total,
-			round
-		);
 	}
 
 	// Result of one model round: the (possibly tool-calling) message and its token usage.
@@ -374,6 +435,55 @@ public class SubAgentRunner {
 	private static String firstLine(String text) {
 		int newline = text.indexOf('\n');
 		return (newline < 0 ? text : text.substring(0, newline)).strip();
+	}
+
+	// A final answer is valid when its first non-blank line is the marker alone.
+	private static boolean isValidFinal(String text) {
+		if (text == null) {
+			return false;
+		}
+		for (String line : text.split("\n")) {
+			String stripped = line.strip();
+			if (stripped.isEmpty()) {
+				continue;
+			}
+			return FINAL_MARKER.equalsIgnoreCase(stripped);
+		}
+		return false;
+	}
+
+	// Reminder after a text reply that broke the final-answer protocol (blank or no marker).
+	private static String finalAnswerNudge() {
+		return (
+			"[harness] Your last reply was not a valid final answer. Reply now with "
+				+ FINAL_MARKER
+				+ " alone on the first line, then your final summary in plain text: what you"
+				+ " worked on, what you did, what failed, and where you saved findings."
+				+ " Do not call any tools."
+		);
+	}
+
+	// Reminder when the round budget ended while the model was still calling tools.
+	private static String forcedSummaryNudge(RunSpec spec) {
+		return (
+			"[harness] You used your full tool-round budget of "
+				+ spec.maxRounds()
+				+ ". Reply now with "
+				+ FINAL_MARKER
+				+ " alone on the first line, then your final summary in plain text: what you"
+				+ " worked on, what you did, what failed, and where you saved findings."
+				+ " Do not call any tools."
+		);
+	}
+
+	// Reminder after the run asked to stop mid-tools.
+	private static String stopRequestedNudge() {
+		return (
+			"[harness] You asked to stop. Reply now with "
+				+ FINAL_MARKER
+				+ " alone on the first line, then your final summary in plain text."
+				+ " Do not call any tools."
+		);
 	}
 
 	/**
@@ -513,8 +623,17 @@ public class SubAgentRunner {
 			.append("- Background processes you start are private to you while you run. They become visible\n")
 			.append("  to the orchestrator when you finish; cancelling your run kills them.\n")
 			.append("- Save anything worth keeping into the workspace (under evidence/ for raw output)\n")
-			.append("  before you finish, then end with a terse summary of what you found and where\n")
-			.append("  you saved it. Your final message is returned to the orchestrator as your result.\n");
+			.append("  before you finish, then end with a final plain-text summary of what you worked\n")
+			.append("  on, what you did, what failed, and where you saved it. Your final message is\n")
+			.append("  the only thing returned to the orchestrator as your result.\n")
+			.append("- The FIRST LINE of that final reply must be exactly ")
+			.append(FINAL_MARKER)
+			.append(", alone on the line. An empty\n")
+			.append("  reply, or a reply whose first line is not ")
+			.append(FINAL_MARKER)
+			.append(", is rejected and you will be asked\n")
+			.append("  again with no tool rounds. Say failures plainly: work that found nothing or hit\n")
+			.append("  a dead end, honestly reported, is a delivered result.\n");
 
 		return List.of(SystemMessage.from(system.toString()), UserMessage.from(spec.task()));
 	}
