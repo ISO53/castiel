@@ -105,6 +105,13 @@ public class UserSettingsService {
 		return settings;
 	}
 
+	/** Replaces the PoC star threshold exploit_search filters by and writes settings to disk. */
+	public synchronized UserSettings setPocMinStars(Integer value) {
+		settings = settings.withPocMinStars(value);
+		writeToDisk(settings);
+		return settings;
+	}
+
 	private UserSettings readFromDisk() {
 		Path file = AppPaths.settingsFile();
 		if (!Files.isRegularFile(file)) {

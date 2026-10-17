@@ -51,6 +51,23 @@
 					@change="persist"
 				/>
 			</SettingsField>
+
+			<SettingsField
+				label="PoC star threshold"
+				hint="Minimum GitHub stars a proof-of-concept repo needs before exploit_search shows it (0-1000). Low-star PoCs are frequently noise or outright malware; the agent can still list them on explicit request."
+				control-class="w-24"
+			>
+				<Input
+					id="limit_poc_min_stars"
+					v-model.number="pocMinStars"
+					type="number"
+					min="0"
+					max="1000"
+					class="text-right"
+					placeholder="25"
+					@change="persist"
+				/>
+			</SettingsField>
 		</div>
 
 		<p v-if="error" class="wrap-break-word text-xs text-destructive">{{ error }}</p>
@@ -73,6 +90,7 @@ const error = ref("");
 const maxToolRounds = ref(settings.maxToolRounds);
 const checkpointIntervalRounds = ref(settings.checkpointIntervalRounds);
 const verbatimToolCalls = ref(settings.verbatimToolCalls);
+const pocMinStars = ref(settings.pocMinStars);
 
 /** Clamps to the field's range and clears anything that is not a number. */
 function clampTo(value, min, max, fallback) {
@@ -85,6 +103,7 @@ async function persist() {
 	maxToolRounds.value = clampTo(maxToolRounds.value, 8, 1024, 256);
 	checkpointIntervalRounds.value = clampTo(checkpointIntervalRounds.value, 1, 128, 32);
 	verbatimToolCalls.value = clampTo(verbatimToolCalls.value, 0, 64, 32);
+	pocMinStars.value = clampTo(pocMinStars.value, 0, 1000, 25);
 	error.value = "";
 	try {
 		await settings.saveLimits({
@@ -96,6 +115,9 @@ async function persist() {
 		maxToolRounds.value = settings.maxToolRounds;
 		checkpointIntervalRounds.value = settings.checkpointIntervalRounds;
 		verbatimToolCalls.value = settings.verbatimToolCalls;
+		// The PoC threshold lives on its own settings endpoint.
+		await settings.setPocMinStars(pocMinStars.value);
+		pocMinStars.value = settings.pocMinStars;
 		settingsUi.flashSaved();
 	} catch (err) {
 		error.value = err instanceof Error ? err.message : String(err);

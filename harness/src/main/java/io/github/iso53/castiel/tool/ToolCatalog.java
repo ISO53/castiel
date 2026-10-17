@@ -90,6 +90,15 @@ public class ToolCatalog {
 			1
 		),
 		new ToolGroup(
+			"vulnerability_intel",
+			"Vulnerability intel",
+			"Searches the CVE registry for current vulnerabilities and public exploit code, with CVSS, EPSS and known-exploitation flags.",
+			List.of("vuln_search", "vuln_detail", "exploit_search"),
+			false,
+			false,
+			1
+		),
+		new ToolGroup(
 			"workspace_search",
 			"Workspace search",
 			"Greps the workspace for files and content matching a query.",
