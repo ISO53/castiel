@@ -70,11 +70,14 @@ export const useSettingsStore = defineStore("settings", {
 		activeProviderId: null,
 		workerModel: { providerId: "", modelName: "" },
 		kaliModel: { providerId: "", modelName: "" },
+		looperModel: { providerId: "", modelName: "" },
 		defaultMaxRounds: 128,
 		subAgentTimeoutMinutes: 60,
 		maxToolRounds: 256,
 		checkpointIntervalRounds: 32,
 		verbatimToolCalls: 32,
+		looperDirectiveCap: 2000,
+		looperMaxRounds: 24,
 		pocMinStars: 25,
 		loaded: false,
 		toolGroups: [],
@@ -121,11 +124,14 @@ export const useSettingsStore = defineStore("settings", {
 			this.activeProviderId = data.activeProviderId ?? null;
 			this.workerModel = data.workerModel ?? { providerId: "", modelName: "" };
 			this.kaliModel = data.kaliModel ?? { providerId: "", modelName: "" };
+			this.looperModel = data.looperModel ?? { providerId: "", modelName: "" };
 			this.defaultMaxRounds = data.defaultMaxRounds ?? 128;
 			this.subAgentTimeoutMinutes = data.subAgentTimeoutMinutes ?? 60;
 			this.maxToolRounds = data.maxToolRounds ?? 256;
 			this.checkpointIntervalRounds = data.checkpointIntervalRounds ?? 32;
 			this.verbatimToolCalls = data.verbatimToolCalls ?? 32;
+			this.looperDirectiveCap = data.looperDirectiveCap ?? 2000;
+			this.looperMaxRounds = data.looperMaxRounds ?? 24;
 			this.pocMinStars = data.pocMinStars ?? 25;
 			this.loaded = true;
 			return data;
@@ -147,6 +153,8 @@ export const useSettingsStore = defineStore("settings", {
 			this.maxToolRounds = data.maxToolRounds ?? this.maxToolRounds;
 			this.checkpointIntervalRounds = data.checkpointIntervalRounds ?? this.checkpointIntervalRounds;
 			this.verbatimToolCalls = data.verbatimToolCalls ?? this.verbatimToolCalls;
+			this.looperDirectiveCap = data.looperDirectiveCap ?? this.looperDirectiveCap;
+			this.looperMaxRounds = data.looperMaxRounds ?? this.looperMaxRounds;
 			return data;
 		},
 		/** Lists the harness tool groups with their current enabled state. */
@@ -212,10 +220,10 @@ export const useSettingsStore = defineStore("settings", {
 			return await response.json();
 		},
 		/**
-		 * Saves the sub-agent settings. All four are always sent, so the endpoint
+		 * Saves the sub-agent settings. All five are always sent, so the endpoint
 		 * never has to reason about which fields a caller meant to change.
 		 */
-		async saveAgents(workerModel, kaliModel, defaultMaxRounds, subAgentTimeoutMinutes) {
+		async saveAgents(workerModel, kaliModel, looperModel, defaultMaxRounds, subAgentTimeoutMinutes) {
 			const response = await fetch(`${API_BASE_URL}/agents`, {
 				method: "PUT",
 				headers: { "Content-Type": "application/json" },
@@ -224,6 +232,8 @@ export const useSettingsStore = defineStore("settings", {
 						workerModel?.providerId && workerModel?.modelName ? workerModel : null,
 					kaliModel:
 						kaliModel?.providerId && kaliModel?.modelName ? kaliModel : null,
+					looperModel:
+						looperModel?.providerId && looperModel?.modelName ? looperModel : null,
 					defaultMaxRounds: Number.isFinite(defaultMaxRounds) ? defaultMaxRounds : null,
 					subAgentTimeoutMinutes: Number.isFinite(subAgentTimeoutMinutes)
 						? subAgentTimeoutMinutes
@@ -236,6 +246,7 @@ export const useSettingsStore = defineStore("settings", {
 			const data = await response.json();
 			this.workerModel = data.workerModel ?? this.workerModel;
 			this.kaliModel = data.kaliModel ?? this.kaliModel;
+			this.looperModel = data.looperModel ?? this.looperModel;
 			this.defaultMaxRounds = data.defaultMaxRounds ?? this.defaultMaxRounds;
 			this.subAgentTimeoutMinutes = data.subAgentTimeoutMinutes ?? this.subAgentTimeoutMinutes;
 			return data;

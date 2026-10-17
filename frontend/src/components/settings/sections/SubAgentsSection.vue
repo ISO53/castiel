@@ -88,6 +88,32 @@
 					</SettingsField>
 				</div>
 			</div>
+		<!-- Looper agent -->
+			<div>
+				<p class="mb-1 text-xs font-semibold text-foreground">
+					Looper agent
+				</p>
+				<p class="mb-1.5 text-[11px] leading-relaxed text-muted-foreground">
+					Writes the next directive whenever a locked session stops. Needs its own model before the loop can be armed.
+				</p>
+				<div class="divide-y divide-border pl-5">
+					<SettingsField label="Provider" hint="Which provider serves this sub-agent.">
+						<SubAgentModelPicker
+							v-model="looper.providerId"
+							:options="providerIds"
+							search-placeholder="Search provider..."
+						/>
+					</SettingsField>
+					<SettingsField label="Model" hint="Left empty until a provider is picked.">
+						<SubAgentModelPicker
+							v-model="looper.modelName"
+							:options="looperModels"
+							:disabled="!looper.providerId"
+							search-placeholder="Search model..."
+						/>
+					</SettingsField>
+				</div>
+			</div>
 		</div>
 
 		<p v-if="error" class="wrap-break-word text-xs text-destructive">{{ error }}</p>
@@ -108,15 +134,18 @@ const providerIds = computed(() => settings.providerIds);
 
 const worker = reactive({ ...settings.workerModel });
 const kali = reactive({ ...settings.kaliModel });
+const looper = reactive({ ...settings.looperModel });
 const maxRounds = ref(settings.defaultMaxRounds);
 const timeoutMinutes = ref(settings.subAgentTimeoutMinutes);
 // Each picker refetches its own catalog; the two never share one.
 const workerModels = ref([]);
 const kaliModels = ref([]);
+const looperModels = ref([]);
 const error = ref("");
 
 watch(() => worker.providerId, loadWorkerModels, { immediate: true });
 watch(() => kali.providerId, loadKaliModels, { immediate: true });
+watch(() => looper.providerId, loadLooperModels, { immediate: true });
 
 async function loadModels(providerId, into) {
 	into.value = [];
@@ -143,6 +172,11 @@ function loadKaliModels(providerId, previous) {
 	return loadModels(providerId, kaliModels);
 }
 
+function loadLooperModels(providerId, previous) {
+	if (previous !== undefined) looper.modelName = "";
+	return loadModels(providerId, looperModels);
+}
+
 /**
  * Persists these settings as soon as any of them changes. Debounced so
  * typing a number or arrow-keying through rounds is one request, not one per
@@ -154,6 +188,8 @@ watch(
 		worker.modelName,
 		kali.providerId,
 		kali.modelName,
+		looper.providerId,
+		looper.modelName,
 		maxRounds.value,
 		timeoutMinutes.value,
 	],
@@ -173,6 +209,7 @@ function persist() {
 			await settings.saveAgents(
 				worker,
 				kali,
+				looper,
 				Math.trunc(Number(maxRounds.value)),
 				Math.trunc(Number(timeoutMinutes.value)),
 			);

@@ -17,11 +17,15 @@ import java.util.List;
  *                        {@code low}/{@code medium}/{@code high} for OpenAI-style effort).
  *                        {@code null} uses the model default.
  * @param chatId          Optional persisted chat session id; {@code null} behaves as before.
+ * @param origin          Optional sender tag for the new user turn ({@code "looper"} when the
+ *                        looper agent submitted it). Persisted on the user turn; never shown
+ *                        to the model.
  */
 public record ChatStreamRequest(
 	String providerId,
 	String modelName,
 	List<ChatTurn> messages,
 	String reasoningEffort,
-	String chatId
+	String chatId,
+	String origin
 ) {}

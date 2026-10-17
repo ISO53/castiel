@@ -64,7 +64,10 @@
 					:align="message.role === 'user' ? 'end' : 'start'">
 					<MessageContent class="gap-2.5">
 						<div v-if="message.role === 'user'"
-							class="max-w-[90%] self-end whitespace-pre-wrap rounded-lg bg-primary px-3 py-2 text-xs leading-relaxed text-primary-foreground">
+							:class="message.origin === 'looper'
+								? 'max-w-[90%] self-end whitespace-pre-wrap rounded-lg bg-amber-500/90 px-3 py-2 text-xs leading-relaxed text-white'
+								: 'max-w-[90%] self-end whitespace-pre-wrap rounded-lg bg-primary px-3 py-2 text-xs leading-relaxed text-primary-foreground'"
+							:title="message.origin === 'looper' ? 'Sent by the looper agent' : undefined">
 							{{ messageText(message) }}
 						</div>
 						<template v-for="(part, partIndex) in message.parts" v-else :key="partIndex">
@@ -160,7 +163,7 @@
 			<p v-if="notice" class="mb-2 text-xs text-amber-500">{{ notice }}</p>
 			<p v-if="error" class="mb-2 text-xs text-destructive">{{ error }}</p>
 			<PromptInput class="w-full rounded-none" @submit="handlePromptSubmit">
-				<PromptInputTextarea :disabled="!ready || streaming" :placeholder="composerPlaceholder"
+				<PromptInputTextarea :disabled="!ready || generationBusy" :placeholder="composerPlaceholder"
 					class="min-h-16" />
 				<PromptInputFooter class="mt-2 items-center justify-between gap-2 border-none">
 					<PromptInputTools class="min-w-0 flex-1">
@@ -237,7 +240,22 @@
 							</ModelSelector>
 						</div>
 					</PromptInputTools>
-					<PromptInputSubmit :status="streaming ? 'streaming' : 'ready'" :disabled="!ready"
+					<Button
+						variant="outline"
+						size="sm"
+						:disabled="!ready"
+						:class="loop.locked ? 'border-amber-500/60 bg-amber-500/10 text-amber-500 hover:bg-amber-500/15' : ''"
+						:title="loop.locked
+							? 'The looper keeps this session working; click to stop the loop'
+							: 'Keep the agent working unattended until you stop it'"
+						@click="toggleLock"
+					>
+						<Loader v-if="looperActive" class="size-3.5 animate-spin" />
+						<Lock v-else-if="loop.locked" class="size-3.5" />
+						<LockOpen v-else class="size-3.5" />
+						<span>{{ loop.locked ? (looperActive ? "Nudging…" : "Looping") : "Loop" }}</span>
+					</Button>
+					<PromptInputSubmit :status="generationBusy ? 'streaming' : 'ready'" :disabled="!ready"
 						@click="handleSubmitClick" />
 				</PromptInputFooter>
 			</PromptInput>
@@ -268,7 +286,7 @@ import {
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "@/components/ai-elements/sources";
 import { ToolCall } from "@/components/ai-elements/tool";
-import { Brain, Check, History, MessageSquare, Plus } from "@lucide/vue";
+import { Brain, Check, History, Lock, LockOpen, MessageSquare, Plus } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
 import EmptyState from "@/components/EmptyState.vue";
 import {
@@ -335,6 +353,8 @@ export default {
 		Check,
 		EmptyState,
 		HarnessNote,
+		Lock,
+		LockOpen,
 		CodeBlock,
 		CodeBlockActions,
 		CodeBlockCopyButton,
@@ -425,6 +445,11 @@ export default {
 			streaming: false,
 			error: "",
 			notice: "",
+			// Looper loop state for the open chat, mirrored from the harness.
+			loop: { locked: false, state: "STOPPED", generationRunning: false, generationId: "", cycles: 0, error: "" },
+			lastLoopError: "",
+			historySignature: "",
+			loopTimer: null,
 		};
 	},
 	computed: {
@@ -512,9 +537,18 @@ export default {
 				!this.hasRenderableContent(last),
 			);
 		},
+		// The looper run is out looking for the next directive.
+		looperActive() {
+			return this.loop.locked && this.loop.state === "LOOPER_RUNNING";
+		},
+		// Any live generation (streaming or looper-driven) owns the composer.
+		generationBusy() {
+			return this.streaming || this.loop.generationRunning;
+		},
 	},
 	async mounted() {
 		window.addEventListener("keydown", this.handleWindowKeydown);
+		this.loopTimer = setInterval(() => this.pollLoop(), 2500);
 		if (this.cwd) {
 			this.chats.fetchList().catch(() => { });
 		}
@@ -528,6 +562,7 @@ export default {
 	},
 	beforeUnmount() {
 		window.removeEventListener("keydown", this.handleWindowKeydown);
+		if (this.loopTimer) clearInterval(this.loopTimer);
 	},
 	watch: {
 		// Reset the search so reopening starts from the full (capped) list.
@@ -574,19 +609,24 @@ export default {
 			this.providerId = session.providerId;
 			this.modelName = session.modelName;
 			this.reasoningEffort = session.reasoningEffort ?? null;
-			this.messages = (session.messages || []).map((msg) => ({
-				id: msg.id || crypto.randomUUID(),
-				role: msg.role,
-				parts: msg.parts || [],
-				isThinking: false,
-				streamBuffer: "",
-				trimResponseLeadingNewlines: false,
-			}));
+			this.messages = this.mapHistoryMessages(session);
 			this.generationId = null;
 			this.lastUsage = null;
 			if (this.providerId) {
 				this.loadProviderModels(this.providerId);
 			}
+		},
+		// Maps a persisted session to the UI message shape (keeps the looper origin tag).
+		mapHistoryMessages(session) {
+			return (session.messages || []).map((msg) => ({
+				id: msg.id || crypto.randomUUID(),
+				role: msg.role,
+				parts: msg.parts || [],
+				origin: msg.origin ?? null,
+				isThinking: false,
+				streamBuffer: "",
+				trimResponseLeadingNewlines: false,
+			}));
 		},
 		formatChatDate(isoString) {
 			if (!isoString) return "";
@@ -613,20 +653,17 @@ export default {
 				this.providerId = session.providerId;
 				this.modelName = session.modelName;
 				this.reasoningEffort = session.reasoningEffort ?? null;
-				this.messages = (session.messages || []).map((msg) => ({
-					id: msg.id || crypto.randomUUID(),
-					role: msg.role,
-					parts: msg.parts || [],
-					isThinking: false,
-					streamBuffer: "",
-					trimResponseLeadingNewlines: false,
-				}));
+				this.messages = this.mapHistoryMessages(session);
 				this.generationId = null;
 				this.lastUsage = null;
+				this.lastLoopError = "";
+				this.historySignature = "";
 
 				if (this.providerId) {
 					this.loadProviderModels(this.providerId);
 				}
+				// Restore the lock button state for this chat.
+				await this.pollLoop();
 			} catch (err) {
 				this.error = this.messageFor(err, "Could not load chat.");
 			}
@@ -658,7 +695,7 @@ export default {
 			}
 		},
 		handleWindowKeydown(event) {
-			if (event.key === "Escape" && this.streaming) {
+			if (event.key === "Escape" && this.generationBusy) {
 				event.preventDefault();
 				this.stopGeneration();
 			}
@@ -666,21 +703,105 @@ export default {
 		// Tells the harness to cancel the generation (aborting the provider stream and any
 		// pending tool rounds), then drops the SSE connection itself.
 		async stopGeneration() {
-			if (!this.streaming) return;
-			const controller = this.abortController;
-			this.abortController = null;
-			if (this.generationId) {
-				try {
-					await fetch(`${CHAT_API}/${encodeURIComponent(this.generationId)}/cancel`, { method: "POST" });
-				} catch {
-					// Best effort. Aborting the local stream is enough to stop the UI.
+			if (this.streaming) {
+				const controller = this.abortController;
+				this.abortController = null;
+				if (this.generationId) {
+					try {
+						await fetch(`${CHAT_API}/${encodeURIComponent(this.generationId)}/cancel`, { method: "POST" });
+					} catch {
+						// Best effort. Aborting the local stream is enough to stop the UI.
+					}
 				}
+				controller?.abort();
+			} else if (this.loop.generationRunning) {
+				// A looper-driven generation: cancel it by id. Stopping also breaks the loop.
+				if (this.loop.generationId) {
+					try {
+						await fetch(`${CHAT_API}/${encodeURIComponent(this.loop.generationId)}/cancel`, { method: "POST" });
+					} catch {
+						// Best effort; the loop status endpoint still reports the real state.
+					}
+				}
+			} else {
+				return;
 			}
-			controller?.abort();
+			if (this.loop.locked) {
+				// Stopping also breaks the loop, or the looper would start it again.
+				this.loop.locked = false;
+				fetch(`${CHAT_BASE}/${encodeURIComponent(this.currentChatId)}/loop`, { method: "DELETE" }).catch(() => { });
+			}
 		},
-		// While streaming the submit button acts as a stop button.
+		// Arms or disarms the looper loop for the open chat.
+		async toggleLock() {
+			if (!this.ready || !this.currentChatId) return;
+			const locking = !this.loop.locked;
+			try {
+				const response = await fetch(`${CHAT_BASE}/${encodeURIComponent(this.currentChatId)}/loop`, {
+					method: locking ? "POST" : "DELETE",
+				});
+				if (!response.ok) throw new Error(await this.readError(response));
+				this.error = "";
+				this.lastLoopError = "";
+				// Optimistic flip; the next poll refines the detailed state.
+				this.loop.locked = locking;
+				await this.pollLoop();
+			} catch (err) {
+				this.error = this.messageFor(err, "Could not change the loop state.");
+			}
+		},
+		// Mirrors the harness loop state; while locked, also pulls fresh history.
+		async pollLoop() {
+			if (!this.currentChatId || this.streaming) return;
+			try {
+				const response = await fetch(`${CHAT_BASE}/${encodeURIComponent(this.currentChatId)}/loop`);
+				if (!response.ok) return;
+				const status = await response.json();
+				this.loop = {
+					locked: status.locked ?? false,
+					state: status.state ?? "STOPPED",
+					generationRunning: status.generationRunning ?? false,
+					generationId: status.generationId ?? "",
+					cycles: status.cycles ?? 0,
+					error: status.error ?? "",
+				};
+				if (!this.loop.locked && this.loop.error && this.loop.error !== this.lastLoopError) {
+					this.lastLoopError = this.loop.error;
+					this.notice = `The looper stopped: ${this.loop.error}`;
+				}
+				if (this.loop.locked || this.loop.generationRunning) {
+					await this.refreshHistory();
+				}
+			} catch {
+				// Transient; the next poll retries.
+			}
+		},
+		// Reconciles the transcript with persisted turns (the looper writes round by round).
+		async refreshHistory() {
+			if (!this.currentChatId || this.streaming) return;
+			try {
+				const response = await fetch(`${window.location.origin}/api/chats/${encodeURIComponent(this.currentChatId)}`);
+				if (!response.ok) return;
+				const session = await response.json();
+				const mapped = this.mapHistoryMessages(session);
+				// Char-based signature: the looper's transcript grows inside one part, so a
+				// part count alone would miss mid-round growth.
+				const last = mapped[mapped.length - 1];
+				const size = last
+					? last.parts.reduce((total, part) => total + (part.text?.length ?? part.result?.length ?? 0), 0)
+					: 0;
+				const signature = `${mapped.length}:${last ? last.parts.length : 0}:${size}`;
+				if (signature !== this.historySignature) {
+					this.historySignature = signature;
+					this.messages = mapped;
+				}
+			} catch {
+				// Transient; the next poll retries.
+			}
+		},
+		// While a generation runs, the submit button acts as a stop button.
 		handleSubmitClick(event) {
-			if (!this.streaming) return;
+			if (!this.generationBusy) return;
 			event.preventDefault();
 			event.stopPropagation();
 			this.stopGeneration();
@@ -837,6 +958,9 @@ export default {
 			this.generationId = null;
 			this.lastUsage = null;
 			this.error = "";
+			this.lastLoopError = "";
+			this.historySignature = "";
+			this.loop = { locked: false, state: "STOPPED", generationRunning: false, generationId: "", cycles: 0, error: "" };
 			this.loadingModels = true;
 
 			try {

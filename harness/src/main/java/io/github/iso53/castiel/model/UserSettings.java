@@ -9,7 +9,7 @@ import java.util.Set;
  * Full user settings document stored under the OS config directory. MCP servers
  * live in their own mcp.json file is not part of this document.
  *
- * @param providers         Provider id → config (ids are UI-defined, e.g. {@code llama.cpp}).
+ * @param providers         Provider id â†’ config (ids are UI-defined, e.g. {@code llama.cpp}).
  * @param activeProviderId  Provider the UI preselects for new chats.
  * @param workerModel       Provider/model sub-agents run on, picked by the user in settings.
  * @param kaliModel         Provider/model the Kali dispatch sub-agent runs on. Unlike the worker
@@ -20,6 +20,10 @@ import java.util.Set;
  *                              that never answers from parking the worker thread.
  * @param pocMinStars       Minimum GitHub stars exploit_search shows public PoCs for (0-1000).
  *                              Low-star PoC repos are frequently noise or outright malware.
+ * @param looperModel       Provider/model the looper agent runs on. Must be set before a
+ *                          session can be locked.
+ * @param looperDirectiveCap Character cap for one looper directive (500-5000).
+ * @param looperMaxRounds   Tool-round budget for one looper run (8-64).
  */
 public record UserSettings(
 	Map<String, LlmProviderConfig> providers,
@@ -33,7 +37,10 @@ public record UserSettings(
 	Integer checkpointIntervalRounds,
 	Integer verbatimToolCalls,
 	Boolean checkForUpdatesOnStartup,
-	Integer pocMinStars
+	Integer pocMinStars,
+	AgentModelRef looperModel,
+	Integer looperDirectiveCap,
+	Integer looperMaxRounds
 ) {
 
 	public static final int DEFAULT_MAX_TOOL_ROUNDS = 256;
@@ -42,11 +49,18 @@ public record UserSettings(
 	public static final int DEFAULT_SUB_AGENT_TIMEOUT_MINUTES = 60;
 	public static final boolean DEFAULT_CHECK_FOR_UPDATES_ON_STARTUP = true;
 	public static final int DEFAULT_POC_MIN_STARS = 25;
+	public static final int DEFAULT_LOOPER_DIRECTIVE_CAP = 2000;
+	public static final int DEFAULT_LOOPER_MAX_ROUNDS = 24;
+	public static final int MIN_LOOPER_DIRECTIVE_CAP = 500;
+	public static final int MAX_LOOPER_DIRECTIVE_CAP = 5000;
+	public static final int MIN_LOOPER_MAX_ROUNDS = 8;
+	public static final int MAX_LOOPER_MAX_ROUNDS = 64;
 
 	public UserSettings {
 		providers = providers == null ? Map.of() : Map.copyOf(providers);
 		workerModel = workerModel == null || workerModel.isBlank() ? AgentModelRef.EMPTY : workerModel;
 			kaliModel = kaliModel == null || kaliModel.isBlank() ? AgentModelRef.EMPTY : kaliModel;
+		looperModel = looperModel == null || looperModel.isBlank() ? AgentModelRef.EMPTY : looperModel;
 		defaultMaxRounds = defaultMaxRounds == null
 			? AgentGuardrails.DEFAULT_MAX_ROUNDS
 			: (int) Math.clamp(defaultMaxRounds.longValue(), AgentGuardrails.MIN_MAX_ROUNDS, AgentGuardrails.MAX_MAX_ROUNDS);
@@ -69,6 +83,12 @@ public record UserSettings(
 		pocMinStars = pocMinStars == null
 			? DEFAULT_POC_MIN_STARS
 			: (int) Math.clamp(pocMinStars.longValue(), 0, 1000);
+		looperDirectiveCap = looperDirectiveCap == null
+			? DEFAULT_LOOPER_DIRECTIVE_CAP
+			: (int) Math.clamp(looperDirectiveCap.longValue(), MIN_LOOPER_DIRECTIVE_CAP, MAX_LOOPER_DIRECTIVE_CAP);
+		looperMaxRounds = looperMaxRounds == null
+			? DEFAULT_LOOPER_MAX_ROUNDS
+			: (int) Math.clamp(looperMaxRounds.longValue(), MIN_LOOPER_MAX_ROUNDS, MAX_LOOPER_MAX_ROUNDS);
 	}
 
 	/**
@@ -76,7 +96,7 @@ public record UserSettings(
 	 * blank document is built, so a new field needs no edit here.
 	 */
 	public static UserSettings empty() {
-		return new UserSettings(null, null, null, null, null, null, null, null, null, null, null, null);
+		return new UserSettings(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 	}
 
 	/** Copy with a replaced provider map and UI default. */
@@ -93,7 +113,10 @@ public record UserSettings(
 			checkpointIntervalRounds,
 			verbatimToolCalls,
 			checkForUpdatesOnStartup,
-			pocMinStars
+			pocMinStars,
+			looperModel,
+			looperDirectiveCap,
+			looperMaxRounds
 		);
 	}
 
@@ -101,6 +124,7 @@ public record UserSettings(
 	public UserSettings withAgents(
 		AgentModelRef workerModel,
 		AgentModelRef kaliModel,
+		AgentModelRef looperModel,
 		Integer defaultMaxRounds,
 		Integer subAgentTimeoutMinutes
 	) {
@@ -116,7 +140,10 @@ public record UserSettings(
 			checkpointIntervalRounds,
 			verbatimToolCalls,
 			checkForUpdatesOnStartup,
-			pocMinStars
+			pocMinStars,
+			looperModel,
+			looperDirectiveCap,
+			looperMaxRounds
 		);
 	}
 
@@ -134,12 +161,21 @@ public record UserSettings(
 			checkpointIntervalRounds,
 			verbatimToolCalls,
 			checkForUpdatesOnStartup,
-			pocMinStars
+			pocMinStars,
+			looperModel,
+			looperDirectiveCap,
+			looperMaxRounds
 		);
 	}
 
 	/** Copy with the harness limits replaced (null keeps the current value). */
-	public UserSettings withLimits(Integer maxToolRounds, Integer checkpointIntervalRounds, Integer verbatimToolCalls) {
+	public UserSettings withLimits(
+		Integer maxToolRounds,
+		Integer checkpointIntervalRounds,
+		Integer verbatimToolCalls,
+		Integer looperDirectiveCap,
+		Integer looperMaxRounds
+	) {
 		return new UserSettings(
 			providers,
 			activeProviderId,
@@ -152,7 +188,10 @@ public record UserSettings(
 			checkpointIntervalRounds,
 			verbatimToolCalls,
 			checkForUpdatesOnStartup,
-			pocMinStars
+			pocMinStars,
+			looperModel,
+			looperDirectiveCap,
+			looperMaxRounds
 		);
 	}
 
@@ -170,7 +209,10 @@ public record UserSettings(
 			checkpointIntervalRounds,
 			verbatimToolCalls,
 			checkForUpdatesOnStartup,
-			pocMinStars
+			pocMinStars,
+			looperModel,
+			looperDirectiveCap,
+			looperMaxRounds
 		);
 	}
 
@@ -188,7 +230,10 @@ public record UserSettings(
 			checkpointIntervalRounds,
 			verbatimToolCalls,
 			checkForUpdatesOnStartup,
-			pocMinStars
+			pocMinStars,
+			looperModel,
+			looperDirectiveCap,
+			looperMaxRounds
 		);
 	}
 

@@ -197,7 +197,10 @@ public class SubAgentRunner {
 		try {
 			StreamingChatModel model = resolveModel(spec);
 			List<ChatMessage> messages = buildMessages(spec);
-			HarnessService.AgentToolset toolset = harnessProvider.getObject().toolsFor(spec.allowedTools());
+			// The looper run is a harness-internal agent: it may watch sub-agent runs.
+			HarnessService.AgentToolset toolset = AgentGuardrails.LOOPER_LABEL.equals(spec.label())
+				? harnessProvider.getObject().looperToolsFor(spec.allowedTools())
+				: harnessProvider.getObject().toolsFor(spec.allowedTools());
 			log.info(
 				"Run {} ({}) starting with tools {} and a budget of {} rounds",
 				run.id(),

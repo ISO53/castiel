@@ -160,13 +160,16 @@ public class SettingsController {
 					.withAgents(
 						body.workerModel(),
 						body.kaliModel(),
+						Objects.requireNonNullElse(body.looperModel(), current.looperModel()),
 						body.defaultMaxRounds(),
 						Objects.requireNonNullElse(body.subAgentTimeoutMinutes(), current.subAgentTimeoutMinutes())
 					)
 					.withLimits(
 						Objects.requireNonNullElse(body.maxToolRounds(), current.maxToolRounds()),
 						Objects.requireNonNullElse(body.checkpointIntervalRounds(), current.checkpointIntervalRounds()),
-						Objects.requireNonNullElse(body.verbatimToolCalls(), current.verbatimToolCalls())
+						Objects.requireNonNullElse(body.verbatimToolCalls(), current.verbatimToolCalls()),
+						Objects.requireNonNullElse(body.looperDirectiveCap(), current.looperDirectiveCap()),
+						Objects.requireNonNullElse(body.looperMaxRounds(), current.looperMaxRounds())
 					)
 			);
 		} catch (IllegalStateException ex) {
@@ -178,11 +181,14 @@ public class SettingsController {
 	public record AgentUpdate(
 		AgentModelRef workerModel,
 		AgentModelRef kaliModel,
+		AgentModelRef looperModel,
 		Integer defaultMaxRounds,
 		Integer subAgentTimeoutMinutes,
 		Integer maxToolRounds,
 		Integer checkpointIntervalRounds,
-		Integer verbatimToolCalls
+		Integer verbatimToolCalls,
+		Integer looperDirectiveCap,
+		Integer looperMaxRounds
 	) {}
 
 	/**
