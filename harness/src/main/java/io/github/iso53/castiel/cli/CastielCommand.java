@@ -5,6 +5,9 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -35,6 +38,19 @@ public final class CastielCommand implements Callable<Integer> {
 	/** Overrides the HTTP port from application.yaml (default 8081). */
 	@Option(names = { "--port", "-p" }, paramLabel = "PORT", description = "HTTP port to listen on (default: 8081).", converter = CastielCommand.PortConverter.class)
 	private Integer port;
+
+	/**
+	 * Also writes logs to the given file: setting the Spring property
+	 * {@code logging.file.name} adds a rolling FILE appender next to the
+	 * console one, so stdout keeps working as before. Given without a value
+	 * (or with a blank one) it falls back to {@link #DEFAULT_LOG_FILE} in
+	 * the current working directory.
+	 */
+	@Option(names = "--log-file", paramLabel = "FILE", arity = "0..1", fallbackValue = CastielCommand.DEFAULT_LOG_FILE, description = "Also write logs to FILE (rotated automatically). Without a value, logs go to " + CastielCommand.DEFAULT_LOG_FILE + " in the current directory.", converter = CastielCommand.LogFileConverter.class)
+	private String logFile;
+
+	/** File name used when --log-file is given without (or with a blank) value. */
+	private static final String DEFAULT_LOG_FILE = "castiel.log";
 
 	/** Whether Spring should boot after parsing, plus the exit code otherwise. */
 	public record ParseResult(boolean boot, int exitCode, CastielCommand cli) {}
@@ -67,6 +83,9 @@ public final class CastielCommand implements Callable<Integer> {
 		if (port != null) {
 			overrides.put("server.port", String.valueOf(port));
 		}
+		if (logFile != null) {
+			overrides.put("logging.file.name", logFile);
+		}
 		return overrides;
 	}
 
@@ -93,6 +112,38 @@ public final class CastielCommand implements Callable<Integer> {
 				// fall through to the shared error below
 			}
 			throw new CommandLine.TypeConversionException("PORT must be an integer between 1 and 65535");
+		}
+	}
+
+	/**
+	 * Maps blank log file values to the default file in the current
+	 * directory and validates the target at parse time: the parent
+	 * directory must exist and be writable, and the target must not be an
+	 * unwritable path or a directory. Logback itself fails silently on an
+	 * unopenable file (its error never reaches the log), so this pre-flight
+	 * check is what makes a typo'd path fail fast with a clear message
+	 * instead of quietly losing the file.
+	 */
+	private static final class LogFileConverter implements CommandLine.ITypeConverter<String> {
+		@Override
+		public String convert(String value) {
+			String trimmed = value == null ? "" : value.trim();
+			if (trimmed.isEmpty()) {
+				// Blank value means "default file in the current directory".
+				trimmed = DEFAULT_LOG_FILE;
+			}
+			Path file = Paths.get(trimmed).toAbsolutePath().normalize();
+			Path parent = file.getParent() == null ? Paths.get(".").toAbsolutePath() : file.getParent();
+			if (!Files.isDirectory(parent) || !Files.isWritable(parent)) {
+				throw new CommandLine.TypeConversionException("FILE: parent directory " + parent + " does not exist or is not writable");
+			}
+			if (Files.isDirectory(file)) {
+				throw new CommandLine.TypeConversionException("FILE: " + file + " is a directory");
+			}
+			if (Files.exists(file) && !Files.isWritable(file)) {
+				throw new CommandLine.TypeConversionException("FILE: " + file + " is not writable");
+			}
+			return trimmed;
 		}
 	}
 }
