@@ -96,7 +96,7 @@ public class ToolCatalog {
 			List.of("vuln_search", "vuln_detail", "exploit_search"),
 			false,
 			false,
-			1
+			3
 		),
 		new ToolGroup(
 			"workspace_search",
