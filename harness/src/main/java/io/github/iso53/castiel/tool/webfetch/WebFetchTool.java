@@ -3,6 +3,7 @@ package io.github.iso53.castiel.tool.webfetch;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import io.github.iso53.castiel.tool.ToolProvider;
+import io.github.iso53.castiel.util.Http;
 import io.github.iso53.castiel.util.Text;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -33,8 +34,7 @@ public class WebFetchTool implements ToolProvider {
 	/** Hard cap on how much of a response body is downloaded before the fetch is refused. */
 	private static final int MAX_BODY_BYTES = 5_000_000;
 
-	/** Honest UA so servers can see who is fetching; a bare variant for Cloudflare challenges. */
-	private static final String USER_AGENT = "castiel (+https://github.com/ISO53/castiel)";
+	/** Bare UA for the Cloudflare challenge retry. */
 	private static final String BARE_USER_AGENT = "castiel";
 
 	/** Notice appended to a page too long to hand to the model whole. */
@@ -74,7 +74,7 @@ public class WebFetchTool implements ToolProvider {
 
 		HttpResponse<InputStream> response = null;
 		String fetchError = null;
-		String userAgent = USER_AGENT;
+		String userAgent = Http.USER_AGENT;
 		URI uri = null;
 		try {
 			uri = URI.create(cleanedUrl);
@@ -98,7 +98,7 @@ public class WebFetchTool implements ToolProvider {
 				}
 				if (
 					status == 403 &&
-					userAgent.equals(USER_AGENT) &&
+					userAgent.equals(Http.USER_AGENT) &&
 					candidate
 						.headers()
 						.firstValue("cf-mitigated")
