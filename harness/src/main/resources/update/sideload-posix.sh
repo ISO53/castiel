@@ -52,6 +52,8 @@ OLD_DIR="$INSTALL_DIR.old"
 rm -rf "$NEW_DIR" "$OLD_DIR"
 
 log "extracting $ARCHIVE"
+# tar needs the target to exist first; unzip and Expand-Archive create it themselves.
+mkdir -p "$NEW_DIR" || { fail extracting "could not create the extract directory"; exit 1; }
 case "$ARCHIVE" in
 	*.zip)
 		unzip -q "$ARCHIVE" -d "$NEW_DIR" || { fail extracting "unzip failed"; exit 1; } ;;
