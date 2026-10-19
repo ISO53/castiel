@@ -38,7 +38,7 @@ public class PocSearchService {
 	private static final Duration TTL = Duration.ofHours(12);
 
 	/** Identify the app on shared public APIs; also what the CVE Search API's guide requires. */
-	private static final String USER_AGENT = "castiel/1.12.0 (+https://github.com/ISO53/castiel)";
+	private static final String USER_AGENT = "castiel (+https://github.com/ISO53/castiel)";
 
 	private static final HttpClient HTTP = HttpClient.newBuilder()
 		.connectTimeout(Duration.ofSeconds(10))

@@ -84,7 +84,7 @@ public class CveSearchService {
 	private static final Duration SEARCH_TTL = Duration.ofMinutes(10);
 
 	/** The CVE Search API's responsible-use guide requires app name, version and contact info. */
-	private static final String USER_AGENT = "castiel/1.12.0 (+https://github.com/ISO53/castiel)";
+	private static final String USER_AGENT = "castiel (+https://github.com/ISO53/castiel)";
 
 	private static final HttpClient HTTP = HttpClient.newBuilder()
 		.connectTimeout(Duration.ofSeconds(10))
