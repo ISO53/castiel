@@ -2,6 +2,7 @@ package io.github.iso53.castiel.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.iso53.castiel.util.Http;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -37,9 +38,6 @@ public class PocSearchService {
 	private static final int FETCH_LIMIT = 1000;
 	private static final Duration TTL = Duration.ofHours(12);
 
-	/** Identify the app on shared public APIs; also what the CVE Search API's guide requires. */
-	private static final String USER_AGENT = "castiel/1.12.0 (+https://github.com/ISO53/castiel)";
-
 	private static final HttpClient HTTP = HttpClient.newBuilder()
 		.connectTimeout(Duration.ofSeconds(10))
 		.followRedirects(HttpClient.Redirect.NORMAL)
@@ -70,7 +68,7 @@ public class PocSearchService {
 			FETCH_LIMIT;
 		HttpRequest request = HttpRequest.newBuilder(URI.create(url))
 			.timeout(Duration.ofSeconds(20))
-			.header("User-Agent", USER_AGENT)
+			.header("User-Agent", Http.USER_AGENT)
 			.GET()
 			.build();
 		try {

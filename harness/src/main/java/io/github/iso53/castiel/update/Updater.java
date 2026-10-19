@@ -106,9 +106,16 @@ public final class Updater {
 	}
 
 	/**
-	 * Walks up from the running jar to the app image root. The root holds the
-	 * launcher and the {@code runtime} dir (Windows, Linux) or the nested
-	 * {@code castiel.app} bundle (macOS). Anything else counts as a dev run.
+	 * Walks up from the running jar to the app image root. The layout differs
+	 * per OS because jpackage nests the bundled parts differently:
+	 * <ul>
+	 *   <li>Windows: {@code app} and {@code runtime} sit directly under the root
+	 *       next to the {@code castiel.exe} launcher.</li>
+	 *   <li>Linux: {@code app} and {@code runtime} sit under {@code lib}, next to
+	 *       the {@code bin/castiel} launcher.</li>
+	 *   <li>macOS: the root holds the nested {@code castiel.app} bundle.</li>
+	 * </ul>
+	 * Anything else counts as a dev run.
 	 */
 	private static Path detectInstallDir() {
 		Path jar = codeSourceJar();
@@ -123,16 +130,20 @@ public final class Updater {
 		if (jar == null || !Files.isRegularFile(jar) || !jar.getFileName().toString().endsWith(".jar")) {
 			return null;
 		}
+		boolean windows = System.getProperty("os.name", "").toLowerCase().contains("win");
 		Path dir = jar.getParent();
 		for (int level = 0; level < 5 && dir != null; level++, dir = dir.getParent()) {
 			if (Files.isDirectory(dir.resolve("castiel.app"))) {
 				return dir;
 			}
-			// Contents/app is inside the macOS bundle; never swap that deep.
+			if (windows && Files.isDirectory(dir.resolve("app")) && Files.isDirectory(dir.resolve("runtime"))) {
+				return dir;
+			}
+			// Linux keeps both the app dir and the runtime under lib/.
 			if (
-				!"Contents".equals(dir.getFileName().toString()) &&
-				Files.isDirectory(dir.resolve("app")) &&
-				Files.isDirectory(dir.resolve("runtime"))
+				!windows &&
+				Files.isDirectory(dir.resolve("lib").resolve("app")) &&
+				Files.isDirectory(dir.resolve("lib").resolve("runtime"))
 			) {
 				return dir;
 			}

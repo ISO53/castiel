@@ -3,6 +3,7 @@ package io.github.iso53.castiel.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.github.iso53.castiel.util.Http;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -79,12 +80,8 @@ public class CveSearchService {
 	private static final String DETAIL_URL = "https://cveawg.mitre.org/api/cve/";
 
 	private static final Duration RECORD_TTL = Duration.ofHours(12);
-	private static final Duration FEED_TTL = Duration.ofHours(24);
 	/** Identical searches within this window are answered from memory, not the API. */
 	private static final Duration SEARCH_TTL = Duration.ofMinutes(10);
-
-	/** The CVE Search API's responsible-use guide requires app name, version and contact info. */
-	private static final String USER_AGENT = "castiel/1.12.0 (+https://github.com/ISO53/castiel)";
 
 	private static final HttpClient HTTP = HttpClient.newBuilder()
 		.connectTimeout(Duration.ofSeconds(10))
@@ -419,7 +416,7 @@ public class CveSearchService {
 	private JsonNode getJson(String url) throws IOException, InterruptedException {
 		HttpRequest request = HttpRequest.newBuilder(URI.create(url))
 			.timeout(Duration.ofSeconds(20))
-			.header("User-Agent", USER_AGENT)
+			.header("User-Agent", Http.USER_AGENT)
 			.header("Accept", "application/json")
 			.GET()
 			.build();
@@ -433,7 +430,7 @@ public class CveSearchService {
 	private JsonNode postJson(String url, String json) throws IOException, InterruptedException {
 		HttpRequest request = HttpRequest.newBuilder(URI.create(url))
 			.timeout(Duration.ofSeconds(20))
-			.header("User-Agent", USER_AGENT)
+			.header("User-Agent", Http.USER_AGENT)
 			.header("Content-Type", "application/json")
 			.header("Accept", "application/json")
 			.POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
