@@ -2,18 +2,22 @@
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import "@fontsource-variable/inter";
 import "./preview.css";
-import { CANNED_REPLIES, DEMO_SCRIPT } from "./data.js";
+import { CANNED_REPLIES, DEMO_SCRIPT, SUB_AGENT_RUNS } from "./data.js";
 import PreviewMenuBar from "./PreviewMenuBar.vue";
 import PreviewWorkspaceDock from "./PreviewWorkspaceDock.vue";
 import PreviewCenter from "./PreviewCenter.vue";
-import PreviewProcesses from "./PreviewProcesses.vue";
+import PreviewAgents from "./PreviewAgents.vue";
+import PreviewDockBar from "./PreviewDockBar.vue";
 import PreviewChat from "./PreviewChat.vue";
+
+const DEFAULT_SUBTABS = { network: "topology", web: "sitemap" };
 
 const rootEl = ref(null);
 const phase = ref(1);
-const topologyReady = ref(false);
-const processes = ref([]);
 const activeDocId = ref("network");
+const subtab = ref("topology");
+const docsReady = ref({ network: false, web: false, vulnerabilities: false, evidence: false });
+const agents = ref([]);
 const messages = ref([]);
 const playing = ref(false);
 const done = ref(false);
@@ -22,10 +26,12 @@ let token = 0;
 let uid = 0;
 let cannedIndex = 0;
 let observer = null;
+let loopTimer = null;
 
 const reducedMotion =
-	typeof window !== "undefined" &&
-	(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
+	(typeof window !== "undefined" && window.location.search.includes("instant")) ||
+	(typeof window !== "undefined" &&
+		(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false));
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -49,12 +55,70 @@ async function typeInto(part, text, ticket) {
 		part.text = text;
 		return;
 	}
-	for (let i = 0; i < text.length; i += 2) {
+	for (let i = 0; i < text.length; i += 3) {
 		if (token !== ticket) return;
-		part.text = text.slice(0, i + 2);
-		await sleep(14);
+		part.text = text.slice(0, i + 3);
+		await sleep(6);
 	}
 	part.text = text;
+}
+
+function spawnAgent(key) {
+	const run = SUB_AGENT_RUNS[key];
+	if (!run) return;
+	agents.value.push({
+		key,
+		id: run.id,
+		display: run.display,
+		profile: "worker",
+		task: run.task,
+		state: "RUNNING",
+		activity: "Thinking",
+		startedAt: Date.now() - run.seed * 1000,
+		runtimeSeconds: run.seed,
+	});
+}
+
+function settleAgent(key) {
+	const agent = agents.value.find((candidate) => candidate.key === key);
+	if (!agent || agent.state !== "RUNNING") return;
+	agent.state = "DONE";
+	agent.runtimeSeconds = Math.floor((Date.now() - agent.startedAt) / 1000);
+}
+
+function cancelAgent(agent) {
+	if (agent.state !== "RUNNING") return;
+	agent.state = "DONE";
+	agent.activity = "";
+	agent.runtimeSeconds = Math.floor((Date.now() - agent.startedAt) / 1000);
+}
+
+function removeAgent(agent) {
+	agents.value = agents.value.filter((candidate) => candidate !== agent);
+}
+
+function applyEffect(effect) {
+	if (!effect) return;
+	if (effect.agent) spawnAgent(effect.agent);
+	if (effect.agentDone) settleAgent(effect.agentDone);
+	if (effect.doc) {
+		docsReady.value[effect.doc] = true;
+		activeDocId.value = effect.doc;
+		subtab.value = effect.subtab ?? DEFAULT_SUBTABS[effect.doc] ?? subtab.value;
+	}
+}
+
+function selectDoc(id) {
+	activeDocId.value = id;
+	subtab.value = DEFAULT_SUBTABS[id] ?? subtab.value;
+}
+
+/** The demo restarts on its own so the landing page keeps showing a live session. */
+function scheduleLoop() {
+	clearTimeout(loopTimer);
+	loopTimer = setTimeout(() => {
+		void restart();
+	}, 12000);
 }
 
 async function runScript() {
@@ -67,60 +131,64 @@ async function runScript() {
 
 		if (beat.t === "user") {
 			messages.value.push({ id: ++uid, role: "user", text: beat.text });
-			if (!(await wait(400))) return;
+			if (!(await wait(200))) return;
 		} else if (beat.t === "reasoning") {
 			const message = lastAssistantMessage();
 			const part = { type: "reasoning", streaming: true, open: true, seconds: null, text: beat.text };
 			message.parts.push(part);
-			if (!(await wait(beat.seconds * 600))) return;
+			if (!(await wait(beat.seconds * 250))) return;
 			part.seconds = beat.seconds;
 			part.streaming = false;
-			if (!(await wait(900))) return;
+			if (!(await wait(300))) return;
 			part.open = false;
 		} else if (beat.t === "text") {
 			const message = lastAssistantMessage();
 			const part = { type: "text", text: "" };
 			message.parts.push(part);
 			await typeInto(part, beat.text, ticket);
-			if (!(await wait(250))) return;
+			applyEffect(beat.effect);
+			if (!(await wait(120))) return;
 		} else if (beat.t === "tool") {
 			const message = lastAssistantMessage();
-			const part = { type: "tool", name: beat.name, state: "running", input: beat.input, output: null, open: false };
+			const part = {
+				type: "tool",
+				name: beat.name,
+				state: "running",
+				input: beat.input ?? {},
+				output: null,
+				open: Boolean(beat.stayOpen),
+			};
 			message.parts.push(part);
-			if (beat.effect?.process) processes.value.push({ id: ++uid, name: beat.effect.process.name });
-			if (!(await wait(beat.seconds * 1000))) return;
+			if (!(await wait(beat.seconds * 500))) return;
 			part.state = "completed";
 			part.output = beat.output;
-			if (beat.effect?.topology) topologyReady.value = true;
-			if (beat.effect?.clearProcesses) processes.value = [];
-			if (!(await wait(350))) return;
-		} else if (beat.t === "effect") {
-			if (beat.phase) phase.value = beat.phase;
-			if (beat.clearProcesses) processes.value = [];
-			if (!(await wait(400))) return;
+			applyEffect(beat.effect);
+			if (!(await wait(150))) return;
 		} else if (beat.t === "pause") {
-			if (!(await wait(beat.ms))) return;
+			if (!(await wait(beat.ms * 0.4))) return;
 		}
 	}
 
 	if (token !== ticket) return;
 	playing.value = false;
 	done.value = true;
+	scheduleLoop();
 }
 
 async function cannedReply() {
 	playing.value = true;
 	const ticket = ++token;
 	const message = lastAssistantMessage();
-	const part = { type: "reasoning", streaming: true, open: false, seconds: null, text: "Demo mode — replies here are canned." };
+	const part = { type: "reasoning", streaming: true, open: false, seconds: null, text: "Reviewing the workspace state before answering." };
 	message.parts.push(part);
-	if (!(await wait(900))) return;
+	if (!(await wait(300))) return;
 	part.seconds = 1;
 	part.streaming = false;
 	const textPart = { type: "text", text: "" };
 	message.parts.push(textPart);
 	await typeInto(textPart, CANNED_REPLIES[cannedIndex++ % CANNED_REPLIES.length], ticket);
 	playing.value = false;
+	scheduleLoop();
 }
 
 function handleSubmit(text) {
@@ -130,17 +198,16 @@ function handleSubmit(text) {
 }
 
 function restart() {
+	clearTimeout(loopTimer);
 	token++;
 	messages.value = [];
 	phase.value = 1;
-	topologyReady.value = false;
-	processes.value = [];
+	activeDocId.value = "network";
+	subtab.value = "topology";
+	docsReady.value = { network: false, web: false, vulnerabilities: false, evidence: false };
+	agents.value = [];
 	done.value = false;
 	void runScript();
-}
-
-function killProcess(id) {
-	processes.value = processes.value.filter((proc) => proc.id !== id);
 }
 
 onMounted(() => {
@@ -158,6 +225,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
 	token++;
+	clearTimeout(loopTimer);
 	observer?.disconnect();
 });
 </script>
@@ -167,19 +235,20 @@ onBeforeUnmount(() => {
 		<div class="pv-frame">
 			<PreviewMenuBar :phase="phase" />
 			<div class="pv-body">
-				<PreviewWorkspaceDock :active-doc-id="activeDocId" @select="activeDocId = $event" />
+				<PreviewWorkspaceDock :active-doc-id="activeDocId" @select="selectDoc" />
 				<div class="pv-mid">
-					<PreviewCenter :active-doc-id="activeDocId" :topology-ready="topologyReady" />
-					<PreviewProcesses :processes="processes" @kill="killProcess" />
+					<PreviewCenter
+						:active-doc-id="activeDocId"
+						:subtab="subtab"
+						:docs-ready="docsReady"
+						@select="selectDoc"
+						@subtab="subtab = $event"
+					/>
+					<PreviewAgents :agents="agents" @cancel="cancelAgent" @remove="removeAgent" />
 				</div>
-				<PreviewChat
-					:messages="messages"
-					:playing="playing"
-					:done="done"
-					@submit="handleSubmit"
-					@restart="restart"
-				/>
+				<PreviewChat :messages="messages" :playing="playing" :done="done" @submit="handleSubmit" />
 			</div>
+			<PreviewDockBar />
 		</div>
 	</section>
 </template>
@@ -190,3 +259,4 @@ onBeforeUnmount(() => {
 	scroll-margin-top: 5rem;
 }
 </style>
+

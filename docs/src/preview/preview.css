@@ -2,6 +2,7 @@
    Tokens are copied verbatim from frontend/src/style.css `.dark` theme. */
 
 .app-preview {
+	color-scheme: dark;
 	--p-background: oklch(0.145 0 0);
 	--p-foreground: oklch(0.985 0 0);
 	--p-card: oklch(0.205 0 0);
@@ -22,6 +23,32 @@
 
 .app-preview button {
 	font-family: inherit;
+}
+
+/* Scrollbars: near-invisible like the app — thin track-less thumb, brightens on hover. */
+.app-preview *,
+.app-preview {
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
+.app-preview ::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+
+.app-preview ::-webkit-scrollbar-track,
+.app-preview ::-webkit-scrollbar-corner {
+	background: transparent;
+}
+
+.app-preview ::-webkit-scrollbar-thumb {
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.14);
+}
+
+.app-preview ::-webkit-scrollbar-thumb:hover {
+	background: rgba(255, 255, 255, 0.28);
 }
 
 .pv-frame {
@@ -158,5 +185,181 @@
 	}
 	40% {
 		opacity: 1;
+	}
+}
+
+/* Shared data-table replica (frontend/src/components/views/DataTable.vue). */
+.pv-table-wrap {
+	min-height: 0;
+	overflow: auto;
+}
+
+.pv-table {
+	table-layout: fixed;
+	border-collapse: collapse;
+	width: 100%;
+	text-align: left;
+	font-size: 0.75rem;
+}
+
+.pv-table thead th {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	padding: 0.375rem 0.625rem;
+	border-bottom: 1px solid var(--p-border);
+	background: var(--p-muted);
+	font-weight: 500;
+	color: var(--p-muted-foreground);
+	user-select: none;
+	white-space: nowrap;
+}
+
+.pv-table thead th .pv-sort {
+	display: inline-block;
+	vertical-align: -2px;
+	margin-left: 0.125rem;
+	width: 0.75rem;
+	height: 0.75rem;
+	opacity: 0.7;
+}
+
+.pv-table tbody td {
+	padding: 0.375rem 0.625rem;
+	border-bottom: 1px solid color-mix(in oklab, var(--p-border) 40%, transparent);
+	color: var(--p-foreground);
+	vertical-align: top;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.pv-table tbody tr:hover {
+	background: color-mix(in oklab, var(--p-muted) 40%, transparent);
+}
+
+.pv-table .pv-mono {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 11px;
+}
+
+.pv-table .pv-dim {
+	color: var(--p-muted-foreground);
+}
+
+.pv-count {
+	margin-left: auto;
+	font-size: 0.75rem;
+	color: var(--p-muted-foreground);
+}
+
+/* Toolbar above the tables (search, segmented control, select). */
+.pv-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.375rem 0.75rem;
+	border-bottom: 1px solid var(--p-border);
+	flex-shrink: 0;
+}
+
+.pv-input {
+	height: 1.75rem;
+	border: 1px solid var(--p-input);
+	border-radius: 0.375rem;
+	background: transparent;
+	padding: 0 0.5rem;
+	font-size: 0.75rem;
+	color: var(--p-foreground);
+	font-family: inherit;
+}
+
+.pv-input::placeholder {
+	color: var(--p-muted-foreground);
+}
+
+.pv-input:focus {
+	outline: none;
+	border-color: var(--p-muted-foreground);
+}
+
+.pv-segmented {
+	display: flex;
+	align-items: center;
+	height: 1.75rem;
+	border: 1px solid var(--p-border);
+	border-radius: 0.375rem;
+	padding: 2px;
+	font-size: 0.75rem;
+}
+
+.pv-segmented button {
+	border: none;
+	background: none;
+	border-radius: 0.25rem;
+	padding: 0.125rem 0.5rem;
+	font-size: 0.75rem;
+	color: var(--p-muted-foreground);
+	cursor: default;
+}
+
+.pv-segmented button:hover {
+	color: var(--p-foreground);
+}
+
+.pv-segmented button.active {
+	background: var(--p-secondary);
+	color: var(--p-secondary-foreground);
+}
+
+.pv-select {
+	height: 1.75rem;
+	max-width: 12rem;
+	border: 1px solid var(--p-border);
+	border-radius: 0.375rem;
+	background: var(--p-muted);
+	padding: 0 0.5rem;
+	font-size: 0.75rem;
+	color: var(--p-foreground);
+	font-family: inherit;
+}
+
+/* Small grey badges (kind / proof chips). */
+.pv-badge-kind {
+	border-radius: 0.25rem;
+	background: var(--p-muted);
+	padding: 0.125rem 0.375rem;
+	font-size: 10px;
+	color: var(--p-muted-foreground);
+}
+
+.pv-badge-proof {
+	border-radius: 0.25rem;
+	background: var(--p-muted);
+	padding: 0.125rem 0.25rem;
+	font-size: 9px;
+	font-weight: 600;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: var(--p-muted-foreground);
+}
+
+/* Vulnerability names in the evidence table (sky-400 in the app). */
+.pv-vuln-name {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 11px;
+	color: #38bdf8;
+}
+
+/* View fade-in used by the document views. */
+@keyframes pv-fade {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
 	}
 }

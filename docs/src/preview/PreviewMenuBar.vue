@@ -132,4 +132,15 @@ defineProps({
 	font-weight: 500;
 	line-height: 1;
 }
+
+/* On narrow frames the phase labels collide with the app menu — drop to step numbers. */
+@media (max-width: 1100px) {
+	.pv-phase-label {
+		display: none;
+	}
+
+	.pv-phase {
+		padding: 0 0.375rem;
+	}
+}
 </style>

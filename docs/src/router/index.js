@@ -13,6 +13,12 @@ const router = createRouter({
 			name: "home",
 			component: HomeView,
 		},
+		// TEMP: standalone preview harness for visual debugging; remove before merge.
+		{
+			path: "/preview",
+			name: "preview-test",
+			component: () => import("@/preview/AppPreview.vue"),
+		},
 	],
 	// Scroll to the top on route change. Hash links (e.g. the Install section)
 	// center the target section vertically in the viewport; when the section is
