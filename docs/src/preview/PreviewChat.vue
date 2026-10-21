@@ -2,18 +2,18 @@
 import { nextTick, ref, watch } from "vue";
 import {
 	ArrowDown,
+	ArrowUp,
+	Bot,
 	Brain,
 	ChevronDown,
-	CircleCheck,
-	Clock,
-	CornerDownLeft,
+	FilePlus,
 	History,
-	PanelRightClose,
+	LockOpen,
 	Plus,
-	RotateCcw,
-	Wrench,
+	Square,
+	SquareTerminal,
 } from "@lucide/vue";
-import { INITIAL_PROMPT_HEADER } from "./data.js";
+import { CONTEXT_USED, INITIAL_PROMPT_HEADER, MODEL_LABEL } from "./data.js";
 
 const props = defineProps({
 	messages: { type: Array, default: () => [] },
@@ -21,11 +21,33 @@ const props = defineProps({
 	done: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(["submit", "restart"]);
+const emit = defineEmits(["submit"]);
 
 const draft = ref("");
 const scroller = ref(null);
 const atBottom = ref(true);
+
+// Mirrors frontend/src/lib/tool-icons.js for the names the demo uses.
+const TOOL_ICONS = {
+	bash: SquareTerminal,
+	bg_start: SquareTerminal,
+	sub_agent: Bot,
+	agent_list: Bot,
+	agent_read: Bot,
+	agent_kill: Bot,
+	write_file: FilePlus,
+};
+
+function toolIcon(name) {
+	return TOOL_ICONS[name] ?? Bot;
+}
+
+/** `name(key: "value", …)` — the same summary ToolCall.vue renders. */
+function argsSummary(part) {
+	const entries = Object.entries(part.input ?? {});
+	if (!entries.length) return "";
+	return `(${entries.map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join(", ")})`;
+}
 
 function onScroll() {
 	const el = scroller.value;
@@ -60,9 +82,11 @@ function escapeHtml(value) {
 	return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-/** Renders **bold** inline markup like the app's markdown renderer would. */
+/** Renders **bold** and `code` inline markup like the app's markdown renderer. */
 function renderInline(text) {
-	return escapeHtml(text).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+	return escapeHtml(text)
+		.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+		.replace(/`([^`]+)`/g, '<code class="pv-inline-code">$1</code>');
 }
 </script>
 
@@ -71,12 +95,8 @@ function renderInline(text) {
 		<header class="pv-chat-header">
 			<p class="pv-chat-title">{{ INITIAL_PROMPT_HEADER }}</p>
 			<div class="pv-chat-actions">
-				<button class="pv-icon-btn" type="button" aria-label="Replay the demo" title="Replay demo" @click="$emit('restart')">
-					<RotateCcw />
-				</button>
 				<button class="pv-icon-btn" type="button" aria-label="Chat history"><History /></button>
 				<button class="pv-icon-btn" type="button" aria-label="New chat"><Plus /></button>
-				<button class="pv-icon-btn" type="button" aria-label="Hide dock"><PanelRightClose /></button>
 			</div>
 		</header>
 
@@ -103,37 +123,33 @@ function renderInline(text) {
 								{{ part.text }}
 							</div>
 
+							<!-- Tool call — mirrors components/ai-elements/tool/ToolCall.vue -->
 							<div v-else-if="part.type === 'tool'" class="pv-tool">
 								<button type="button" class="pv-tool-header" @click="part.open = !part.open">
-									<Wrench class="pv-inline-icon" />
-									<span class="pv-tool-name">{{ part.name }}</span>
-									<span class="pv-badge">
-										<Clock v-if="part.state === 'running'" class="pv-badge-icon running" />
-										<CircleCheck v-else class="pv-badge-icon completed" />
-										{{ part.state === "running" ? "Running" : "Completed" }}
+									<component :is="toolIcon(part.name)" class="pv-inline-icon" />
+									<span class="pv-tool-summary">
+										<span v-if="part.state === 'running'" class="pv-shimmer">{{ part.name }}{{ argsSummary(part) }}</span>
+										<template v-else>
+											<span class="pv-tool-name">{{ part.name }}</span><span>{{ argsSummary(part) }}</span>
+										</template>
 									</span>
 									<ChevronDown class="pv-chev" :class="{ open: part.open }" />
 								</button>
-								<div v-if="part.open" class="pv-tool-content">
-									<p class="pv-tool-label">Input</p>
-									<pre class="pv-tool-pre">{{ part.input }}</pre>
-									<template v-if="part.output">
-										<p class="pv-tool-label">Output</p>
-										<pre class="pv-tool-pre">{{ part.output }}</pre>
-									</template>
+
+								<div v-if="part.open && part.state !== 'running'" class="pv-tool-content">
+									<div v-for="(value, key) in part.input" :key="key" class="pv-tool-param">
+										<span class="pv-tool-key">{{ key }}:</span>
+										<span class="pv-tool-value">{{ typeof value === "string" ? JSON.stringify(value) : value }}</span>
+									</div>
+									<pre v-if="part.output" class="pv-tool-result">{{ part.output }}</pre>
 								</div>
 							</div>
 
-							<div
-								v-else-if="part.type === 'text'"
-								class="pv-msg-assistant"
-								v-html="renderInline(part.text)"
-							></div>
+							<!-- Assistant text segment -->
+							<div v-else-if="part.type === 'text'" class="pv-msg-text" v-html="renderInline(part.text)" />
 						</template>
 					</template>
 				</template>
-
-				<div v-if="playing" class="pv-loader"><span /><span /><span /></div>
 			</div>
 
 			<button v-if="!atBottom" type="button" class="pv-scroll-btn" aria-label="Scroll to bottom" @click="scrollToBottom">
@@ -145,35 +161,40 @@ function renderInline(text) {
 			<textarea
 				v-model="draft"
 				class="pv-textarea"
-				placeholder="Message castiel..."
-				rows="2"
+				rows="3"
+				spellcheck="false"
+				placeholder="Message castiel…"
 				@keydown.enter.exact.prevent="send"
-			></textarea>
+			/>
 			<div class="pv-composer-footer">
-				<span class="pv-context" title="Context window usage">
-					<span class="pv-context-pct">6.1%</span>
-					<svg viewBox="0 0 16 16" class="pv-context-ring" aria-hidden="true">
-						<circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--p-input)" stroke-width="2" />
+				<span class="pv-context">
+					{{ CONTEXT_USED.toFixed(1) }}%
+					<svg viewBox="0 0 16 16" class="pv-context-ring">
+						<circle cx="8" cy="8" r="6.5" class="pv-ring-track" />
 						<circle
 							cx="8"
 							cy="8"
 							r="6.5"
-							fill="none"
-							stroke="var(--p-muted-foreground)"
-							stroke-width="2"
-							stroke-dasharray="2.5 38.5"
-							stroke-linecap="round"
-							transform="rotate(-90 8 8)"
+							class="pv-ring-value"
+							:stroke-dasharray="`${2 * Math.PI * 6.5 * (CONTEXT_USED / 100)} 999`"
 						/>
 					</svg>
 				</span>
-				<button type="button" class="pv-chip">
-					<Brain class="pv-inline-icon" />
-					Reasoning: Medium
+				<button class="pv-chip" type="button">
+					<Brain class="pv-chip-icon" />
+					Reasoning: Default
 				</button>
-				<button type="button" class="pv-chip pv-chip-model">nvidia/nemotron-3-ult…</button>
-				<button type="button" class="pv-send" :disabled="!draft.trim()" aria-label="Send message" @click="send">
-					<CornerDownLeft />
+				<button class="pv-chip pv-chip-model" type="button">
+					<Bot class="pv-chip-icon" />
+					<span class="pv-chip-model-name">{{ MODEL_LABEL }}</span>
+				</button>
+				<button class="pv-chip" type="button">
+					<LockOpen class="pv-chip-icon" />
+					Loop
+				</button>
+				<button class="pv-send" type="button" :disabled="playing" @click="!playing && send()">
+					<Square v-if="playing" class="pv-stop-icon" />
+					<ArrowUp v-else />
 				</button>
 			</div>
 		</div>
@@ -192,7 +213,6 @@ function renderInline(text) {
 .pv-chat-header {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
 	gap: 0.5rem;
 	height: 2rem;
 	padding: 0 0.75rem;
@@ -201,6 +221,7 @@ function renderInline(text) {
 }
 
 .pv-chat-title {
+	flex: 1;
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -213,7 +234,7 @@ function renderInline(text) {
 .pv-chat-actions {
 	display: flex;
 	align-items: center;
-	gap: 0.125rem;
+	gap: 0.25rem;
 	flex-shrink: 0;
 }
 
@@ -242,8 +263,6 @@ function renderInline(text) {
 	flex: 1;
 	min-height: 0;
 	overflow-y: auto;
-	scrollbar-width: thin;
-	scrollbar-color: var(--p-muted) transparent;
 }
 
 .pv-chat-list {
@@ -256,47 +275,52 @@ function renderInline(text) {
 .pv-msg-user {
 	align-self: flex-end;
 	max-width: 90%;
-	padding: 0.5rem 0.75rem;
+	white-space: pre-wrap;
 	border-radius: 0.5rem;
 	background: var(--p-primary);
+	padding: 0.5rem 0.75rem;
+	font-size: 0.75rem;
+	line-height: 1.625;
 	color: var(--p-primary-foreground);
-	font-size: 0.75rem;
-	line-height: 1.625;
-	white-space: pre-wrap;
 }
 
-.pv-msg-assistant {
-	align-self: start;
-	max-width: 90%;
+.pv-msg-text {
+	min-width: 0;
+	max-width: 95%;
+	align-self: flex-start;
 	font-size: 0.75rem;
-	line-height: 1.625;
+	line-height: 1.65;
 	color: var(--p-foreground);
+	word-break: break-word;
 }
 
-.pv-msg-assistant :deep(strong) {
-	font-weight: 600;
+:deep(.pv-inline-code) {
+	border: 1px solid var(--p-border);
+	border-radius: 0.25rem;
+	background: var(--p-muted);
+	padding: 0 0.25rem;
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 11px;
+	color: var(--p-foreground);
 }
 
 .pv-inline-icon {
 	width: 0.875rem;
 	height: 0.875rem;
 	flex-shrink: 0;
-	color: var(--p-muted-foreground);
 }
 
 .pv-reasoning {
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
-	width: 100%;
-	padding: 0;
+	gap: 0.375rem;
 	border: none;
 	background: none;
+	padding: 0;
 	font-size: 0.75rem;
 	color: var(--p-muted-foreground);
-	text-align: left;
 	cursor: default;
-	transition: color 0.15s ease;
+	align-self: flex-start;
 }
 
 .pv-reasoning:hover {
@@ -304,18 +328,15 @@ function renderInline(text) {
 }
 
 .pv-reasoning-content {
-	padding: 0.25rem 0 0 1.375rem;
+	max-width: 95%;
 	font-size: 0.75rem;
 	line-height: 1.625;
-	opacity: 0.6;
-	color: var(--p-foreground);
+	color: var(--p-muted-foreground);
 }
 
 .pv-chev {
-	width: 1rem;
-	height: 1rem;
-	margin-left: auto;
-	color: var(--p-muted-foreground);
+	width: 0.75rem;
+	height: 0.75rem;
 	transition: transform 0.15s ease;
 }
 
@@ -325,11 +346,8 @@ function renderInline(text) {
 
 .pv-tool {
 	width: 100%;
-	align-self: start;
-	border: 1px solid var(--p-border);
-	border-radius: 0.5rem;
-	background: var(--p-card);
-	overflow: hidden;
+	min-width: 0;
+	align-self: flex-start;
 }
 
 .pv-tool-header {
@@ -337,75 +355,68 @@ function renderInline(text) {
 	align-items: center;
 	gap: 0.5rem;
 	width: 100%;
-	padding: 0.75rem;
+	min-width: 0;
 	border: none;
 	background: none;
+	padding: 0;
 	text-align: left;
+	font-size: 0.75rem;
+	color: var(--p-muted-foreground);
 	cursor: default;
 }
 
-.pv-tool-name {
-	font-size: 0.75rem;
-	font-weight: 500;
+.pv-tool-header:hover {
 	color: var(--p-foreground);
 }
 
-.pv-badge {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.375rem;
-	padding: 0.125rem 0.5rem;
-	border-radius: 999px;
-	background: var(--p-secondary);
-	color: var(--p-secondary-foreground);
-	font-size: 0.75rem;
+.pv-tool-summary {
+	min-width: 0;
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
-.pv-badge-icon {
-	width: 1rem;
-	height: 1rem;
+.pv-tool-name {
+	font-weight: 700;
+	color: color-mix(in oklab, var(--p-foreground) 80%, var(--p-muted-foreground));
 }
+</style>
 
-.pv-badge-icon.running {
-	animation: pv-pulse 1.2s ease-in-out infinite;
-}
-
-.pv-badge-icon.completed {
-	color: #16a34a;
-}
-
-@keyframes pv-pulse {
-	0%,
-	100% {
-		opacity: 1;
-	}
-	50% {
-		opacity: 0.35;
-	}
-}
-
+<style scoped>
 .pv-tool-content {
-	margin: 0 0.75rem 0.75rem;
-	padding-top: 0.625rem;
-	border-top: 1px solid var(--p-border);
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	padding: 0.375rem 0.25rem;
 }
 
-.pv-tool-label {
-	margin: 0.375rem 0 0.25rem;
-	font-size: 0.6875rem;
-	font-weight: 500;
-	color: var(--p-muted-foreground);
-}
-
-.pv-tool-pre {
-	margin: 0;
-	padding: 0.5rem;
-	border-radius: 0.375rem;
-	background: var(--p-muted);
+.pv-tool-param {
+	display: flex;
+	gap: 0.375rem;
+	min-width: 0;
 	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 	font-size: 0.6875rem;
 	line-height: 1.5;
-	color: var(--p-foreground);
+	color: color-mix(in oklab, var(--p-muted-foreground) 70%, transparent);
+}
+
+.pv-tool-key {
+	flex-shrink: 0;
+}
+
+.pv-tool-value {
+	min-width: 0;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.pv-tool-result {
+	margin: 0;
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 0.6875rem;
+	line-height: 1.5;
+	color: color-mix(in oklab, var(--p-muted-foreground) 70%, transparent);
 	white-space: pre-wrap;
 	word-break: break-word;
 }
@@ -461,8 +472,10 @@ function renderInline(text) {
 
 .pv-composer-footer {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
-	gap: 0.5rem;
+	gap: 0.375rem;
+	row-gap: 0.375rem;
 	margin-top: 0.5rem;
 }
 
@@ -473,11 +486,26 @@ function renderInline(text) {
 	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 	font-size: 0.6875rem;
 	color: var(--p-muted-foreground);
+	flex-shrink: 0;
 }
 
 .pv-context-ring {
 	width: 0.875rem;
 	height: 0.875rem;
+	transform: rotate(-90deg);
+}
+
+.pv-ring-track {
+	fill: none;
+	stroke: var(--p-muted);
+	stroke-width: 2.5;
+}
+
+.pv-ring-value {
+	fill: none;
+	stroke: var(--p-muted-foreground);
+	stroke-width: 2.5;
+	stroke-linecap: round;
 }
 
 .pv-chip {
@@ -493,17 +521,31 @@ function renderInline(text) {
 	color: var(--p-muted-foreground);
 	cursor: default;
 	white-space: nowrap;
+	min-width: 0;
+	overflow: hidden;
+	flex-shrink: 1;
 }
 
 .pv-chip:hover {
 	color: var(--p-foreground);
 }
 
+.pv-chip-icon {
+	width: 0.875rem;
+	height: 0.875rem;
+	flex-shrink: 0;
+}
+
 .pv-chip-model {
+	min-width: 0;
+	margin-left: auto;
+	overflow: hidden;
+}
+
+.pv-chip-model-name {
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	margin-left: auto;
 }
 
 .pv-send {
@@ -520,11 +562,18 @@ function renderInline(text) {
 }
 
 .pv-send:disabled {
-	opacity: 0.5;
+	opacity: 0.75;
 }
 
 .pv-send svg {
 	width: 0.875rem;
 	height: 0.875rem;
 }
+
+.pv-stop-icon {
+	fill: currentColor;
+}
 </style>
+
+
+

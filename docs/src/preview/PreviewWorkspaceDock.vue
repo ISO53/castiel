@@ -1,20 +1,10 @@
 <script setup>
-import {
-	Folder,
-	Columns2,
-	LayoutGrid,
-	RotateCcw,
-	PanelLeftClose,
-	Network,
-	Globe,
-	Bug,
-	Image,
-	Plug,
-	RefreshCw,
-} from "@lucide/vue";
+import { Folder, RotateCcw, Network, Globe, Bug, Image, Plug, RefreshCw } from "@lucide/vue";
 import { DOCUMENTS, MCP_SERVERS, WORKSPACE_NAME } from "./data.js";
 
 const ICONS = { network: Network, web: Globe, vulnerabilities: Bug, evidence: Image };
+
+const connectedCount = MCP_SERVERS.filter((server) => server.enabled).length;
 
 defineProps({
 	activeDocId: { type: String, default: "network" },
@@ -29,10 +19,7 @@ defineEmits(["select"]);
 		<div class="pv-dock-header">
 			<Folder class="pv-header-icon" />
 			<span class="pv-ws-name">{{ WORKSPACE_NAME }}</span>
-			<button class="pv-icon-btn" type="button" aria-label="Split view"><Columns2 /></button>
-			<button class="pv-icon-btn" type="button" aria-label="Grid view"><LayoutGrid /></button>
-			<button class="pv-icon-btn" type="button" aria-label="Refresh"><RotateCcw /></button>
-			<button class="pv-icon-btn" type="button" aria-label="Collapse dock"><PanelLeftClose /></button>
+			<button class="pv-icon-btn" type="button" aria-label="Refresh workspace"><RotateCcw /></button>
 		</div>
 
 		<div class="pv-docs">
@@ -56,14 +43,28 @@ defineEmits(["select"]);
 			<div class="pv-mcp-header">
 				<Plug class="pv-header-icon" />
 				<span class="pv-mcp-title">MCP Servers</span>
-				<span class="pv-mcp-badge">{{ MCP_SERVERS.length }}/{{ MCP_SERVERS.length }}</span>
-				<button class="pv-icon-btn" type="button" aria-label="Reconnect MCP servers"><RefreshCw /></button>
+				<span class="pv-mcp-badge">{{ connectedCount }}/{{ MCP_SERVERS.length }}</span>
+				<button class="pv-icon-btn" type="button" aria-label="Reconnect disconnected MCP servers"><RefreshCw /></button>
 			</div>
 			<ul class="pv-mcp-list">
-				<li v-for="server in MCP_SERVERS" :key="server.name" class="pv-mcp-row">
-					<span class="pv-dot" />
+				<li
+					v-for="server in MCP_SERVERS"
+					:key="server.name"
+					class="pv-mcp-row"
+					:class="{ disabled: !server.enabled }"
+				>
 					<span class="pv-mcp-name">{{ server.name }}</span>
 					<span class="pv-mcp-count">{{ server.tools }}</span>
+					<button
+						type="button"
+						class="pv-switch"
+						:class="{ on: server.enabled }"
+						role="switch"
+						:aria-checked="server.enabled"
+						:aria-label="`${server.enabled ? 'Disable' : 'Enable'} MCP server ${server.name}`"
+					>
+						<span class="pv-switch-knob" />
+					</button>
 				</li>
 			</ul>
 		</div>
@@ -222,17 +223,16 @@ defineEmits(["select"]);
 	border-radius: 0.375rem;
 }
 
-.pv-dot {
-	width: 0.5rem;
-	height: 0.5rem;
-	flex-shrink: 0;
-	border-radius: 999px;
-	background: #10b981;
+.pv-mcp-row.disabled {
+	opacity: 0.5;
 }
 
 .pv-mcp-name {
 	flex: 1;
 	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 	font-size: 0.75rem;
 	color: var(--p-foreground);
 }
@@ -241,5 +241,38 @@ defineEmits(["select"]);
 	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 	font-size: 10px;
 	color: var(--p-muted-foreground);
+}
+
+/* Replica of the ui Switch: primary when on, muted when off. */
+.pv-switch {
+	position: relative;
+	width: 2rem;
+	height: 1.125rem;
+	flex-shrink: 0;
+	border: none;
+	border-radius: 999px;
+	background: #3f3f46;
+	cursor: default;
+	padding: 0;
+}
+
+.pv-switch.on {
+	background: var(--p-primary);
+}
+
+.pv-switch-knob {
+	position: absolute;
+	top: 0.125rem;
+	left: 0.125rem;
+	width: 0.875rem;
+	height: 0.875rem;
+	border-radius: 999px;
+	background: #a1a1aa;
+	transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.pv-switch.on .pv-switch-knob {
+	transform: translateX(0.875rem);
+	background: #ffffff;
 }
 </style>
