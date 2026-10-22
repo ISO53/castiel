@@ -5,7 +5,7 @@
 //   ollama     — simple-icons/simple-icons "ollama.svg" (monochrome mark)
 //   openrouter — openrouter.ai/brand (glyph, "volt" variant for dark surfaces)
 //   cline      — cline.bot/brand assets ("Bot" icon, dark variant)
-//   z.ai       — z.ai static logo (listed as "coming soon" until supported)
+//   z.ai       — z.ai static logo
 import llamacppLogo from "@/assets/providers/llamacpp.svg";
 import ollamaLogo from "@/assets/providers/ollama.svg";
 import openrouterLogo from "@/assets/providers/openrouter.svg";

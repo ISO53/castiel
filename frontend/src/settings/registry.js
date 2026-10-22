@@ -48,6 +48,14 @@ export const SETTINGS_TREE = [
 				keywords: ["api key", "account", "sign in", "oauth", "anthropic", "openai", "google", "clinepass", "subscription", "billing"],
 				component: () => import("@/components/settings/sections/ClineSection.vue"),
 			},
+			{
+				id: "z.ai",
+				title: "Z.ai",
+				logo: "z.ai",
+				description: "Zhipu's GLM model family straight from z.ai — pay-as-you-go with a Standard API key, or on the GLM Coding Plan subscription. The key type decides billing.",
+				keywords: ["api key", "cloud", "glm", "zhipu", "openai compatible", "coding plan", "subscription", "billing"],
+				component: () => import("@/components/settings/sections/ZaiSection.vue"),
+			},
 		],
 	},
 	{

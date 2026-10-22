@@ -5,6 +5,7 @@ import io.github.iso53.castiel.model.ProviderType;
 import io.github.iso53.castiel.provider.LlmProvider;
 import io.github.iso53.castiel.provider.OllamaProvider;
 import io.github.iso53.castiel.provider.OpenAiCompatibleProvider;
+import io.github.iso53.castiel.provider.ZaiProvider;
 import org.springframework.stereotype.Service;
 
 /**
@@ -30,6 +31,7 @@ public class LlmClientFactory {
 		return switch (config.type()) {
 			case OPENAI_COMPATIBLE -> new OpenAiCompatibleProvider(config);
 			case OLLAMA -> new OllamaProvider(config);
+			case ZAI -> new ZaiProvider(config);
 		};
 	}
 }

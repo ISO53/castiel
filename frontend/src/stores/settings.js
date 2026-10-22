@@ -10,6 +10,10 @@ const CLINE_ID = "cline";
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1";
 /** Cline's endpoint is fixed. Users only provide their API key. */
 const CLINE_API_URL = "https://api.cline.bot/api/v1";
+/** z.ai endpoints differ by usage mode: pay-as-you-go API vs GLM Coding Plan subscription. */
+const ZAI_ID = "z.ai";
+const ZAI_API_URL = "https://api.z.ai/api/paas/v4";
+const ZAI_CODING_API_URL = "https://api.z.ai/api/coding/paas/v4";
 
 async function readError(response) {
 	const body = await response.text();
@@ -64,6 +68,15 @@ export function defaultClineProvider() {
 	};
 }
 
+/** Default form values for the Z.ai settings section (UI-only). */
+export function defaultZaiProvider() {
+	return {
+		type: "ZAI",
+		apiUrl: ZAI_API_URL,
+		apiKey: "",
+	};
+}
+
 export const useSettingsStore = defineStore("settings", {
 	state: () => ({
 		providers: {},
@@ -110,6 +123,12 @@ export const useSettingsStore = defineStore("settings", {
 			return {
 				...defaultClineProvider(),
 				...(state.providers[CLINE_ID] ?? {}),
+			};
+		},
+		zai(state) {
+			return {
+				...defaultZaiProvider(),
+				...(state.providers[ZAI_ID] ?? {}),
 			};
 		},
 	},
@@ -301,7 +320,14 @@ export const useSettingsStore = defineStore("settings", {
 				apiUrl: CLINE_API_URL,
 				apiKey: form.apiKey ?? "",
 			});
-	},
+		},
+		connectZai(form) {
+			return this.connectProvider(ZAI_ID, {
+				type: "ZAI",
+				apiUrl: form.mode === "coding" ? ZAI_CODING_API_URL : ZAI_API_URL,
+				apiKey: form.apiKey ?? "",
+			});
+		},
 	/** Sets the CVSS version scores are displayed in; persisted for all workspaces. */
 	setCvssVersion(version) {
 		this.cvssVersion = version === "3.1" ? "3.1" : "4.0";

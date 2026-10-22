@@ -19,4 +19,12 @@ public enum ProviderType {
 	 * Ollama root URL (default {@code http://localhost:11434}). No API key required.
 	 */
 	OLLAMA,
+
+	/**
+	 * Z.ai (Zhipu GLM) cloud API. OpenAI Chat Completions dialect at a fixed root URL
+	 * that already carries the version segment ({@code /api/paas/v4} or the Coding
+	 * Plan's {@code /api/coding/paas/v4}); served from a static catalog since z.ai
+	 * exposes no model-listing endpoint usable for key validation.
+	 */
+	ZAI,
 }

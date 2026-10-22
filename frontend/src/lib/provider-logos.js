@@ -2,6 +2,7 @@ import clineLogo from "@/assets/providers/cline.svg";
 import llamaCppLogo from "@/assets/providers/llama-cpp.svg";
 import ollamaLogo from "@/assets/providers/ollama.svg";
 import openRouterLogo from "@/assets/providers/open-router.svg";
+import zaiLogo from "@/assets/providers/zai.svg";
 
 /**
  * Maps a settings-provider id to its brand logo asset, for display in the
@@ -14,6 +15,7 @@ const LOGOS = {
 	openrouter: openRouterLogo,
 	"open-router": openRouterLogo,
 	ollama: ollamaLogo,
+	"z.ai": zaiLogo,
 };
 
 export function providerLogo(providerId) {
