@@ -4,11 +4,12 @@ import io.github.iso53.castiel.model.DirectoryListing;
 import io.github.iso53.castiel.model.FileContent;
 import io.github.iso53.castiel.service.FileExplorerService;
 import io.github.iso53.castiel.service.WorkspaceEventBus;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.nio.file.Path;
 
 /**
  * Exposes the local directory explorer used to pick a workspace folder.
@@ -59,7 +60,16 @@ public class FileExplorerController {
 	}
 
 	/**
-	 * Serves a file's raw bytes with a guessed content type (evidence gallery, lightbox).
+	 * Serves a file's raw bytes (evidence gallery, lightbox).
+	 *
+	 * <p>Workspace content can originate from the engaged target (fetched pages,
+	 * downloaded PoCs), so only media types the browser renders without executing
+	 * script are served inline. Everything else — HTML pages above all — is forced
+	 * into an opaque download: {@code application/octet-stream} plus
+	 * {@code Content-Disposition: attachment} and a sandboxing CSP, so a crafted
+	 * file can never execute script on this origin when previewed. The filename is
+	 * sanitized and RFC 5987 encoded, so a crafted name cannot smuggle header
+	 * syntax (quotes, CR/LF) either.
 	 */
 	@GetMapping("/raw")
 	public ResponseEntity<byte[]> readFileRaw(@RequestParam("path") String path) {
@@ -71,13 +81,38 @@ public class FileExplorerController {
 			} catch (InvalidMediaTypeException ex) {
 				mediaType = MediaType.APPLICATION_OCTET_STREAM;
 			}
+			boolean inline = isInlineSafe(mediaType);
 			return ResponseEntity.ok()
-				.header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.name() + "\"")
-				.contentType(mediaType)
+				.header(HttpHeaders.CONTENT_DISPOSITION, disposition(file.name(), inline))
+				.header(HttpHeaders.CONTENT_SECURITY_POLICY, "sandbox")
+				.header(HttpHeaders.X_CONTENT_TYPE_OPTIONS, "nosniff")
+				.contentType(inline ? mediaType : MediaType.APPLICATION_OCTET_STREAM)
 				.body(file.bytes());
 		} catch (IllegalArgumentException ex) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
 		}
+	}
+
+	/** Media types the browser renders without executing scripts in this origin. */
+	private static boolean isInlineSafe(MediaType mediaType) {
+		String type = mediaType.getType();
+		return (
+			type.equals("image") ||
+			type.equals("video") ||
+			type.equals("audio") ||
+			(type.equals("application") && mediaType.getSubtype().equals("pdf"))
+		);
+	}
+
+	/**
+	 * Builds the Content-Disposition value: inline for safe media, download for
+	 * everything else. The fallback name keeps printable ASCII only and drops
+	 * quoting characters; the RFC 5987 name is percent-encoded UTF-8.
+	 */
+	private static String disposition(String name, boolean inline) {
+		String fallback = name.replaceAll("[^\\x20-\\x7e]", "_").replace("\"", "_").replace("\\", "_");
+		String encoded = URLEncoder.encode(fallback, StandardCharsets.UTF_8).replace("+", "%20");
+		return (inline ? "inline" : "attachment") + "; filename=\"" + fallback + "\"; filename*=UTF-8''" + encoded;
 	}
 
 	/**
