@@ -12,7 +12,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -36,7 +35,7 @@ public class WebConfig {
     @Order(-100) // CORS answers browser preflights before the auth gate sees them.
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOrigins(localUiOrigins());
+        corsConfig.setAllowedOriginPatterns(localUiOrigins());
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
         corsConfig.setAllowedHeaders(List.of("*"));
         corsConfig.setAllowCredentials(false);
@@ -49,19 +48,14 @@ public class WebConfig {
     }
 
     /**
-     * The origins the local UI is reached from: the backend's own port (packaged
-     * build, served by this process) and the Vite dev server port (dev build),
-     * each for every localhost spelling. The backend port follows the configured
-     * {@code server.port} so {@code --port} keeps working.
+     * The origins the local UI is reached from: any localhost port. Browsers send an
+     * Origin header on every POST, so the exact port cannot be assumed - the Vite dev
+     * server moves to the next free port, and the packaged build is served by this
+     * process itself. Loopback-only patterns keep the API unreachable to web pages
+     * from other hosts.
      */
     private List<String> localUiOrigins() {
-        String port = env.getProperty("server.port", "8081");
-        List<String> origins = new ArrayList<>();
-        for (String host : List.of("localhost", "127.0.0.1", "[::1]")) {
-            origins.add("http://" + host + ":" + port);
-            origins.add("http://" + host + ":5173");
-        }
-        return origins;
+        return List.of("http://localhost:*", "http://127.0.0.1:*", "http://[::1]:*");
     }
 
     @EventListener
