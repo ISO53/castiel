@@ -19,6 +19,8 @@ import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
+import org.springframework.web.util.pattern.PathPattern;
+import org.springframework.web.util.pattern.PathPatternParser;
 import reactor.core.publisher.Mono;
 
 /**
@@ -51,6 +53,12 @@ public class AuthWebFilter implements WebFilter {
 		"0:0:0:0:0:0:0:1"
 	);
 
+	private static final PathPatternParser PATTERN_PARSER = PathPatternParser.defaultInstance;
+	private static final PathPattern API_PATTERN = PATTERN_PARSER.parse("/api/**");
+	private static final PathPattern AUTH_STATUS_PATTERN = PATTERN_PARSER.parse("/api/auth/status");
+	private static final PathPattern AUTH_LOGIN_PATTERN = PATTERN_PARSER.parse("/api/auth/login");
+	private static final PathPattern AUTH_LOGOUT_PATTERN = PATTERN_PARSER.parse("/api/auth/logout");
+
 	private final AuthService auth;
 
 	public AuthWebFilter(AuthService auth) {
@@ -63,8 +71,9 @@ public class AuthWebFilter implements WebFilter {
 			return chain.filter(exchange);
 		}
 		ServerHttpRequest request = exchange.getRequest();
+		// Raw (undecoded) path; kept only for log output.
 		String path = request.getPath().value();
-		if (!path.startsWith("/api/")) {
+		if (!API_PATTERN.matches(request.getPath())) {
 			return chain.filter(exchange);
 		}
 		if (request.getMethod() == HttpMethod.OPTIONS) {
@@ -72,7 +81,7 @@ public class AuthWebFilter implements WebFilter {
 		}
 		// Authenticated API payloads must never land in caches.
 		exchange.getResponse().getHeaders().set(HttpHeaders.CACHE_CONTROL, "no-store");
-		if (isPublic(path)) {
+		if (isPublic(request)) {
 			return chain.filter(exchange);
 		}
 
@@ -110,10 +119,17 @@ public class AuthWebFilter implements WebFilter {
 		return token.isEmpty() ? null : token;
 	}
 
-	// /api/auth/status, /login and /logout are the only endpoints reachable without a
-	// credential; logout without a session is a harmless no-op.
-	private static boolean isPublic(String path) {
-		return path.equals("/api/auth/status") || path.equals("/api/auth/login") || path.equals("/api/auth/logout");
+	/**
+	 * /api/auth/status, /login and /logout are the only endpoints reachable without a
+	 * credential; logout without a session is a harmless no-op. Matched against the
+	 * decoded request path, exactly like the router would.
+	 */
+	private static boolean isPublic(ServerHttpRequest request) {
+		return (
+			AUTH_STATUS_PATTERN.matches(request.getPath()) ||
+			AUTH_LOGIN_PATTERN.matches(request.getPath()) ||
+			AUTH_LOGOUT_PATTERN.matches(request.getPath())
+		);
 	}
 
 	/**
