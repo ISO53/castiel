@@ -41,4 +41,12 @@ public final class AppPaths {
 	public static Path settingsFile() {
 		return configDir().resolve("settings.json");
 	}
+
+	/**
+	 * Auth token store next to the settings file. Created with owner-only
+	 * permissions on POSIX systems (see {@code AuthStore}).
+	 */
+	public static Path authFile() {
+		return configDir().resolve("auth.json");
+	}
 }

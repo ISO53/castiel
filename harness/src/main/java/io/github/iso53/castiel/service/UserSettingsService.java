@@ -11,6 +11,8 @@ import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -130,6 +132,26 @@ public class UserSettingsService {
 		Path file = AppPaths.settingsFile();
 		try {
 			Files.createDirectories(file.getParent());
+			boolean posix = file.getFileSystem().supportedFileAttributeViews().contains("posix");
+			if (!Files.exists(file)) {
+				// Owner-only file, mirroring AuthStore: the file carries provider API keys.
+				if (posix) {
+					Files.createFile(
+						file,
+						PosixFilePermissions.asFileAttribute(
+							Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE)
+						)
+					);
+				} else {
+					Files.createFile(file);
+				}
+			} else if (posix) {
+				// Tighten files written by older versions with default permissions.
+				Files.setPosixFilePermissions(
+					file,
+					Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE)
+				);
+			}
 			objectMapper.writeValue(file.toFile(), value);
 		} catch (IOException ex) {
 			throw new IllegalStateException("Could not write settings to " + file, ex);

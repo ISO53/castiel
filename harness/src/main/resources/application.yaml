@@ -2,6 +2,15 @@ server:
   port: 8081
   address: 127.0.0.1
 
+castiel:
+  auth:
+    # Opt-in via --auth; when false the API is open exactly as before.
+    enabled: false
+    # Sliding idle lifetime of a browser session.
+    session-idle: 24h
+    # Absolute lifetime; also the login cookie's Max-Age.
+    session-absolute: 30d
+
 spring:
   banner:
     charset: UTF-8

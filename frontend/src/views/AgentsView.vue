@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { Bot, ChevronDown, SquareX, Trash2 } from "@lucide/vue";
 import { marked } from "marked";
-import DOMPurify from "dompurify";
+import { sanitizeMarkdown } from "@/lib/sanitize";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/ui/button";
 import EmptyState from "@/components/EmptyState.vue";
@@ -131,7 +131,7 @@ const terminalStates = {
 // The summary is a finished string, not a stream, so it renders through the same
 // static path the chat view uses rather than the animated streaming renderer.
 const summaryHtml = computed(() =>
-	DOMPurify.sanitize(marked.parse(store.selectedSummary, { async: false })),
+	sanitizeMarkdown(marked.parse(store.selectedSummary, { async: false })),
 );
 </script>
 

@@ -1,5 +1,8 @@
 ﻿<template>
-	<div class="app">
+	<!-- Login gate: nothing mounts until the harness lets us in. -->
+	<AuthGate v-if="auth.needsLogin" />
+	<div v-else-if="!auth.ready" class="app" />
+	<div v-else class="app">
 		<MenuBar />
 
 		<ResizablePanelGroup direction="horizontal" class="flex-1 min-h-0">
@@ -53,6 +56,7 @@
 import { computed, markRaw } from "vue";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import DockBar from "@/components/DockBar.vue";
+import AuthGate from "@/components/AuthGate.vue";
 import ChatView from "@/views/ChatView.vue";
 import ChatHistoryPanel from "@/components/ChatHistoryPanel.vue";
 import FileTreeView from "@/components/FileTreeView.vue";
@@ -64,6 +68,7 @@ import TabbedView from "./views/TabbedView.vue";
 import SettingsDialog from "@/components/settings/SettingsDialog.vue";
 import { Toaster } from "@/components/ui/sonner";
 import { useChatsStore } from "@/stores/chats";
+import { useAuthStore } from "@/stores/auth";
 import { useDocksStore } from "@/stores/docks";
 import { useTabsStore } from "@/stores/tabs";
 import { useUpdateStore } from "@/stores/update";
@@ -88,6 +93,7 @@ export default {
 		ResizablePanelGroup,
 		ResizablePanel,
 		ResizableHandle,
+		AuthGate,
 		ChatView,
 		ChatHistoryPanel,
 		DockBar,
@@ -101,24 +107,33 @@ export default {
 	},
 	setup() {
 		const docks = useDocksStore();
+		const auth = useAuthStore();
 		// Docks render one registered view at a time.
 		const rightView = computed(() => RIGHT_DOCK_VIEWS[docks.rightView] ?? RIGHT_DOCK_VIEWS.chat);
 		const bottomView = computed(() => BOTTOM_DOCK_VIEWS[docks.bottomView] ?? BOTTOM_DOCK_VIEWS.processes);
-		// Startup update flow: feed, markers, optional auto-check. Fires once per launch.
-		useUpdateStore().init();
-		return { docks, rightView, bottomView };
+		return { docks, auth, rightView, bottomView };
 	},
-	mounted() {
-		// The onboarding tour opens once; it can be reopened from the Help menu.
-		if (!localStorage.getItem(ONBOARDING_SEEN_KEY)) {
-			useTabsStore().openTab({
-				value: "onboarding",
-				label: "Onboarding",
-				component: "OnboardingView",
-			});
+	data() {
+		return {
+			/** Guards the once-per-launch startup flow (update check + onboarding). */
+			appStarted: false,
+		};
+	},
+	async mounted() {
+		// Ask the harness about its --auth gate before anything mounts; also keeps
+		// watching window focus so a server-side session expiry re-locks the app.
+		await this.auth.start();
+		if (!this.auth.needsLogin) {
+			this.onUnlocked();
 		}
 	},
 	watch: {
+		"auth.needsLogin"(needed, was) {
+			if (was && !needed) {
+				// Just unlocked (login or restored session): start the app flows.
+				this.onUnlocked();
+			}
+		},
 		"docks.left"(isOpen) {
 			this.$nextTick(() => this.syncPanelState("leftDock", isOpen));
 		},
@@ -130,6 +145,24 @@ export default {
 		},
 	},
 	methods: {
+		// Runs exactly once per launch, right after the app first renders unlocked:
+		// the startup update flow and the first-run onboarding tour.
+		onUnlocked() {
+			if (this.appStarted) {
+				return;
+			}
+			this.appStarted = true;
+			// Startup update flow: feed, markers, optional auto-check.
+			useUpdateStore().init();
+			// The onboarding tour opens once; it can be reopened from the Help menu.
+			if (!localStorage.getItem(ONBOARDING_SEEN_KEY)) {
+				useTabsStore().openTab({
+					value: "onboarding",
+					label: "Onboarding",
+					component: "OnboardingView",
+				});
+			}
+		},
 		// ResizablePanel re-exposes the underlying SplitterPanel's API, so a ref
 		// on it gives us collapse/expand/isCollapsed.
 		syncPanelState(dockName, isOpen) {

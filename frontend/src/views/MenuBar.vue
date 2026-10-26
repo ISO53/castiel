@@ -17,6 +17,13 @@
 					<Plug />
 					<span>Open MCP Settings File</span>
 				</MenubarItem>
+				<template v-if="auth.enabled">
+					<MenubarSeparator />
+					<MenubarItem @click="signOut">
+						<LogOut />
+						<span>Sign out</span>
+					</MenubarItem>
+				</template>
 			</MenubarContent>
 		</MenubarMenu>
 
@@ -115,6 +122,7 @@ import {
 	History,
 	Info,
 	LayoutGrid,
+	LogOut,
 	MessageSquare,
 	Plug,
 	Settings,
@@ -124,6 +132,7 @@ import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarSeparator, Me
 import { ENGAGEMENT_PHASES, useEngagementStore } from "@/stores/engagement";
 import { useDocksStore } from "@/stores/docks";
 import { useMcpStore } from "@/stores/mcp";
+import { useAuthStore } from "@/stores/auth";
 import { useTabsStore } from "@/stores/tabs";
 import { useSettingsUiStore } from "@/stores/settingsUi";
 import { useWorkspaceStore } from "@/stores/workspace";
@@ -144,6 +153,7 @@ export default {
 		History,
 		Info,
 		LayoutGrid,
+		LogOut,
 		Menubar,
 		MenubarContent,
 		MenubarItem,
@@ -164,6 +174,7 @@ export default {
 			engagement: useEngagementStore(),
 			workspace: useWorkspaceStore(),
 			mcp: useMcpStore(),
+			auth: useAuthStore(),
 			docks: useDocksStore(),
 			workspaceDialogOpen: false,
 			workspaceMode: "open",
@@ -283,6 +294,10 @@ export default {
 		},
 		openSettings() {
 			this.settingsUi.show();
+		},
+		// Drops the harness session; App.vue swaps the whole app for the login gate.
+		async signOut() {
+			await this.auth.logout();
 		},
 	},
 };

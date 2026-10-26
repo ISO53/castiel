@@ -318,7 +318,7 @@ import { useWorkspaceStore } from "@/stores/workspace";
 import { useChatsStore } from "@/stores/chats";
 import { useDocksStore } from "@/stores/docks";
 import { providerLogo } from "@/lib/provider-logos";
-import DOMPurify from "dompurify";
+import { sanitizeMarkdown } from "@/lib/sanitize";
 import { marked } from "marked";
 
 const SETTINGS_API = `${window.location.origin}/api/settings`;
@@ -807,7 +807,7 @@ export default {
 			this.stopGeneration();
 		},
 		renderMarkdown(content) {
-			return DOMPurify.sanitize(marked.parse(content, { async: false }));
+			return sanitizeMarkdown(marked.parse(content, { async: false }));
 		},
 		// Splits assistant text into prose (markdown HTML) and fenced code segments so
 		// code blocks can be rendered with the CodeBlock component while streaming.
