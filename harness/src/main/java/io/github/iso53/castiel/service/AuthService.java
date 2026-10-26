@@ -2,6 +2,8 @@ package io.github.iso53.castiel.service;
 
 import io.github.iso53.castiel.util.AppPaths;
 import jakarta.annotation.PostConstruct;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -10,7 +12,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,16 +33,6 @@ public class AuthService {
 
 	private static final int MAX_LOGIN_FAILURES = 5;
 	private static final Duration LOCKOUT = Duration.ofSeconds(60);
-
-	// Addresses that mean "only reachable from this machine"; anything else with auth
-	// disabled draws a startup warning. 0.0.0.0 is deliberately not in this set.
-	private static final Set<String> LOOPBACK_BINDS = Set.of(
-		"127.0.0.1",
-		"localhost",
-		"::1",
-		"[::1]",
-		"0:0:0:0:0:0:0:1"
-	);
 
 	// SHA-256 of the token; comparison is constant-time on the digests so neither the
 	// token value nor its length leaks through timing.
@@ -79,7 +70,7 @@ public class AuthService {
 	@PostConstruct
 	void init() {
 		if (!enabled) {
-			warnWhenExposed();
+			refuseWhenExposed();
 			return;
 		}
 		AuthStore.LoadedToken stored = AuthStore.loadOrCreate();
@@ -182,16 +173,31 @@ public class AuthService {
 	}
 
 	// Auth disabled plus a non-loopback bind is the classic footgun: the API runs
-	// arbitrary commands, so exposure without the gate must be loud.
-	private void warnWhenExposed() {
+	// arbitrary commands, so exposure without the gate must not boot at all. The CLI
+	// already refuses --bind without --auth; this boot-time check covers overrides
+	// that bypass the command line (e.g. the SERVER_ADDRESS environment variable).
+	private void refuseWhenExposed() {
 		String address = env.getProperty("server.address");
-		if (address == null || address.isBlank() || LOOPBACK_BINDS.contains(address.toLowerCase())) {
+		if (address == null || address.isBlank()) {
 			return;
 		}
-		log.warn(
-			"Auth is disabled and castiel binds to {} - anyone who can reach this address can run commands on this machine. Start with --auth to require token authentication.",
-			address
-		);
+		boolean loopback;
+		try {
+			loopback = InetAddress.getByName(address).isLoopbackAddress();
+		} catch (UnknownHostException ex) {
+			// Unresolvable addresses cannot bind either; let the server start fail on its own.
+			loopback = true;
+		}
+		if (loopback) {
+			return;
+		}
+		String message =
+			"Auth is disabled and castiel binds to " +
+			address +
+			" - anyone who can reach this address can " +
+			"run commands on this machine. Start with --auth, or keep the default localhost bind.";
+		log.error(message);
+		throw new IllegalStateException(message);
 	}
 
 	private static byte[] sha256(String value) {

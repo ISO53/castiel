@@ -6,6 +6,8 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -41,7 +43,7 @@ public final class CastielCommand implements Callable<Integer> {
 	private boolean auth;
 
 	/** Overrides the bind address from application.yaml (default 127.0.0.1). */
-	@Option(names = "--bind", paramLabel = "ADDR", description = "Network address to bind (default: 127.0.0.1). Bind beyond localhost only together with --auth.")
+	@Option(names = "--bind", paramLabel = "ADDR", description = "Network address to bind (default: 127.0.0.1). Binding beyond localhost is only allowed together with --auth and is rejected otherwise.")
 	private String bind;
 
 	/** Prints the auth token and exits. */
@@ -87,6 +89,25 @@ public final class CastielCommand implements Callable<Integer> {
 			&& !cli.resetToken
 			&& !commandLine.isUsageHelpRequested()
 			&& !commandLine.isVersionHelpRequested();
+
+		// Fail fast on the exposed-and-unauthenticated combination: the API can run
+		// arbitrary commands, so binding beyond localhost without --auth must not boot.
+		if (boot && cli.bind != null && !cli.bind.isBlank() && !cli.auth) {
+			boolean loopback;
+			try {
+				loopback = InetAddress.getByName(cli.bind.trim()).isLoopbackAddress();
+			} catch (UnknownHostException ex) {
+				// Unresolvable addresses cannot bind either; skip the gate.
+				loopback = true;
+			}
+			if (!loopback) {
+				System.err.println(
+						"--bind " + cli.bind.trim() + ": binding beyond localhost requires --auth; without it anyone "
+						+ "who can reach this address can run commands on this machine. Start with --auth, or keep "
+						+ "the default localhost bind.");
+				return new ParseResult(false, 2, cli);
+			}
+		}
 		return new ParseResult(boot, exitCode, cli);
 	}
 
