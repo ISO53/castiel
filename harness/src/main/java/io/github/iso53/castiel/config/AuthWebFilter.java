@@ -5,10 +5,12 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -24,10 +26,12 @@ import org.springframework.web.util.pattern.PathPatternParser;
 import reactor.core.publisher.Mono;
 
 /**
- * Opt-in API gate for {@code --auth}: every {@code /api/**} request must carry a valid
- * session cookie (browser flow) or the bearer token (scripting). Static UI assets stay
- * open; they hold no secrets and the login screen has to be reachable. When auth is
- * disabled the filter is a pass-through, so local runs behave exactly as before.
+ * Two envelope gates run for every request, with and without {@code --auth}:
+ * the {@code Host} header must name this app (defeats DNS rebinding), and
+ * command-sending browser requests must come from this app's own origin.
+ * With auth on, {@code /api/**} additionally needs a valid session cookie
+ * (browser flow) or the bearer token (scripting). Static UI assets stay open;
+ * they hold no secrets and the login screen has to be reachable.
  */
 public class AuthWebFilter implements WebFilter {
 
@@ -43,8 +47,8 @@ public class AuthWebFilter implements WebFilter {
 		HttpMethod.PATCH
 	);
 
-	// Hosts accepted by the cross-origin check beyond the request's own Host header;
-	// local development through the Vite proxy always counts as same-origin.
+	// Host names that mean "this machine"; anything else in the Host header is the
+	// fingerprint of DNS rebinding.
 	private static final Set<String> LOOPBACK_HOSTS = Set.of(
 		"localhost",
 		"127.0.0.1",
@@ -61,18 +65,54 @@ public class AuthWebFilter implements WebFilter {
 
 	private final AuthService auth;
 
-	public AuthWebFilter(AuthService auth) {
+	/** Host names the Host header may present, lowercase. */
+	private final Set<String> allowedHosts;
+
+	/** Whether the bind address covers every interface (there, --auth guards instead). */
+	private final boolean wildcardBind;
+
+	public AuthWebFilter(AuthService auth, Environment env) {
 		this.auth = auth;
+		Set<String> hosts = new HashSet<>();
+		for (String name : LOOPBACK_HOSTS) {
+			hosts.add(name.toLowerCase(Locale.ROOT));
+		}
+		// Proxy deployments present a foreign Host name (e.g. machine.tailnet.ts.net
+		// behind `tailscale serve`); those are opted into explicitly.
+		String extra = env.getProperty("castiel.web.allowed-hosts");
+		if (extra != null && !extra.isBlank()) {
+			for (String name : extra.split(",")) {
+				if (!name.isBlank()) {
+					hosts.add(name.trim().toLowerCase(Locale.ROOT));
+				}
+			}
+		}
+		String bind = env.getProperty("server.address", "").trim();
+		this.wildcardBind = bind.isBlank() || bind.equals("0.0.0.0") || bind.equals("::");
+		if (!wildcardBind) {
+			hosts.add(bind.toLowerCase(Locale.ROOT));
+		}
+		this.allowedHosts = Set.copyOf(hosts);
 	}
 
 	@Override
 	public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+		ServerHttpRequest request = exchange.getRequest();
+		// First gate, both auth modes: is the envelope addressed to this app at all?
+		if (!isAllowedHost(request)) {
+			log.warn("Rejected request with unexpected Host header {}", request.getHeaders().getHost());
+			return deny(exchange, HttpStatus.FORBIDDEN, "unexpected host header");
+		}
 		if (!auth.enabled()) {
+			// No credential is needed, so a browser page must still prove it is this
+			// app's own UI: command-sending requests from other origins are turned away.
+			if (MUTATING.contains(request.getMethod()) && !isOwnOrigin(request)) {
+				log.warn("Rejected cross-origin {} {}", request.getMethod(), request.getPath().value());
+				return deny(exchange, HttpStatus.FORBIDDEN, "cross-origin request rejected");
+			}
 			return chain.filter(exchange);
 		}
-		ServerHttpRequest request = exchange.getRequest();
-		// Raw (undecoded) path; kept only for log output.
-		String path = request.getPath().value();
+		String path = request.getPath().value(); // raw (undecoded) path; log output only
 		if (!API_PATTERN.matches(request.getPath())) {
 			return chain.filter(exchange);
 		}
@@ -89,7 +129,7 @@ public class AuthWebFilter implements WebFilter {
 		if (sessionId != null && auth.validateSession(sessionId)) {
 			// SameSite=Strict already blocks cross-site cookie sends; the origin check
 			// is the second line (e.g. against DNS rebinding onto 127.0.0.1).
-			if (MUTATING.contains(request.getMethod()) && !sameOrigin(request)) {
+			if (MUTATING.contains(request.getMethod()) && !isOwnOrigin(request)) {
 				log.warn("Rejected cross-origin {} {} with a session cookie", request.getMethod(), path);
 				return deny(exchange, HttpStatus.FORBIDDEN, "cross-origin request rejected");
 			}
@@ -133,12 +173,30 @@ public class AuthWebFilter implements WebFilter {
 	}
 
 	/**
-	 * Compares the Origin (fallback: Referer) host against the request's Host header,
-	 * an X-Forwarded-Host, or a loopback spelling. Requests without origin information
-	 * pass: non-browser clients legitimately omit it, and SameSite=Strict still guards
-	 * the cookie.
+	 * The Host header's host part (without port) must name this app: a loopback
+	 * spelling, the configured bind address, or an entry in
+	 * {@code castiel.web.allowed-hosts}. A wildcard bind covers every interface, so
+	 * any spelling is legitimate there and {@code --auth} guards the API instead.
 	 */
-	private boolean sameOrigin(ServerHttpRequest request) {
+	private boolean isAllowedHost(ServerHttpRequest request) {
+		if (wildcardBind) {
+			return true;
+		}
+		InetSocketAddress host = request.getHeaders().getHost();
+		if (host == null) {
+			return false;
+		}
+		return allowedHosts.contains(hostName(host));
+	}
+
+	/**
+	 * Browser-fired requests always carry an Origin (fallback: Referer) naming the
+	 * page that sent them, and pages cannot forge that header; it must be this app's
+	 * own address. Requests without origin information pass: non-browser clients
+	 * legitimately omit it. Only the host and port are compared - the scheme is left
+	 * out because TLS-terminating proxies make the request's own scheme unreliable.
+	 */
+	private boolean isOwnOrigin(ServerHttpRequest request) {
 		String candidate = request.getHeaders().getFirst(HttpHeaders.ORIGIN);
 		if (candidate == null || candidate.isBlank()) {
 			candidate = request.getHeaders().getFirst(HttpHeaders.REFERER);
@@ -157,16 +215,32 @@ public class AuthWebFilter implements WebFilter {
 			return false;
 		}
 		InetSocketAddress hostHeader = request.getHeaders().getHost();
-		String forwardedHost = request.getHeaders().getFirst("X-Forwarded-Host");
-		return (
-			matches(host, hostHeader == null ? null : hostHeader.getHostString()) ||
-			matches(host, forwardedHost) ||
-			LOOPBACK_HOSTS.contains(host.toLowerCase(Locale.ROOT))
-		);
+		if (hostHeader == null || !host.equalsIgnoreCase(hostName(hostHeader))) {
+			return false;
+		}
+		int originPort = origin.getPort() != -1 ? origin.getPort() : defaultPort(origin.getScheme());
+		int hostPort = hostHeader.getPort();
+		if (hostPort != -1) {
+			return originPort == hostPort;
+		}
+		// Host without a port: only a match when the origin rides the request's own
+		// default port.
+		int requestPort =
+			request.getURI().getPort() != -1 ? request.getURI().getPort() : defaultPort(request.getURI().getScheme());
+		return originPort == requestPort;
 	}
 
-	private static boolean matches(String originHost, String candidate) {
-		return candidate != null && originHost.equalsIgnoreCase(candidate);
+	/** Lowercased host name of the Host header, without the IPv6 brackets. */
+	private static String hostName(InetSocketAddress host) {
+		String name = host.getHostString().toLowerCase(Locale.ROOT);
+		if (name.startsWith("[") && name.endsWith("]")) {
+			name = name.substring(1, name.length() - 1);
+		}
+		return name;
+	}
+
+	private static int defaultPort(String scheme) {
+		return "https".equalsIgnoreCase(scheme) ? 443 : 80;
 	}
 
 	private Mono<Void> deny(ServerWebExchange exchange, HttpStatus status, String message) {
