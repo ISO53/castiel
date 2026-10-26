@@ -1,5 +1,6 @@
 package io.github.iso53.castiel.cli;
 
+import io.github.iso53.castiel.service.AuthStore;
 import io.github.iso53.castiel.update.UpdateCli;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -35,6 +36,22 @@ public final class CastielCommand implements Callable<Integer> {
 	@Option(names = "--check-update", description = "Compare this build with the latest GitHub release and install a newer one.")
 	private boolean checkUpdate;
 
+	/** Requires token authentication for every API call. */
+	@Option(names = "--auth", description = "Require token authentication for every API call. Recommended whenever castiel is reachable beyond localhost.")
+	private boolean auth;
+
+	/** Overrides the bind address from application.yaml (default 127.0.0.1). */
+	@Option(names = "--bind", paramLabel = "ADDR", description = "Network address to bind (default: 127.0.0.1). Bind beyond localhost only together with --auth.")
+	private String bind;
+
+	/** Prints the auth token and exits. */
+	@Option(names = "--show-token", description = "Print the --auth access token and exit.")
+	private boolean showToken;
+
+	/** Replaces the auth token and exits. */
+	@Option(names = "--reset-token", description = "Replace the --auth access token and exit. Takes effect on the next start, which also drops open sessions.")
+	private boolean resetToken;
+
 	/** Overrides the HTTP port from application.yaml (default 8081). */
 	@Option(names = { "--port", "-p" }, paramLabel = "PORT", description = "HTTP port to listen on (default: 8081).", converter = CastielCommand.PortConverter.class)
 	private Integer port;
@@ -66,6 +83,8 @@ public final class CastielCommand implements Callable<Integer> {
 		int exitCode = commandLine.execute(args);
 		boolean boot = exitCode == 0
 			&& !cli.checkUpdate
+			&& !cli.showToken
+			&& !cli.resetToken
 			&& !commandLine.isUsageHelpRequested()
 			&& !commandLine.isVersionHelpRequested();
 		return new ParseResult(boot, exitCode, cli);
@@ -80,6 +99,12 @@ public final class CastielCommand implements Callable<Integer> {
 		if (debug) {
 			overrides.put("spring.profiles.active", "debug");
 		}
+		if (auth) {
+			overrides.put("castiel.auth.enabled", "true");
+		}
+		if (bind != null && !bind.isBlank()) {
+			overrides.put("server.address", bind.trim());
+		}
 		if (port != null) {
 			overrides.put("server.port", String.valueOf(port));
 		}
@@ -91,11 +116,38 @@ public final class CastielCommand implements Callable<Integer> {
 
 	@Override
 	public Integer call() {
+		if (showToken) {
+			// Terminal flow: prints the stored token, no Spring boot follows.
+			return showToken();
+		}
+		if (resetToken) {
+			// Terminal flow: replaces the token, no Spring boot follows.
+			return resetToken();
+		}
 		if (checkUpdate) {
 			// A dedicated flow that owns the terminal; a normal boot never follows it.
 			return UpdateCli.run();
 		}
 		// Normal boot: Spring takes over after this returns 0.
+		return 0;
+	}
+
+	/** Prints the stored auth token; used when the first-boot log line got lost. */
+	private int showToken() {
+		String token = AuthStore.load();
+		if (token == null) {
+			System.out.println("No auth token yet: start castiel once with --auth to initialize it.");
+			return 1;
+		}
+		System.out.println(token);
+		return 0;
+	}
+
+	/** Replaces the auth token; takes effect on the next start, which also drops open sessions. */
+	private int resetToken() {
+		String token = AuthStore.reset();
+		System.out.println("New auth token: " + token);
+		System.out.println("Restart castiel so the new token takes effect; existing sessions are dropped on restart.");
 		return 0;
 	}
 

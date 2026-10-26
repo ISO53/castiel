@@ -6,6 +6,7 @@ import org.springframework.boot.web.server.context.WebServerInitializedEvent;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsWebFilter;
@@ -32,6 +33,7 @@ public class WebConfig {
     }
 
     @Bean
+    @Order(-100) // CORS answers browser preflights before the auth gate sees them.
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
         corsConfig.setAllowedOrigins(localUiOrigins());
@@ -39,7 +41,7 @@ public class WebConfig {
         corsConfig.setAllowedHeaders(List.of("*"));
         corsConfig.setAllowCredentials(false);
         corsConfig.setMaxAge(3600L);
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfig);
 

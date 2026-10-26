@@ -84,8 +84,8 @@ public class FileExplorerController {
 			boolean inline = isInlineSafe(mediaType);
 			return ResponseEntity.ok()
 				.header(HttpHeaders.CONTENT_DISPOSITION, disposition(file.name(), inline))
-				.header(HttpHeaders.CONTENT_SECURITY_POLICY, "sandbox")
-				.header(HttpHeaders.X_CONTENT_TYPE_OPTIONS, "nosniff")
+				.header("Content-Security-Policy", "sandbox")
+				.header("X-Content-Type-Options", "nosniff")
 				.contentType(inline ? mediaType : MediaType.APPLICATION_OCTET_STREAM)
 				.body(file.bytes());
 		} catch (IllegalArgumentException ex) {
