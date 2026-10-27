@@ -36,7 +36,7 @@ public class EngagementService {
 		"No active testing. Discuss the target, scope, objectives, and rules with the user;"
 			+ " passive OSINT from third-party sources only, no traffic to the target.",
 		"Information gathering is open. Interact with in-scope targets freely and fill in"
-			+ " network.json, web.json, and identity.json.",
+			+ " network.json and web.json",
 		"Probe in-scope targets for weaknesses using the recon data; record each issue in"
 			+ " vulnerabilities.json. Never write a CVSS score yourself: after recording a"
 			+ " finding, call cvss_score with a CVSS v4.0 and a CVSS v3.1 vector for it.",
