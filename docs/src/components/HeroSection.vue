@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { withBase } from "vitepress";
 import { Check, Copy } from "@lucide/vue";
 import MeshGradient from "@/components/MeshGradient.vue";
 import heroPreset from "@/studio/hero-preset.json";
@@ -183,7 +184,7 @@ onBeforeUnmount(() => {
 					</div>
 					<p class="install-hint">
 						installs the latest release ·
-						<RouterLink to="/#install">all install options</RouterLink>
+						<a :href="withBase('/#install')">all install options</a>
 					</p>
 				</div>
 			</div>

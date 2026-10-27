@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, ref } from "vue";
+import { withBase } from "vitepress";
 import { Star, Download } from "@lucide/vue";
 import logoUrl from "@/assets/castiel-logo.svg";
 import githubUrl from "@/assets/github.svg";
@@ -33,9 +34,9 @@ onMounted(async () => {
 	<header class="navbar">
 		<nav class="nav-inner container">
 			<div class="nav-left">
-				<RouterLink to="/" class="nav-brand" aria-label="castiel home">
+				<a :href="withBase('/')" class="nav-brand" aria-label="castiel home">
 					<img :src="logoUrl" alt="castiel" class="nav-logo" />
-				</RouterLink>
+				</a>
 			</div>
 
 			<div class="nav-links">
@@ -47,7 +48,7 @@ onMounted(async () => {
 				>
 					Docs
 				</a>
-				<RouterLink to="/#install" class="nav-link">Install</RouterLink>
+				<a :href="withBase('/#install')" class="nav-link">Install</a>
 				<a
 					class="nav-link"
 					href="https://github.com/ISO53/castiel/releases"
@@ -69,10 +70,10 @@ onMounted(async () => {
 					<Star class="nav-star-icon" aria-hidden="true" />
 					<span class="nav-star-count">{{ starCount !== null ? formatCount(starCount) : "Stars" }}</span>
 				</a>
-				<RouterLink to="/#install" class="nav-button primary">
+				<a :href="withBase('/#install')" class="nav-button primary">
 					<Download class="nav-download-icon" aria-hidden="true" />
 					<span>Download</span>
-				</RouterLink>
+				</a>
 			</div>
 		</nav>
 	</header>
