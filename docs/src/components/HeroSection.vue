@@ -89,7 +89,7 @@ const LOG_LINES = [
 	{
 		time: "21:31:27.913",
 		logger: "i.g.i.castiel.service.KaliToolCatalog",
-		msg: "Loaded 754 Kali tools and indexed in 2272 ms",
+		msg: "Loaded 754 Kali tools and indexed in 172 ms",
 	},
 	{
 		time: "21:31:29.214",
@@ -99,7 +99,7 @@ const LOG_LINES = [
 	{
 		time: "21:31:29.222",
 		logger: "i.g.iso53.castiel.CastielApplication",
-		msg: "Started CastielApplication in 9.445 seconds (process running for 11.994)",
+		msg: "Started CastielApplication in 1.445 seconds (process running for 2.994)",
 	},
 ];
 
@@ -614,7 +614,3 @@ onBeforeUnmount(() => {
 }
 
 </style>
-
-
-
-

@@ -1,13 +1,12 @@
 <script setup>
-import { computed, onBeforeUnmount, ref } from "vue";
-import { Check, Copy } from "@lucide/vue";
+import { computed, ref } from "vue";
 
-// Installation methods. Each step maps to the terminal command shown for the
-// selected OS; hovering a step switches the terminal to that step's command.
+// Installation methods. The OS tabs switch the download asset, hint and
+// one-liner command shown below.
 const OS_LIST = [
-	{ id: "windows", label: "Windows", shell: "PowerShell" },
-	{ id: "linux", label: "Linux", shell: "bash" },
-	{ id: "macos", label: "macOS", shell: "zsh" },
+	{ id: "windows", label: "Windows" },
+	{ id: "linux", label: "Linux" },
+	{ id: "macos", label: "macOS" },
 ];
 
 // Version-less asset names keep these URLs stable across releases.
@@ -38,66 +37,9 @@ function detectOs() {
 	return "windows";
 }
 
-const BUILD_STEPS = [
-	{
-		title: "Clone the repository",
-		text: "The whole project. Harness, UI and website lives in one repo on",
-		linkText: "GitHub",
-		trail: ".",
-		href: "https://github.com/ISO53/castiel",
-		commands: {
-			windows: "git clone https://github.com/ISO53/castiel.git",
-			linux: "git clone https://github.com/ISO53/castiel.git",
-			macos: "git clone https://github.com/ISO53/castiel.git",
-		},
-	},
-	{
-		title: "Run the packaging script for your OS",
-		text: "Builds the UI, packages the harness and produces a self-contained app image (launcher + bundled runtime) in packaging/dist.",
-		commands: {
-			windows: "cd castiel/packaging; .\\package-windows.ps1",
-			linux: "cd castiel/packaging && chmod +x package-linux.sh && ./package-linux.sh",
-			macos: "cd castiel/packaging && chmod +x package-macos.sh && ./package-macos.sh",
-		},
-	},
-	{
-		title: "Run your build",
-		text: "Open http://localhost:8081 and start working.",
-		commands: {
-			windows: ".\\dist\\castiel\\castiel.exe",
-			linux: "./dist/castiel/castiel",
-			macos: "open dist/castiel/castiel.app",
-		},
-	},
-];
-
 const activeOs = ref(detectOs());
-const buildOs = ref(detectOs());
-const activeStep = ref(0);
-const copied = ref(false);
 
 const activeDownload = computed(() => DOWNLOADS[activeOs.value]);
-const currentCommand = computed(
-	() => BUILD_STEPS[activeStep.value]?.commands[buildOs.value] ?? "",
-);
-const currentShell = computed(
-	() => OS_LIST.find((entry) => entry.id === buildOs.value)?.shell ?? "",
-);
-
-let copiedTimer = null;
-
-async function copyCommands() {
-	try {
-		await navigator.clipboard.writeText(currentCommand.value);
-		copied.value = true;
-		clearTimeout(copiedTimer);
-		copiedTimer = setTimeout(() => (copied.value = false), 1600);
-	} catch {
-		// Clipboard unavailable (permissions/insecure context) — ignore.
-	}
-}
-
-onBeforeUnmount(() => clearTimeout(copiedTimer));
 </script>
 
 <template>
@@ -134,64 +76,6 @@ onBeforeUnmount(() => clearTimeout(copiedTimer));
 			<p class="download-hint">{{ activeDownload.hint }}</p>
 		</div>
 	</section>
-
-	<section id="build" class="build container">
-		<div class="install-header">
-			<h2 class="install-title">Build locally</h2>
-			<p class="install-sub">Build it yourself from source.</p>
-		</div>
-
-		<div class="install-grid">
-			<div class="install-steps">
-				<ol>
-					<li
-						v-for="(step, index) in BUILD_STEPS"
-						:key="step.title"
-						class="install-step"
-						:class="{ active: index === activeStep }"
-						@mouseenter="activeStep = index"
-						@click="activeStep = index"
-					>
-						<span class="install-step-num">{{ String(index + 1).padStart(2, "0") }}</span>
-						<div>
-							<h3 class="install-step-title">{{ step.title }}</h3>
-							<p class="install-step-text">
-								{{ step.text }}
-								<a v-if="step.href" :href="step.href" target="_blank" rel="noopener">{{ step.linkText }}</a>{{ step.trail }}
-							</p>
-						</div>
-					</li>
-				</ol>
-				<p class="install-requirements">Requires Java 25+, Maven and Node.js 22+.</p>
-			</div>
-
-			<div class="install-terminal">
-				<div class="terminal-bar">
-					<span class="terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-					<span class="terminal-title">{{ currentShell }}</span>
-					<div class="terminal-os" role="group" aria-label="Target operating system">
-						<button
-							v-for="entry in OS_LIST"
-							:key="entry.id"
-							type="button"
-							class="terminal-os-btn"
-							:class="{ active: entry.id === buildOs }"
-							:aria-pressed="entry.id === buildOs"
-							@click="buildOs = entry.id"
-						>
-							{{ entry.label }}
-						</button>
-					</div>
-					<button class="terminal-copy" type="button" @click="copyCommands">
-						<Check v-if="copied" class="terminal-copy-icon" aria-hidden="true" />
-						<Copy v-else class="terminal-copy-icon" aria-hidden="true" />
-						<span>{{ copied ? "Copied" : "Copy" }}</span>
-					</button>
-				</div>
-				<pre class="terminal-body"><code>{{ currentCommand }}</code></pre>
-			</div>
-		</div>
-	</section>
 </template>
 
 <style scoped>
@@ -199,11 +83,6 @@ onBeforeUnmount(() => clearTimeout(copiedTimer));
 	margin-block: 0 6rem;
 	scroll-margin-top: 5rem;
 	text-align: center;
-}
-
-.build {
-	margin-block: 0 6rem;
-	scroll-margin-top: 5rem;
 }
 
 .download-actions {
@@ -284,205 +163,5 @@ onBeforeUnmount(() => clearTimeout(copiedTimer));
 	border-color: var(--border);
 	background: var(--bg);
 	color: var(--fg);
-}
-
-.install-grid {
-	display: grid;
-	grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-	gap: 2rem;
-	align-items: start;
-}
-
-/* Left column — numbered steps */
-.install-steps ol {
-	display: flex;
-	flex-direction: column;
-	gap: 1.25rem;
-	margin: 0;
-	padding: 0;
-	list-style: none;
-}
-
-.install-steps li {
-	display: flex;
-	gap: 0.875rem;
-	cursor: default;
-}
-
-.install-step-num {
-	padding-top: 0.1rem;
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-	font-size: 0.75rem;
-	color: var(--faint);
-	transition: color 0.15s ease;
-}
-
-.install-step.active .install-step-num {
-	color: var(--fg);
-}
-
-.install-step-title {
-	margin: 0 0 0.25rem;
-	font-size: 0.95rem;
-	font-weight: 600;
-	color: var(--fg);
-	transition: color 0.15s ease;
-}
-
-.install-step:not(.active) .install-step-title {
-	color: var(--muted);
-}
-
-.install-step-text {
-	margin: 0;
-	font-size: 0.9rem;
-	line-height: 1.65;
-	color: var(--muted);
-}
-
-.install-step-text a {
-	color: var(--fg);
-	text-decoration: underline;
-	text-decoration-color: var(--border);
-	text-underline-offset: 3px;
-	transition: text-decoration-color 0.15s ease;
-}
-
-.install-step-text a::after {
-	content: "↗";
-	margin-left: 0.2em;
-	font-size: 0.8em;
-}
-
-.install-step-text a:hover {
-	text-decoration-color: var(--fg);
-}
-
-.install-requirements {
-	margin: 1.75rem 0 0;
-	font-size: 0.8rem;
-	color: var(--faint);
-}
-
-/* Right column — terminal (tokens echo the app-preview mock) */
-.install-terminal {
-	/* Mock-app tokens copied verbatim from preview.css. */
-	--t-background: oklch(0.145 0 0);
-	--t-foreground: oklch(0.985 0 0);
-	--t-card: oklch(0.205 0 0);
-	--t-muted-foreground: oklch(0.708 0 0);
-	--t-border: oklch(1 0 0 / 10%);
-	border: 1px solid var(--t-border);
-	border-radius: 0.75rem;
-	background: var(--t-background);
-	overflow: hidden;
-	box-shadow:
-		0 1px 2px oklch(0 0 0 / 40%),
-		0 24px 64px oklch(0 0 0 / 55%);
-	font-family: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-}
-
-.terminal-bar {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-	padding: 0.6rem 0.875rem;
-	border-bottom: 1px solid var(--t-border);
-	background: var(--t-card);
-}
-
-.terminal-dots {
-	display: flex;
-	gap: 0.4rem;
-}
-
-.terminal-dots i {
-	width: 0.6rem;
-	height: 0.6rem;
-	border-radius: 999px;
-	background: color-mix(in srgb, var(--t-foreground) 14%, transparent);
-}
-
-.terminal-title {
-	font-size: 0.72rem;
-	font-weight: 500;
-	color: var(--t-muted-foreground);
-}
-
-.terminal-os {
-	display: inline-flex;
-	gap: 0.15rem;
-	margin-left: auto;
-	padding: 0.15rem;
-	border: 1px solid var(--t-border);
-	border-radius: 6px;
-}
-
-.terminal-os-btn {
-	padding: 0.15rem 0.5rem;
-	border: none;
-	border-radius: 4px;
-	background: none;
-	color: var(--t-muted-foreground);
-	font-size: 0.68rem;
-	font-weight: 500;
-	font-family: inherit;
-	cursor: pointer;
-	transition:
-		background-color 0.15s ease,
-		color 0.15s ease;
-}
-
-.terminal-os-btn:hover {
-	color: var(--t-foreground);
-}
-
-.terminal-os-btn.active {
-	background: color-mix(in srgb, var(--t-foreground) 12%, transparent);
-	color: var(--t-foreground);
-}
-
-.terminal-copy {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.3rem;
-	border: none;
-	background: none;
-	padding: 0.1rem 0.2rem;
-	color: var(--t-muted-foreground);
-	font-size: 0.7rem;
-	font-weight: 500;
-	font-family: inherit;
-	cursor: pointer;
-	transition: color 0.15s ease;
-}
-
-.terminal-copy:hover {
-	color: var(--t-foreground);
-}
-
-.terminal-copy-icon {
-	width: 0.8rem;
-	height: 0.8rem;
-}
-
-.terminal-body {
-	margin: 0;
-	padding: 1rem 1.1rem;
-	overflow-x: auto;
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-	font-size: 0.78rem;
-	line-height: 1.7;
-	color: var(--t-foreground);
-	white-space: pre;
-	scrollbar-width: thin;
-	scrollbar-color: var(--t-muted-foreground) transparent;
-}
-
-@media (max-width: 860px) {
-	.install-grid {
-		grid-template-columns: 1fr;
-		gap: 1.5rem;
-	}
 }
 </style>
