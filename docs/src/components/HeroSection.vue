@@ -204,15 +204,21 @@ onBeforeUnmount(() => {
 							>▌</span>
 						</p>
 						<pre
-							v-if="bannerVisible"
-							class="term-art term-enter"
+							class="term-art"
+							:class="{ 'term-enter': bannerVisible }"
+							:style="{ visibility: bannerVisible ? 'visible' : 'hidden' }"
 							aria-hidden="true"
 							v-html="BANNER_HTML"
 						/>
+						<!--
+							Every log line is mounted from the start but hidden, so the terminal
+							keeps its final height from the first paint; lines appear in place.
+						-->
 						<p
-							v-for="log in LOG_LINES.slice(0, visibleLogCount)"
+							v-for="(log, index) in LOG_LINES"
 							:key="log.time + log.msg"
-							class="term-log term-enter"
+							class="term-log"
+							:style="{ visibility: index < visibleLogCount ? 'visible' : 'hidden' }"
 						>
 							<span class="t-time">{{ log.time }}</span>
 							<span class="t-info"> INFO </span>
@@ -223,8 +229,8 @@ onBeforeUnmount(() => {
 							<span class="t-msg">{{ log.msg }}</span>
 						</p>
 						<p
-							v-if="visibleLogCount === LOG_LINES.length"
 							class="term-line term-caret"
+							:style="{ visibility: visibleLogCount === LOG_LINES.length ? 'visible' : 'hidden' }"
 						>▌</p>
 					</div>
 				</div>
