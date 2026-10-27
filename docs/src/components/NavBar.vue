@@ -40,12 +40,7 @@ onMounted(async () => {
 			</div>
 
 			<div class="nav-links">
-				<a
-					class="nav-link"
-					href="https://github.com/ISO53/castiel#readme"
-					target="_blank"
-					rel="noopener"
-				>
+				<a :href="withBase('/guide/')" class="nav-link">
 					Docs
 				</a>
 				<a :href="withBase('/#install')" class="nav-link">Install</a>

@@ -9,9 +9,11 @@
 	--vp-c-bg-elv: #0a0a0a;
 	--vp-c-bg-soft: #0a0a0a;
 
-	--vp-c-text-1: #ededed;
-	--vp-c-text-2: #a1a1a1;
-	--vp-c-text-3: #6b6b6b;
+	/* Greyed-off text ramp: sentences sit in a dimmer mid-grey on the black page;
+	   headers carry the white instead (see the rule below). */
+	--vp-c-text-1: #9a9a9a;
+	--vp-c-text-2: #787878;
+	--vp-c-text-3: #565656;
 
 	--vp-c-brand-1: #c10007;
 	--vp-c-brand-2: #e0161e;
@@ -21,6 +23,15 @@
 	--vp-c-border: #222222;
 	--vp-c-divider: #222222;
 	--vp-c-gutter: #222222;
+
+	/* Inline code: a muted red accent instead of full-strength brand red, on a
+	   barely-raised chip so it doesn't glow on the black page. */
+	--vp-code-color: #de8288;
+	--vp-code-bg: #141414;
+
+	/* Code blocks sit on the same near-black as the page, with a dim lang tag. */
+	--vp-code-block-bg: #0a0a0a;
+	--vp-code-lang-color: rgba(212, 212, 212, 0.4);
 
 	--vp-font-family-base:
 		"Geist Variable",
@@ -34,6 +45,66 @@
 	--vp-font-family-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
 	--vp-nav-bg-color: rgba(0, 0, 0, 0.55);
+}
+
+/* main.css (the landing page's global sheet) loads after the VitePress theme
+   and sets body { color: var(--fg) } with a near-white --fg — which is what
+   doc sentences actually inherit. Point body at the VitePress text ramp
+   instead, and restore the SPA palette for the landing page only via the
+   .landing wrapper in LandingLayout.vue. */
+body {
+	color: var(--vp-c-text-1);
+}
+
+.landing {
+	color: var(--fg);
+}
+
+/* Navbar: the same frosted glass as the landing page's NavBar — translucent
+   black with a blur, so content scrolling under it stays readable. !important
+   is needed because the default theme flips the navbar between transparent
+   (top of page) and opaque (scrolled) states with higher-specificity rules. */
+.VPNavBar {
+	background-color: rgba(0, 0, 0, 0.55) !important;
+	backdrop-filter: blur(14px) saturate(1.2) !important;
+	-webkit-backdrop-filter: blur(14px) saturate(1.2) !important;
+}
+
+/* Headers are the only near-white text on the page. */
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3,
+.vp-doc h4,
+.vp-doc h5,
+.vp-doc h6 {
+	color: #ffffff;
+}
+
+/* Scrollbars blend into the black page instead of glaring white.
+   WebKit/Blink engines plus the standard scrollbar-color for Firefox. */
+* {
+	scrollbar-color: #2a2a2a transparent;
+}
+
+::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+	background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+	background-color: #2a2a2a;
+	border-radius: 8px;
+	border: 2px solid transparent;
+	background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background-color: #3a3a3a;
+}
+
+::-webkit-scrollbar-corner {
+	background-color: transparent;
 }
 
 ::selection {

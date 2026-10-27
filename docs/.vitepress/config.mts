@@ -17,12 +17,61 @@ export default defineConfig({
 	// Keep the output at docs/dist so the existing GitHub Pages workflow
 	// (which uploads docs/dist) keeps working unchanged.
 	outDir: "dist",
+	// Code blocks: VitePress's default palette assumes a gray surface, not pure
+	// black, and its saturated tokens read as garish on this site. Use the muted
+	// vitesse-dark theme for both modes (appearance is disabled) so tokens stay
+	// CSS-variable driven and easy to tune in custom.css.
+	markdown: {
+		theme: { light: "vitesse-dark", dark: "vitesse-dark" },
+	},
+	lastUpdated: true,
 	themeConfig: {
-		nav: [{ text: "GitHub", link: "https://github.com/ISO53/castiel" }],
+		// The guide pages use the default docs layout; the landing page keeps its
+		// own NavBar (which links here as "Docs").
+		nav: [
+			{ text: "Docs", link: "/guide/", activeMatch: "^/guide/" },
+			{ text: "GitHub", link: "https://github.com/ISO53/castiel" },
+		],
+		sidebar: {
+			"/guide/": [
+				{
+					text: "Introduction",
+					items: [
+						{ text: "What is castiel", link: "/guide/" },
+						{ text: "Getting started", link: "/guide/getting-started" },
+					],
+				},
+				{
+					text: "Core concepts",
+					items: [
+						{ text: "Engagement phases", link: "/guide/engagement-phases" },
+						{ text: "Engagement documents", link: "/guide/engagement-documents" },
+						{ text: "Tools", link: "/guide/tools" },
+						{ text: "Sub-agents & background work", link: "/guide/sub-agents" },
+					],
+				},
+				{
+					text: "Configuration",
+					items: [
+						{ text: "LLM providers", link: "/guide/providers" },
+						{ text: "MCP servers", link: "/guide/mcp" },
+						{ text: "CLI reference", link: "/guide/cli" },
+					],
+				},
+				{
+					text: "About",
+					items: [{ text: "Acknowledgments", link: "/guide/acknowledgments" }],
+				},
+			],
+		},
 		socialLinks: [{ icon: "github", link: "https://github.com/ISO53/castiel" }],
 		// Local full-text search (MiniSearch) — no external service, works on Pages.
 		search: {
 			provider: "local",
+		},
+		editLink: {
+			pattern: "https://github.com/ISO53/castiel/edit/main/docs/:path",
+			text: "Edit this page on GitHub",
 		},
 	},
 	vite: {
