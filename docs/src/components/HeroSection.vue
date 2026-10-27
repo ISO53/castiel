@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { withBase } from "vitepress";
-import { Check, Copy } from "@lucide/vue";
+import { BookOpen, Check, Copy, Download } from "@lucide/vue";
 import MeshGradient from "@/components/MeshGradient.vue";
 import heroPreset from "@/studio/hero-preset.json";
 
@@ -27,6 +27,20 @@ function detectOs() {
 
 const activeOs = ref(detectOs());
 const installCommand = computed(() => COMMANDS[activeOs.value]);
+
+// Hero download button: version-less release asset, mirroring the
+// install-section download map (keep the file names in sync).
+const DOWNLOAD_BASE = "https://github.com/ISO53/castiel/releases/latest/download";
+const DOWNLOAD_FILES = {
+	windows: "castiel-windows-x64.zip",
+	linux: "castiel-linux-x64.tar.gz",
+	macos: "castiel-macos-arm64.zip",
+};
+const OS_LABELS = { windows: "Windows", linux: "Linux", macos: "macOS" };
+const heroDownload = computed(() => ({
+	label: `Download for ${OS_LABELS[activeOs.value]}`,
+	href: `${DOWNLOAD_BASE}/${DOWNLOAD_FILES[activeOs.value]}`,
+}));
 const shellLabel = computed(() =>
 	activeOs.value === "windows" ? "PowerShell" : "bash",
 );
@@ -168,6 +182,27 @@ onBeforeUnmount(() => {
 					your workspace with the language model of your choice.
 				</p>
 
+				<div class="hero-actions">
+					<a
+						class="hero-button primary"
+						:href="heroDownload.href"
+						target="_blank"
+						rel="noopener"
+					>
+						<Download class="hero-button-icon" aria-hidden="true" />
+						<span>{{ heroDownload.label }}</span>
+					</a>
+					<a
+						class="hero-button ghost"
+						href="https://github.com/ISO53/castiel#readme"
+						target="_blank"
+						rel="noopener"
+					>
+						<BookOpen class="hero-button-icon" aria-hidden="true" />
+						<span>Docs</span>
+					</a>
+				</div>
+
 				<div class="hero-install">
 					<div class="install-cmd">
 						<span class="cmd-prompt">$</span>
@@ -282,6 +317,51 @@ onBeforeUnmount(() => {
 	font-size: clamp(1rem, 2vw, 1.15rem);
 	font-weight: 400;
 	line-height: 1.6;
+}
+
+.hero-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	margin: 0 0 2rem;
+}
+
+/* Mirrors the CTA buttons: solid primary, bordered ghost. */
+.hero-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45rem;
+	padding: 0.7rem 1.5rem;
+	border-radius: 8px;
+	font-size: 0.95rem;
+	font-weight: 600;
+	transition:
+		background-color 0.15s ease,
+		border-color 0.15s ease,
+		color 0.15s ease;
+}
+
+.hero-button-icon {
+	width: 1rem;
+	height: 1rem;
+}
+
+.hero-button.primary {
+	background: var(--fg);
+	color: var(--bg);
+}
+
+.hero-button.primary:hover {
+	background: #ffffff;
+}
+
+.hero-button.ghost {
+	border: 1px solid var(--border);
+	color: var(--fg);
+}
+
+.hero-button.ghost:hover {
+	border-color: var(--fg);
 }
 
 .hero-install {
