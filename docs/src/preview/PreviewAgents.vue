@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { Bot, SquareX, Trash2 } from "@lucide/vue";
 
 const props = defineProps({
@@ -10,10 +10,15 @@ const emit = defineEmits(["cancel", "remove"]);
 
 // One-second clock so live rows recompute their runtime without polling.
 const nowSeconds = ref(Math.floor(Date.now() / 1000));
-const ticker = setInterval(() => {
-	nowSeconds.value = Math.floor(Date.now() / 1000);
-}, 1000);
-onUnmounted(() => clearInterval(ticker));
+let ticker = null;
+onMounted(() => {
+	ticker = setInterval(() => {
+		nowSeconds.value = Math.floor(Date.now() / 1000);
+	}, 1000);
+});
+onUnmounted(() => {
+	if (ticker) clearInterval(ticker);
+});
 
 const runningCount = computed(() => props.agents.filter((agent) => agent.state === "RUNNING").length);
 
