@@ -1,4 +1,6 @@
 <script setup>
+import { withBase } from "vitepress";
+
 import logoUrl from "@/assets/castiel-logo.svg";
 
 const year = new Date().getFullYear();
@@ -21,7 +23,7 @@ const year = new Date().getFullYear();
 				>
 					Docs
 				</a>
-				<RouterLink to="/#install" class="footer-link">Install</RouterLink>
+				<a :href="withBase('/#install')" class="footer-link">Install</a>
 			</div>
 
 			<div class="footer-group github">
